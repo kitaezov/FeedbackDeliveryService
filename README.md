@@ -30,19 +30,3 @@ docker-compose up --build
 ```sh
 http://localhost:3000
 ```
-
-## Контрибьютинг
-1. Сделать форк репозитория
-2. Создать новую ветку:
-   ```sh
-   git checkout -b feature-new-functionality
-   ```
-3. Внести изменения и закоммитить:
-   ```sh
-   git commit -m "Добавлена новая функциональность"
-   ```
-4. Отправить изменения:
-   ```sh
-   git push origin feature-new-functionality
-   ```
-5. Создать Pull Request

@@ -20,9 +20,9 @@ FeedbackDeliveryService — это сервис для сбора отзывов
 npm install
 ```
 ### Запуск проекта
-#### Frontend
 ```sh
-docker-compose up --build
+cd .\frontend\
+npm start
 ```
 
 ### localhost

@@ -5,11 +5,45 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="51775f23-a7c8-4523-b977-45e6dc6ae9a2" name="Changes" comment="1">
+      <change afterPath="$PROJECT_DIR$/frontend/src/assets/logo.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/public/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/build/favicon.ico" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/build/favicon.ico" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/build/logo192.png" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/build/logo192.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/build/logo512.png" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/build/logo512.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/build/manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/build/manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/build/robots.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@babel/plugin-proposal-private-property-in-object/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@babel/plugin-proposal-private-property-in-object/LICENSE" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@babel/plugin-proposal-private-property-in-object/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@babel/plugin-proposal-private-property-in-object/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@babel/plugin-proposal-private-property-in-object/lib/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@babel/plugin-proposal-private-property-in-object/lib/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/@babel/plugin-proposal-private-property-in-object/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/@babel/plugin-proposal-private-property-in-object/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/LICENSE" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/index.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/index.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/options.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/options.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/plugins.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/plugins.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/req.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/postcss-load-config/src/req.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/logo.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/AnimatedButton.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/AnimatedButton.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/Button.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Card.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Card.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/LoadingSpinner.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/LoadingSpinner.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/RandomAvatar.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/RatingStars.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ReviewCard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ReviewCard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/auth/LoginForm.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/auth/LoginForm.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/auth/ProfilePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/auth/ProfilePage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/reviews/ReviewCard.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/reviews/ReviewForm.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/reviews/ReviewForm.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/index.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/styles/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/styles/App.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/node_modules/.package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,30 +91,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Docker.docker-compose.yml.postgres: Compose Deployment.executor": "Run",
-    "Docker.docker-compose.yml: Compose Deployment.executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/Users/kitaezov/Desktop/audio-enhancer-extension",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\WebStorm 2024.3.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Docker.docker-compose.yml.postgres: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;Docker.docker-compose.yml: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/User/WebstormProjects/FeedbackDeliveryService/frontend/src/assets&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\WebStorm 2023.3.4\\plugins\\javascript-impl\\jsLanguageServicesImpl\\external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\User\WebstormProjects\FeedbackDeliveryService\frontend\src\assets" />
       <recent name="C:\Users\kitaezov\Desktop\feedback-service\frontend\public" />
       <recent name="C:\Users\kitaezov\Desktop\feedback-service\frontend\src\assets" />
     </key>
@@ -92,9 +127,15 @@
       <recent name="C:\Users\kitaezov\Desktop\feedback-service\frontend\public" />
     </key>
   </component>
-  <component name="RunManager" selected="Docker.docker-compose.yml.postgres: Compose Deployment">
+  <component name="RunManager" selected="Docker.docker-compose.yml: Compose Deployment">
     <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
       <deployment type="docker-compose.yml">
+        <settings />
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="docker-deploy" factoryName="dockerfile" temporary="true">
+      <deployment type="dockerfile">
         <settings />
       </deployment>
       <method v="2" />
@@ -127,13 +168,6 @@
         <item itemvalue="Docker.docker-compose.yml: Compose Deployment" />
       </list>
     </recent_temporary>
-  </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-js-predefined-d6986cc7102b-deb605915726-JavaScript-WS-243.22562.112" />
-      </set>
-    </attachedChunks>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -168,6 +202,12 @@
       <workItem from="1738678193129" duration="7000" />
       <workItem from="1739128657280" duration="4000" />
       <workItem from="1739634489397" duration="2340000" />
+      <workItem from="1740334338842" duration="382000" />
+      <workItem from="1740334753958" duration="543000" />
+      <workItem from="1740335693613" duration="2763000" />
+      <workItem from="1740398411057" duration="59000" />
+      <workItem from="1740491893021" duration="3606000" />
+      <workItem from="1740497274597" duration="1448000" />
     </task>
     <task id="LOCAL-00001" summary="1">
       <option name="closed" value="true" />

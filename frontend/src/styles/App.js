@@ -1,19 +1,20 @@
 import React, {useState} from 'react';
-import {Moon, Sun, Menu, Home, User, LogOut} from 'lucide-react';
+import {Menu, Home, User, LogOut} from 'lucide-react';
 import {Card, CardHeader, CardTitle, CardContent} from '../components/Card';
 import {LoadingSpinner} from '../components/LoadingSpinner';
 import {LoginModal} from '../features/auth/LoginForm';
 import {AnimatedButton} from '../components/AnimatedButton';
-import {CompactRatingCategory} from '../components/RatingStars';
-import {ProfilePage } from '../features/auth/ProfilePage';
+import {ProfilePage} from '../features/auth/ProfilePage';
 import {ReviewCard} from '../components/ReviewCard';
 import {ReviewForm} from '../features/reviews/ReviewForm';
 
+/**
+ * Главный компонент приложения FeedbackDelivery
+ */
 const App = () => {
     const [rating, setRating] = useState(0);
     const [hoveredStar, setHoveredStar] = useState(0);
     const [feedback, setFeedback] = useState('');
-    const [isDarkMode, setIsDarkMode] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -22,16 +23,21 @@ const App = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [loginData, setLoginData] = useState({name: '', email: '', password: ''});
     const [user, setUser] = useState(null);
+    const [error, setError] = useState(null);
 
     const getRandomAvatar = () => {
-        const styles = ['micah', 'bottts', 'pixel-art'];
-        const style = styles[Math.floor(Math.random() * styles.length)];
-        const seed = Math.random().toString(36).substring(7);
-        return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+        try {
+            const styles = ['micah', 'bottts', 'pixel-art'];
+            const style = styles[Math.floor(Math.random() * styles.length)];
+            const seed = Math.random().toString(36).substring(7);
+            return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+        } catch (error) {
+            console.error('Ошибка при генерации аватара:', error);
+            return `https://api.dicebear.com/7.x/micah/svg?seed=default`;
+        }
     };
 
     const [reviews, setReviews] = useState([
-
         {
             id: 1,
             userName: "Анна М.",
@@ -85,37 +91,51 @@ const App = () => {
     ]);
 
     const navigateTo = async (page) => {
-        setIsLoading(true);
+        try {
+            setIsLoading(true);
+            document.body.style.transition = "background-color 0.3s ease-in-out";
+            document.body.style.backgroundColor = "rgba(10,10,10,0.7)";
 
-        document.body.style.transition = "background-color 0.3s ease-in-out";
-        document.body.style.backgroundColor = "rgba(10,10,10,0.7)";
+            await new Promise(resolve => setTimeout(resolve, 800));
 
-
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        setCurrentPage(page);
-        document.body.style.opacity = "1";
-
-        setIsLoading(false);
-        setIsMenuOpen(false);
+            setCurrentPage(page);
+            document.body.style.opacity = "1";
+        } catch (err) {
+            console.error('Ошибка при навигации:', err);
+            setError('Произошла ошибка при переходе');
+        } finally {
+            setIsLoading(false);
+            setIsMenuOpen(false);
+        }
     };
 
-
     const handleLoginSubmit = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setUser({
-            name: loginData.name,
-            email: loginData.email,
-            avatar: getRandomAvatar(),
-            totalReviews: 0,
-            averageRating: 0,
-            totalLikes: 0,
-            reviews: []
-        });
-        setIsLoginModalOpen(false);
-        setIsLoading(false);
+        try {
+            e.preventDefault();
+            setIsLoading(true);
+
+            if (!loginData.email || !loginData.password) {
+                throw new Error('Заполните все обязательные поля');
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            setUser({
+                name: loginData.name,
+                email: loginData.email,
+                avatar: getRandomAvatar(),
+                totalReviews: 0,
+                averageRating: 0,
+                totalLikes: 0,
+                reviews: []
+            });
+            setIsLoginModalOpen(false);
+        } catch (err) {
+            console.error('Ошибка авторизации:', err);
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleLogout = () => {
@@ -124,17 +144,26 @@ const App = () => {
     };
 
     const handleNewReview = (newReview) => {
-        setReviews(prev => [newReview, ...prev]);
-        if (user) {
-            setUser(prev => ({
-                ...prev,
-                reviews: [newReview, ...prev.reviews],
-                totalReviews: prev.totalReviews + 1,
-                averageRating: (prev.averageRating * prev.totalReviews + newReview.rating) / (prev.totalReviews + 1)
-            }));
+        try {
+            if (!newReview.rating || !newReview.comment) {
+                throw new Error('Заполните все поля отзыва');
+            }
+
+            setReviews(prev => [newReview, ...prev]);
+            if (user) {
+                setUser(prev => ({
+                    ...prev,
+                    reviews: [newReview, ...prev.reviews],
+                    totalReviews: prev.totalReviews + 1,
+                    averageRating: (prev.averageRating * prev.totalReviews + newReview.rating) / (prev.totalReviews + 1)
+                }));
+            }
+            setSubmitted(true);
+            setTimeout(() => setSubmitted(false), 3000);
+        } catch (err) {
+            console.error('Ошибка при добавлении отзыва:', err);
+            setError(err.message);
         }
-        setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 3000);
     };
 
     const renderUnauthorizedReviewForm = () => (
@@ -167,10 +196,17 @@ const App = () => {
         </div>
     );
 
-
     return (
-        <div className={`min-h-screen font-source ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-900 text-white'}`}>
+        <div className="min-h-screen font-source bg-gray-900 text-white">
             {isLoading && <LoadingSpinner/>}
+
+            {error && (
+                <div className="fixed top-20 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50">
+                    {error}
+                    <button onClick={() => setError(null)} className="ml-2">✕</button>
+                </div>
+            )}
+
             {isLoginModalOpen && (
                 <LoginModal
                     onClose={() => setIsLoginModalOpen(false)}
@@ -181,12 +217,12 @@ const App = () => {
                 />
             )}
 
-            <nav className="fixed top-0 w-full bg-white dark:bg-gray-800 shadow-lg z-40">
+            <nav className="fixed top-0 w-full bg-gray-800 shadow-lg z-40">
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="flex justify-between items-center py-4">
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="p-2 rounded-lg hover:bg-gray-700"
                         >
                             <Menu className="h-6 w-6"/>
                         </button>
@@ -196,26 +232,19 @@ const App = () => {
                         >
                             FeedbackDelivery
                         </h1>
-                        <button
-                            onClick={() => setIsDarkMode(!isDarkMode)}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                            {isDarkMode ? <Sun className="h-6 w-6"/> : <Moon className="h-6 w-6"/>}
-                        </button>
+                        <div className="w-6"/> {/* Placeholder для баланса */}
                     </div>
                 </div>
             </nav>
 
             {isMenuOpen && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300 ease-in-out opacity-100">
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300 ease-in-out opacity-100">
                     <div
-                        className="w-64 bg-white dark:bg-gray-800 h-full shadow-lg p-4 transform transition-transform duration-300 ease-in-out translate-x-0"
-                        style={{transform: isMenuOpen ? 'translateX(0)' : 'translateX(-100%)'}}
+                        className="w-64 bg-gray-800 h-full shadow-lg p-4 transform transition-transform duration-300 ease-in-out translate-x-0"
                     >
                         <button
                             onClick={() => setIsMenuOpen(false)}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="p-2 rounded-lg hover:bg-gray-700"
                         >
                             ✕
                         </button>
@@ -223,7 +252,7 @@ const App = () => {
                             <li>
                                 <button
                                     onClick={() => navigateTo('main')}
-                                    className="w-full flex items-center space-x-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                                    className="w-full flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-lg"
                                 >
                                     <Home className="h-5 w-5"/>
                                     <span>Главная</span>
@@ -234,7 +263,7 @@ const App = () => {
                                     <li>
                                         <button
                                             onClick={() => navigateTo('profile')}
-                                            className="w-full flex items-center space-x-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                                            className="w-full flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-lg"
                                         >
                                             <User className="h-5 w-5"/>
                                             <span>Профиль</span>
@@ -243,7 +272,7 @@ const App = () => {
                                     <li>
                                         <button
                                             onClick={handleLogout}
-                                            className="w-full flex items-center space-x-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-red-500"
+                                            className="w-full flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-lg text-red-500"
                                         >
                                             <LogOut className="h-5 w-5"/>
                                             <span>Выход</span>

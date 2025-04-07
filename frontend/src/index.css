@@ -1,0 +1,254 @@
+/**
+ * Основные стили приложения
+ * 
+ * Файл подключает Tailwind CSS и определяет базовые стили для элементов страницы.
+ */
+
+/* Импорт базовых стилей Tailwind */
+@tailwind base;
+/* Импорт компонентных стилей Tailwind */
+@tailwind components;
+/* Импорт утилитарных стилей Tailwind */
+@tailwind utilities;
+
+/* Импортируем файл с настройками отзывчивости */
+@import './styles/responsive.css';
+
+@layer base {
+  :root {
+    /* Переменные для светлой темы */
+    --color-bg-primary: theme('colors.white');
+    --color-bg-secondary: theme('colors.gray.100');
+    --color-text-primary: theme('colors.gray.900');
+    --color-text-secondary: theme('colors.gray.700');
+    --color-accent: theme('colors.blue.600');
+  }
+
+  .dark {
+    /* Переменные для темной темы */
+    --color-bg-primary: theme('colors.gray.900');
+    --color-bg-secondary: theme('colors.gray.800');
+    --color-text-primary: theme('colors.gray.100');
+    --color-text-secondary: theme('colors.gray.300');
+    --color-accent: theme('colors.blue.400');
+  }
+}
+
+@layer utilities {
+  /* Дополнительные утилиты для текста */
+  .text-shadow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .text-shadow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  
+  .text-shadow-none {
+    text-shadow: none;
+  }
+  
+  /* Утилиты для решения проблем с контрастом текста */
+  .text-high-contrast {
+    color: rgb(17 24 39);
+  }
+  
+  .text-medium-contrast {
+    color: rgb(55 65 81);
+  }
+  
+  .text-low-contrast {
+    color: rgb(107 114 128);
+  }
+  
+  /* Фоны с правильным контрастом */
+  .bg-contrast-high {
+    background-color: rgb(255 255 255);
+  }
+  
+  .bg-contrast-medium {
+    background-color: rgb(243 244 246);
+  }
+  
+  .bg-contrast-low {
+    background-color: rgb(229 231 235);
+  }
+  
+  /* Рамки с поддержкой тем */
+  .border-themed {
+    border-color: rgb(229 231 235);
+  }
+  
+  .border-themed-light {
+    border-color: rgb(243 244 246);
+  }
+  
+  /* Утилиты для работы с тенями */
+  .shadow-themed {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  
+  .shadow-themed-md {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  }
+  
+  /* Улучшенная поддержка аспектных соотношений для карточек и контейнеров */
+  .aspect-card {
+    aspect-ratio: 16/9;
+  }
+  
+  /* Улучшенная поддержка равномерных карточек */
+  .card-equal-height {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
+  .card-body-fill {
+    flex: 1 1 auto;
+  }
+}
+
+/* Стили для тега body */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  /* Предотвращаем сжатие по ширине на мобильных устройствах */
+  min-width: 320px;
+}
+
+/* Стили для тега code - для отображения программного кода */
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+  @apply bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Стили для страниц с фиксированной высотой */
+.min-h-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Обеспечиваем правильное отображение футера */
+footer {
+  flex-shrink: 0;
+}
+
+/* Обеспечиваем растягивание основного контента */
+main {
+  flex: 1 0 auto;
+}
+
+/* Предотвращаем сжатие контейнеров */
+.container {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    max-width: 100%;
+  }
+}
+
+/* Компоненты списков - обеспечиваем достаточную ширину */
+.restaurant-section,
+.review-section,
+section {
+  width: 100%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 1024px) {
+  .restaurant-section,
+  .review-section,
+  section {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1280px) {
+  .restaurant-section,
+  .review-section,
+  section {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1536px) {
+  .restaurant-section,
+  .review-section,
+  section {
+    max-width: 100%;
+  }
+}
+
+/* Обеспечиваем правильное соотношение сторон у изображений */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Animation delay utilities */
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}

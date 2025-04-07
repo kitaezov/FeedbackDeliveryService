@@ -1,0 +1,351 @@
+/**
+ * Image and media styling utilities
+ * This file provides standardized image and media styling across the application
+ */
+
+/* Ensure all images have proper responsive behavior by default */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Aspect ratio utilities */
+.img-square {
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.img-wide {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.img-portrait {
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+/* Image with rounded corners */
+.img-rounded {
+  border-radius: var(--radius-lg);
+}
+
+.img-rounded-sm {
+  border-radius: var(--radius-md);
+}
+
+.img-circle {
+  border-radius: 50%;
+}
+
+/* Image sizing utilities */
+.img-xs {
+  width: var(--space-8);
+  height: var(--space-8);
+}
+
+.img-sm {
+  width: var(--space-12);
+  height: var(--space-12);
+}
+
+.img-md {
+  width: var(--space-16);
+  height: var(--space-16);
+}
+
+.img-lg {
+  width: var(--space-24);
+  height: var(--space-24);
+}
+
+.img-xl {
+  width: var(--space-32);
+  height: var(--space-32);
+}
+
+/* Avatar sizes */
+.avatar-xs {
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-sm {
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-md {
+  width: var(--space-10);
+  height: var(--space-10);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-lg {
+  width: var(--space-12);
+  height: var(--space-12);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Image containers */
+.img-container {
+  overflow: hidden;
+  position: relative;
+}
+
+.img-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.img-container:hover img {
+  transform: scale(1.05);
+}
+
+/* Thumbnail grid */
+.thumbnail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: var(--space-2);
+}
+
+.thumbnail-grid-lg {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+/* Image shadows */
+.img-shadow {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.img-shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Image borders */
+.img-border {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.img-border-light {
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode adjustments */
+.dark .img-border {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .img-border-light {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Image loader animation */
+.img-loading {
+  background: linear-gradient(90deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Dark mode image loader */
+.dark .img-loading {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%);
+  background-size: 200% 100%;
+}
+
+/* Image handling styles */
+
+/* Basic responsive image */
+.img-responsive {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Avatar styles */
+.avatar-image {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark .avatar-image {
+  border-color: #2d3748;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Error states */
+.error-image {
+  filter: grayscale(100%);
+  opacity: 0.7;
+}
+
+/* Image loading skeleton */
+.image-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.dark .image-skeleton {
+  background: linear-gradient(90deg, #374151 25%, #1f2937 50%, #374151 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Optimization for various formats */
+.webp-image,
+.jpeg-image,
+.png-image,
+.gif-image {
+  image-rendering: auto;
+}
+
+/* Add these classes to improve image rendering in different browsers */
+.png-image {
+  image-rendering: crisp-edges; /* For Firefox */
+}
+
+.gif-image {
+  will-change: transform; /* Optimize animation performance */
+}
+
+/* Object fit utilities */
+.object-cover {
+  object-fit: cover;
+}
+
+.object-contain {
+  object-fit: contain;
+}
+
+.object-fill {
+  object-fit: fill;
+}
+
+.object-scale-down {
+  object-fit: scale-down;
+}
+
+/* Image overlay for hover effects */
+.image-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.dark .image-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.image-wrapper:hover .image-overlay {
+  opacity: 1;
+}
+
+/* Style for broken images */
+img.broken {
+  position: relative;
+  display: inline-block;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+img.broken::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #666;
+}
+
+.dark img.broken::after {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #9ca3af;
+}
+
+/* Caption styles for images */
+.image-caption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  text-align: center;
+  color: #4b5563;
+}
+
+.dark .image-caption {
+  color: #9ca3af;
+}
+
+/* 
+ * WEBP background for browsers that support it
+ * Commented out because the referenced images don't exist
+ 
+@supports (background-image: -webkit-image-set(url("image.webp") 1x)) {
+  .webp-bg {
+    background-image: -webkit-image-set(
+      url("image.webp") 1x,
+      url("image.jpg") 1x
+    );
+  }
+}
+
+.webp-bg {
+  background-image: url("image.jpg");
+}
+*/ 

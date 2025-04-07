@@ -30,6 +30,7 @@ npm start
 ```sh
 http://localhost:3000
 ```
+<<<<<<< HEAD
 
 ## Admin Role Hierarchy
 
@@ -71,3 +72,5 @@ This will:
 - Update the database schema to support the role hierarchy
 - Ensure the head_admin account exists (admin@yandex.ru)
 - Migrate any legacy roles to the new system
+=======
+>>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1

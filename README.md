@@ -1,124 +1,124 @@
 # FeedbackDeliveryService
 
-## Description
-FeedbackDeliveryService is a service for collecting restaurant reviews. It allows users to rate establishments, leave comments, and analyze ratings.
+## Описание
+FeedbackDeliveryService — это сервис для сбора отзывов о ресторанах. Позволяет пользователям оценивать заведения, оставлять комментарии и анализировать рейтинги.
 
-## Functionality
-- Adding reviews with ratings based on various criteria
-- User authorization and registration
-- Likes and comments on reviews
-- Viewing statistics on ratings
+## Функциональность
+- Добавление отзывов с оценками по различным критериям
+- Авторизация и регистрация пользователей
+- Лайки и комментарии к отзывам
+- Просмотр статистики по рейтингам
 
-## Technologies
+## Технологии
 - **Frontend:** React, Tailwind CSS
 - **Backend:** Node.js, Express
-- **Database:** PostgreSQL / MongoDB
-- **Authentication:** JWT
+- **База данных:** PostgreSQL / MongoDB
+- **Аутентификация:** JWT
 
-### Installing Dependencies
+### Установка зависимостей
 ```sh
 npm install
 ```
 
-### Starting the Project
+### Запуск проекта
 ```sh
 cd .\frontend\
 npm start
 ```
 
-### localhost
-#### Website
+### Локальный хост
+#### Веб-сайт
 ```sh
 http://localhost:3000
 ```
 
-## Admin Role Hierarchy
+## Иерархия ролей администраторов
 
-The system implements a logical role hierarchy with different permissions per role:
+В системе реализована логическая иерархия ролей с различными разрешениями для каждой роли:
 
-### Role Levels (in descending order of privileges)
+### Уровни ролей (в порядке убывания привилегий)
 
-1. **Head Admin** (head_admin)
-   - Can manage all restaurants, users, and content
-   - Can assign any role (including admin and head_admin)
-   - Has access to all admin panel features
-   - Only head_admin can make changes to other head_admin accounts
-   - Special account: admin@yandex.ru is always head_admin
+1. **Главный администратор** (head_admin)
+   - Может управлять всеми ресторанами, пользователями и контентом
+   - Может назначать любую роль (включая admin и head_admin)
+   - Имеет доступ ко всем функциям панели администратора
+   - Только head_admin может вносить изменения в учетные записи других head_admin
+   - Специальная учетная запись: admin@yandex.ru всегда имеет роль head_admin
 
-2. **Admin** (admin)
-   - Can manage restaurants and all content
-   - Can assign manager role to users
-   - Cannot modify admins or head_admins
+2. **Администратор** (admin)
+   - Может управлять ресторанами и всем контентом
+   - Может назначать роль менеджера пользователям
+   - Не может изменять администраторов или главных администраторов
 
-3. **Manager** (manager)
-   - Can moderate reviews and content
-   - Cannot modify user roles except downgrading to user
-   - Cannot manage restaurants or other admins
-   - Limited admin panel access
+3. **Менеджер** (manager)
+   - Может модерировать отзывы и контент
+   - Не может изменять роли пользователей, кроме понижения до обычного пользователя
+   - Не может управлять ресторанами или другими администраторами
+   - Ограниченный доступ к панели администратора
 
-4. **User** (user)
-   - Regular user with no admin privileges
+4. **Пользователь** (user)
+   - Обычный пользователь без административных привилегий
 
-## How to Get Admin Access
+## Как получить права администратора
 
-### Default Head Admin Account
+### Учетная запись главного администратора по умолчанию
 - **Email:** admin@yandex.ru
-- **Password:** admin123
-- This account has full head_admin privileges by default
+- **Пароль:** admin123
+- Эта учетная запись имеет полные права head_admin по умолчанию
 
-### Manually Assigning Admin Roles
-1. Log in with the head_admin account
-2. Navigate to Admin Panel → User Management
-3. Find the user you want to promote
-4. Click "Edit User"
-5. Change their role to admin, manager, or head_admin
-6. Save changes
+### Ручное назначение ролей администратора
+1. Войдите в систему с учетной записью head_admin
+2. Перейдите в Панель администратора → Управление пользователями
+3. Найдите пользователя, которого хотите повысить
+4. Нажмите "Редактировать пользователя"
+5. Измените их роль на admin, manager или head_admin
+6. Сохраните изменения
 
-### Through Database (for developers)
+### Через базу данных (для разработчиков)
 ```sh
 cd backend
 node src/scripts/updateRoles.js
 ```
 
-### Admin Panel Access
-Once logged in as an admin:
-1. The admin panel is accessible at `/admin`
-2. Or click on the admin icon in the top navbar
+### Доступ к панели администратора
+После входа в систему в качестве администратора:
+1. Панель администратора доступна по адресу `/admin`
+2. Или нажмите на значок администратора в верхней панели навигации
 
-## Admin Features
+## Функции администратора
 
-### Restaurant Management
-- Add new restaurants
-- Edit restaurant details
-- Delete restaurants
-- Manage restaurant categories
+### Управление ресторанами
+- Добавление новых ресторанов
+- Редактирование данных о ресторанах
+- Удаление ресторанов
+- Управление категориями ресторанов
 
-### User Management
-- View all users
-- Edit user information
-- Change user roles
-- Block users
+### Управление пользователями
+- Просмотр всех пользователей
+- Редактирование информации о пользователях
+- Изменение ролей пользователей
+- Блокировка пользователей
 
-### Review Moderation
-- View all reviews
-- Edit or delete inappropriate reviews
-- Hide reviews from public view
+### Модерация отзывов
+- Просмотр всех отзывов
+- Редактирование или удаление неприемлемых отзывов
+- Скрытие отзывов от публичного просмотра
 
-### Analytics Dashboard
-- View site statistics
-- Monitor user activity
-- Track popular restaurants
+### Панель аналитики
+- Просмотр статистики сайта
+- Мониторинг активности пользователей
+- Отслеживание популярных ресторанов
 
-## Running the Role System Update
+## Запуск обновления системы ролей
 
-When upgrading to the new role system, run:
+При обновлении до новой системы ролей выполните:
 
 ```sh
 cd backend
 node src/scripts/updateRoles.js
 ```
 
-This will:
-- Update the database schema to support the role hierarchy
-- Ensure the head_admin account exists (admin@yandex.ru)
-- Migrate any legacy roles to the new system
+Это:
+- Обновит схему базы данных для поддержки иерархии ролей
+- Убедится, что учетная запись head_admin существует (admin@yandex.ru)
+- Перенесет устаревшие роли в новую систему

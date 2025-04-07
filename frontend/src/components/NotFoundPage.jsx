@@ -103,6 +103,8 @@ const NotFoundPage = ({ isDarkMode }) => {
                     >
                         Вернуться на главную
                     </motion.button>
+
+                    
                 </div>
             </div>
         </motion.div>

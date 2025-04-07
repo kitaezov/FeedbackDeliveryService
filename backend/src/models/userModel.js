@@ -71,14 +71,74 @@ class UserModel {
      * @returns {Promise<boolean>} - Success status
      */
     async update(id, userData) {
-        const { name, email } = userData;
-        
-        await pool.execute(
-            'UPDATE users SET name = ?, email = ? WHERE id = ?',
-            [name, email, id]
-        );
-        
-        return true;
+        try {
+            const { name, email, password, phoneNumber, birthDate } = userData;
+            console.log('UserModel.update - Входные данные:', JSON.stringify(userData, null, 2));
+            console.log('UserModel.update - Извлеченные поля:');
+            console.log('- phoneNumber:', phoneNumber);
+            console.log('- birthDate:', birthDate);
+            
+            // Build the update query dynamically based on provided fields
+            let queryParts = [];
+            let params = [];
+            
+            if (name !== undefined) {
+                queryParts.push('name = ?');
+                params.push(name);
+            }
+            
+            if (email !== undefined) {
+                queryParts.push('email = ?');
+                params.push(email);
+            }
+            
+            if (password !== undefined) {
+                queryParts.push('password = ?');
+                params.push(password);
+            }
+            
+            if (phoneNumber !== undefined) {
+                queryParts.push('phone_number = ?');
+                params.push(phoneNumber);
+                console.log('UserModel.update - Добавлен параметр phone_number:', phoneNumber);
+            }
+            
+            if (birthDate !== undefined) {
+                queryParts.push('birth_date = ?');
+                params.push(birthDate);
+                console.log('UserModel.update - Добавлен параметр birth_date:', birthDate);
+            }
+            
+            // If no fields to update, return
+            if (queryParts.length === 0) {
+                console.log('UserModel.update - Нет полей для обновления');
+                return false;
+            }
+            
+            // Complete the query with parameters
+            const query = `UPDATE users SET ${queryParts.join(', ')} WHERE id = ?`;
+            params.push(id);
+            
+            console.log('UserModel.update - SQL запрос:', query);
+            console.log('UserModel.update - Параметры:', params);
+            
+            // Execute update query
+            const [result] = await pool.execute(query, params);
+            console.log('UserModel.update - Результат обновления:', result);
+            
+            // Get updated user data
+            const [rows] = await pool.execute(
+                'SELECT id, name, email, role, created_at, avatar, phone_number as phoneNumber, birth_date as birthDate FROM users WHERE id = ?',
+                [id]
+            );
+            
+            console.log('UserModel.update - Полученные данные:', rows.length > 0 ? JSON.stringify(rows[0], null, 2) : 'нет данных');
+            
+            return rows[0] || null;
+        } catch (error) {
+            console.error('Error updating user:', error);
+            throw error;
+        }
     }
     
     /**

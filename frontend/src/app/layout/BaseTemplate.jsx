@@ -56,7 +56,7 @@ export const BaseTemplate = ({
     
     // Отображение с учетом боковой панели
     const renderWithSidebar = () => {
-        const contentClasses = fullWidth ? 'w-full' : 'max-w-4xl mx-auto';
+        const contentClasses = fullWidth || true ? 'w-full' : 'w-full';
         const mainContentClasses = sidebar ? (sidebarPosition === 'left' ? 'md:ml-4' : 'md:mr-4') : '';
         
         // Если нет сайдбара - просто возвращаем контент
@@ -72,17 +72,17 @@ export const BaseTemplate = ({
         return (
             <div className={`flex flex-col md:flex-row ${contentClasses}`}>
                 {sidebarPosition === 'left' && (
-                    <div className="w-full md:w-1/4 mb-4 md:mb-0">
+                    <div className="w-full md:w-1/5 mb-4 md:mb-0">
                         {sidebar}
                     </div>
                 )}
                 
-                <div className={`w-full ${sidebar ? 'md:w-3/4' : 'w-full'} ${mainContentClasses}`}>
+                <div className={`w-full ${sidebar ? 'md:w-4/5' : 'w-full'} ${mainContentClasses}`}>
                     {renderContent()}
                 </div>
                 
                 {sidebarPosition === 'right' && (
-                    <div className="w-full md:w-1/4 mt-4 md:mt-0">
+                    <div className="w-full md:w-1/5 mt-4 md:mt-0">
                         {sidebar}
                     </div>
                 )}

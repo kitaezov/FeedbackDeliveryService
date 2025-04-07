@@ -135,20 +135,14 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-}
-
+} 
+ 
 #root {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 
-/* Стили для страниц с фиксированной высотой */
-.min-h-screen {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
 
 /* Обеспечиваем правильное отображение футера */
 footer {
@@ -163,44 +157,50 @@ main {
 /* Предотвращаем сжатие контейнеров */
 .container {
   width: 100%;
-  max-width: 100%;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  max-width: 100% !important;
+  padding-left: 1rem;
+  padding-right: 1rem;
   margin-left: auto;
   margin-right: auto;
-}
+} 
 
 @media (min-width: 640px) {
   .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    max-width: 100%;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    max-width: 100% !important;
   }
 }
 
 @media (min-width: 768px) {
   .container {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    max-width: 100%;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 100% !important;
   }
 }
 
 @media (min-width: 1024px) {
   .container {
-    max-width: 100%;
+    max-width: 100% !important;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
   }
 }
 
 @media (min-width: 1280px) {
   .container {
-    max-width: 100%;
+    max-width: 100% !important;
+    padding-left: 3rem;
+    padding-right: 3rem;
   }
 }
 
 @media (min-width: 1536px) {
   .container {
-    max-width: 100%;
+    max-width: 100% !important;
+    padding-left: 4rem;
+    padding-right: 4rem;
   }
 }
 
@@ -209,7 +209,7 @@ main {
 .review-section,
 section {
   width: 100%;
-  max-width: 100%;
+  max-width: 100% !important;
   margin-left: auto;
   margin-right: auto;
 }
@@ -218,7 +218,7 @@ section {
   .restaurant-section,
   .review-section,
   section {
-    max-width: 100%;
+    max-width: 100% !important;
   }
 }
 
@@ -226,7 +226,7 @@ section {
   .restaurant-section,
   .review-section,
   section {
-    max-width: 100%;
+    max-width: 100% !important;
   }
 }
 
@@ -234,7 +234,7 @@ section {
   .restaurant-section,
   .review-section,
   section {
-    max-width: 100%;
+    max-width: 100% !important;
   }
 }
 

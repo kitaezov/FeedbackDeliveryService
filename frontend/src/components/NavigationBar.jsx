@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import api from '../utils/api';
+import notificationService from '../services/notificationService';
 
 /**
  * Получает полный URL аватара пользователя
@@ -143,7 +144,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
     const searchInputRef = useRef(null);
     const mobileMenuRef = useRef(null);
 
-    // Загрузка уведомлений с сервера
+    // Функция для загрузки уведомлений
     const fetchNotifications = useCallback(async () => {
         if (!user || !user.token) return;
         
@@ -164,26 +165,28 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
 
     // Загружаем уведомления при изменении пользователя
     useEffect(() => {
-        fetchNotifications();
-        
-        // Настраиваем интервал для периодического обновления
-        const intervalId = setInterval(fetchNotifications, 60000); // каждую минуту
-        
-        return () => clearInterval(intervalId);
-    }, [fetchNotifications]);
+        if (user && user.token) {
+            fetchNotifications();
+            
+            // Настраиваем интервал для периодического обновления
+            const intervalId = setInterval(fetchNotifications, 30000); // каждые 30 секунд
+            
+            return () => clearInterval(intervalId);
+        }
+    }, [fetchNotifications, user]);
 
     // Обработчик для отметки уведомления как прочитанного
     const markAsRead = async (notificationId) => {
         if (!user || !user.token) return;
         
         try {
-            await api.put(`/notifications/${notificationId}/read`);
+            await notificationService.markNotificationAsRead(notificationId);
             
             // Обновляем локальное состояние
             setNotifications(prev => 
                 prev.map(notification => 
                     notification.id === notificationId 
-                        ? { ...notification, isRead: true } 
+                        ? { ...notification, is_read: true } 
                         : notification
                 )
             );
@@ -273,17 +276,10 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
         };
     }, []);
 
-    // Примеры уведомлений для запасного случая
-    const fallbackNotifications = [
-        { id: 1, message: 'Новый отзыв', time: '5 минут назад', isRead: false },
-        { id: 2, message: 'Обновление профиля', time: '1 час назад', isRead: true },
-        { id: 3, message: 'Оцените доставку ресторана', time: '1 секунду назад', isRead: false },
-    ];
-
-    // Получаем уведомления, либо из загруженных, либо из запасных примеров
+    // Получаем уведомления из загруженных данных
     const displayedNotifications = notifications.length > 0 
         ? notifications 
-        : user ? fallbackNotifications : [];
+        : [];
 
     // Проверка авторизации пользователя
     const isLoggedIn = !!user;
@@ -374,20 +370,6 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                     }
                                 }}
                             >
-                                <motion.div 
-                                    className="pl-3 pr-1"
-                                    whileHover={{ scale: 1.1 }}
-                                    transition={{ duration: 0.2 }}
-                                >
-                                    <Search size={16} className="text-gray-500 dark:text-gray-400" />
-                                </motion.div>
-                                <input
-                                    type="text"
-                                    placeholder="Найти ресторан" 
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="py-1 pr-3 w-full bg-transparent focus:outline-none text-gray-900 dark:text-white text-sm"
-                                />
                             </motion.div>
                         </motion.div>
                     </div>
@@ -470,7 +452,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                                     displayedNotifications.map((notification, index) => (
                                                         <motion.div 
                                                             key={notification.id} 
-                                                            className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 ${!notification.isRead ? 'bg-gray-100 dark:bg-gray-700/50' : ''}`}
+                                                            className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 ${!notification.is_read ? 'bg-gray-100 dark:bg-gray-700/50' : ''}`}
                                                             onClick={() => markAsRead(notification.id)}
                                                             initial={{ opacity: 0, y: 10 }}
                                                             animate={{ opacity: 1, y: 0 }}
@@ -531,15 +513,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                     whileHover="hover"
                                     whileTap="tap"
                                 >
-                                    {user.avatar ? (
-                                        <img 
-                                            src={getAvatarUrl(user.avatar)} 
-                                            alt={user.name || 'Аватар пользователя'} 
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <UserCircle2 size={24} className="text-gray-600 dark:text-gray-300" />
-                                    )}
+                                    <UserCircle2 size={24} className="text-gray-600 dark:text-gray-300" />
                                 </motion.button>
                                 
                                 {/* Dropdown меню профиля */}
@@ -555,18 +529,8 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                             {/* Информация о пользователе */}
                                             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
                                                 <div className="flex items-center">
-                                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 mr-3">
-                                                        {user.avatar ? (
-                                                            <img 
-                                                                src={getAvatarUrl(user.avatar)} 
-                                                                alt={user.name || 'Аватар пользователя'} 
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center">
-                                                                <UserCircle2 size={24} className="text-gray-600 dark:text-gray-300" />
-                                                            </div>
-                                                        )}
+                                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 mr-3 flex items-center justify-center">
+                                                        <UserCircle2 size={24} className="text-gray-600 dark:text-gray-300" />
                                                     </div>
                                                     <div>
                                                         <div className="font-medium text-sm text-gray-900 dark:text-white">

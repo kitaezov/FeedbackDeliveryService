@@ -47,11 +47,11 @@
   --radius-full: 9999px;        /* For pills and full rounded elements */
   
   /* Container widths */
-  --container-sm: 640px;
-  --container-md: 768px;
-  --container-lg: 1024px;
-  --container-xl: 1280px;
-  --container-2xl: 1536px;
+  --container-sm: 100%;
+  --container-md: 100%;
+  --container-lg: 100%;
+  --container-xl: 100%;
+  --container-2xl: 100%;
   
   /* Z-index scale */
   --z-0: 0;
@@ -109,35 +109,46 @@
   margin-right: auto;
   padding-left: var(--space-4);
   padding-right: var(--space-4);
+  max-width: 100% !important;
 }
 
 @media (min-width: 640px) {
   .container-responsive {
-    max-width: var(--container-sm);
+    max-width: 100% !important;
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
   }
 }
 
 @media (min-width: 768px) {
   .container-responsive {
-    max-width: var(--container-md);
+    max-width: 100% !important;
+    padding-left: var(--space-8);
+    padding-right: var(--space-8);
   }
 }
 
 @media (min-width: 1024px) {
   .container-responsive {
-    max-width: var(--container-lg);
+    max-width: 100% !important;
+    padding-left: var(--space-10);
+    padding-right: var(--space-10);
   }
 }
 
 @media (min-width: 1280px) {
   .container-responsive {
-    max-width: var(--container-xl);
+    max-width: 100% !important;
+    padding-left: var(--space-12);
+    padding-right: var(--space-12);
   }
 }
 
 @media (min-width: 1536px) {
   .container-responsive {
-    max-width: var(--container-2xl);
+    max-width: 100% !important;
+    padding-left: var(--space-16);
+    padding-right: var(--space-16);
   }
 }
 

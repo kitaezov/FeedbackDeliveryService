@@ -7,6 +7,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
 const { validateEmail, validatePassword, validateName } = require('../utils/validators');
+const config = require('../config');
+const fs = require('fs');
+const path = require('path');
+const notificationController = require('./notificationController');
 
 /**
  * Register a new user
@@ -372,11 +376,176 @@ const deleteAvatar = async (req, res) => {
     }
 };
 
+/**
+ * Update user profile information
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const updateProfile = async (req, res) => {
+    try {
+        // Extract user ID from token
+        const userId = req.user.userId;
+        console.log('Обновление профиля для пользователя:', userId);
+        console.log('Данные запроса:', JSON.stringify(req.body, null, 2));
+        
+        // Get update data from request body
+        const { name, email, phoneNumber, birthDate, currentPassword, newPassword } = req.body;
+        console.log('Извлеченные поля:');
+        console.log('- phoneNumber:', phoneNumber);
+        console.log('- birthDate:', birthDate);
+        
+        // Get user from database
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                message: 'Пользователь не найден',
+                details: 'Указанный пользователь не существует в базе данных'
+            });
+        }
+        
+        // Prepare update data
+        const updateData = {};
+        
+        // Validate and add name if provided
+        if (name !== undefined) {
+            if (!validateName(name)) {
+                return res.status(400).json({
+                    message: 'Некорректное имя',
+                    details: 'Имя должно содержать от 1 до 15 символов',
+                    field: 'name'
+                });
+            }
+            updateData.name = name;
+        }
+        
+        // Validate and add email if provided
+        if (email !== undefined && email !== user.email) {
+            if (!validateEmail(email)) {
+                return res.status(400).json({
+                    message: 'Некорректный email',
+                    details: 'Пожалуйста, введите корректный email-адрес',
+                    field: 'email'
+                });
+            }
+            
+            // Check if email is already in use
+            const existingUser = await userModel.findByEmail(email);
+            if (existingUser && existingUser.id !== userId) {
+                return res.status(409).json({
+                    message: 'Email уже используется',
+                    details: 'Указанный email уже используется другим пользователем',
+                    field: 'email'
+                });
+            }
+            
+            updateData.email = email;
+        }
+        
+        // Add phoneNumber if provided
+        if (phoneNumber !== undefined) {
+            updateData.phoneNumber = phoneNumber;
+            console.log('phoneNumber добавлен в updateData:', phoneNumber);
+        }
+        
+        // Add birthDate if provided
+        if (birthDate !== undefined) {
+            updateData.birthDate = birthDate;
+            console.log('birthDate добавлен в updateData:', birthDate);
+        }
+        
+        // Handle password change if provided
+        if (newPassword) {
+            // Verify current password
+            if (!currentPassword) {
+                return res.status(400).json({
+                    message: 'Необходим текущий пароль',
+                    details: 'Для смены пароля необходимо указать текущий пароль',
+                    field: 'currentPassword'
+                });
+            }
+            
+            // Check if current password is correct
+            const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+            if (!isPasswordValid) {
+                return res.status(401).json({
+                    message: 'Неверный текущий пароль',
+                    details: 'Указанный текущий пароль не соответствует действительному',
+                    field: 'currentPassword'
+                });
+            }
+            
+            // Validate new password
+            if (!validatePassword(newPassword)) {
+                return res.status(400).json({
+                    message: 'Некорректный новый пароль',
+                    details: 'Новый пароль должен содержать не менее 6 символов',
+                    field: 'newPassword'
+                });
+            }
+            
+            // Hash new password
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(newPassword, salt);
+            updateData.password = hashedPassword;
+        }
+        
+        // If no data to update
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                message: 'Нет данных для обновления',
+                details: 'Не указаны поля для обновления'
+            });
+        }
+        
+        console.log('Данные для обновления:', JSON.stringify(updateData, null, 2));
+        
+        // Update user in database
+        const updatedUser = await userModel.update(userId, updateData);
+        
+        console.log('Результат обновления:', updatedUser ? 'Успешно' : 'Ошибка');
+        if (updatedUser) {
+            console.log('Обновленные данные пользователя:', JSON.stringify(updatedUser, null, 2));
+        }
+        
+        if (!updatedUser) {
+            return res.status(500).json({
+                message: 'Ошибка обновления профиля',
+                details: 'Не удалось обновить профиль в базе данных'
+            });
+        }
+        
+        // Создаем уведомление об обновлении профиля
+        await notificationController.createProfileUpdateNotification(userId);
+        
+        // Return updated user data
+        res.json({
+            message: 'Профиль успешно обновлен',
+            user: {
+                id: updatedUser.id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                phoneNumber: updatedUser.phoneNumber,
+                birthDate: updatedUser.birthDate,
+                role: updatedUser.role,
+                created_at: updatedUser.created_at,
+                avatar: updatedUser.avatar
+            }
+        });
+    } catch (error) {
+        console.error('Ошибка обновления профиля:', error);
+        res.status(500).json({
+            message: 'Ошибка обновления профиля',
+            details: 'Произошла внутренняя ошибка сервера'
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
     validateToken,
     getProfile,
     uploadAvatar,
-    deleteAvatar
+    deleteAvatar,
+    updateProfile
 }; 

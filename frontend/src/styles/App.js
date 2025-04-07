@@ -15,7 +15,7 @@ import {ReviewForm} from '../features/reviews/ReviewForm';
 import ReviewsSection from "../features/reviews/ReviewsSection";
 import RestaurantCharts from "../features/restaurants/RestaurantCharts";
 import AdminPanel from "../features/admin/AdminPanel";
-import NavigationBar from '../components/NavigationBar';
+import NavigationBar from '../components/NavigationBar' ;
 import HelpAssistant from "../components/HelpAssistant";
 import { Footer } from '../components/Footer';
 import RestaurantRatingsPage from "../features/restaurants/RestaurantRatingsPage";

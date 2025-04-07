@@ -38,45 +38,49 @@ export const RestaurantsListPage = () => {
     };
     
     return (
-        <Container size="full" className="py-6">
-            {/* Хлебные крошки */}
-            <Breadcrumbs className="py-4">
-                <Breadcrumbs.Item href="/">Главная</Breadcrumbs.Item>
-                <Breadcrumbs.Item isCurrentPage>Рестораны</Breadcrumbs.Item>
-            </Breadcrumbs>
+        <Container size="full" className="py-6 px-4 sm:px-6 lg:px-8 w-full">
+            <Breadcrumbs 
+                items={[{ label: 'Главная', href: '/' }, { label: 'Рестораны' }]} 
+                className="mb-4" 
+            />
             
-            {/* Заголовок страницы */}
-            <div className="mb-8">
-                <Heading level={1} className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    Рестораны
-                </Heading>
-                <p className="text-gray-600 dark:text-gray-400">
-                    Найдите лучшие рестораны по отзывам и рейтингам реальных посетителей
-                </p>
-            </div>
+            <Heading level={1} className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                Рестораны
+            </Heading>
             
-            {/* Основной контент */}
-            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 lg:gap-8">
-                {/* Список ресторанов */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full">
+                {/* Фильтры */}
                 <div className="lg:col-span-1">
-                    {/* Информация о результатах поиска */}
-                    {!isLoading && !error && (
-                        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                            {metadata.totalCount > 0 ? (
-                                <span>Найдено: {metadata.totalCount} ресторанов</span>
-                            ) : (
-                                <span>Нет ресторанов, соответствующих выбранным фильтрам</span>
-                            )}
-                        </div>
-                    )}
+                    <div className="sticky top-4 bg-white dark:bg-gray-800 rounded-lg p-4 shadow-xl border border-gray-200 dark:border-gray-700">
+                        <RestaurantFilters 
+                            filters={filters} 
+                            onFiltersChange={handleFiltersChange}
+                            cuisines={cuisines}
+                        />
+                    </div>
+                </div>
+                
+                {/* Список ресторанов */}
+                <div className="lg:col-span-3">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl border border-gray-200 dark:border-gray-700 mb-6">
+                        <RestaurantStats 
+                            totalRestaurants={stats.totalRestaurants} 
+                            totalReviews={stats.totalReviews} 
+                            topCuisines={stats.topCuisines}
+                            averageRating={stats.averageRating}
+                            isLoading={isLoading}
+                        />
+                    </div>
                     
-                    <RestaurantList 
-                        restaurants={restaurants}
-                        isLoading={isLoading}
-                        error={error}
-                        metadata={metadata}
-                        onPageChange={goToPage}
-                    />
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+                        <RestaurantList 
+                            restaurants={restaurants}
+                            isLoading={isLoading}
+                            error={error}
+                            metadata={metadata}
+                            onPageChange={goToPage}
+                        />
+                    </div>
                 </div>
             </div>
         </Container>

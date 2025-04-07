@@ -8,18 +8,15 @@ import { API_BASE, API_URL } from '../../config';
 import { restaurantService } from '../../features/restaurants/services/restaurantService';
 
 const RestaurantButton = ({ restaurant, isSelected, onSelect }) => (
-    <motion.button
+    <button
         type="button"
         onClick={() => onSelect(restaurant)}
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-        transition={{ duration: 0.2 }}
         className={`
             w-full p-0 rounded-lg transition-all 
-            border relative overflow-hidden
+            border relative overflow-hidden shadow-sm
             ${isSelected
-            ? 'border-gray-400 ring-2 ring-gray-400'
-            : 'border-gray-200 hover:border-gray-300'}
+            ? 'border-gray-400 dark:border-gray-500 ring-2 ring-gray-400 dark:ring-gray-500'
+            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}
         `}
     >
         <div className="w-full pt-[60%] relative">
@@ -29,21 +26,21 @@ const RestaurantButton = ({ restaurant, isSelected, onSelect }) => (
                 className="absolute top-0 left-0 w-full h-full object-cover"
             />
         </div>
-        <div className="p-2">
-            <h3 className="font-medium text-sm text-gray-700 truncate">
+        <div className="p-2 bg-white dark:bg-gray-800">
+            <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300 truncate">
                 {restaurant.name}
             </h3>
             <div className="flex items-center justify-between mt-1">
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {restaurant.cuisine} | {restaurant.priceRange}
                 </p>
                 <div className="flex items-center">
                     <Star className="w-3 h-3 text-yellow-500 mr-1" />
-                    <span className="text-xs font-medium text-gray-600">{restaurant.avgRating}</span>
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{restaurant.avgRating}</span>
                 </div>
             </div>
         </div>
-    </motion.button>
+    </button>
 );
 
 const StarRating = ({ value, onClick, size = "normal" }) => {
@@ -65,6 +62,8 @@ const StarRating = ({ value, onClick, size = "normal" }) => {
 
 // Animation variants for feature blocks (similar to NavigationBar animations)
 const featureBlockVariants = {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
     hover: {
         scale: 1.02,
         transition: { 
@@ -83,6 +82,8 @@ const featureBlockVariants = {
 
 // Animation variants for icons
 const iconVariants = {
+    initial: { opacity: 0, scale: 0.8 },
+    animate: { opacity: 1, scale: 1 },
     hover: { 
         scale: 1.15,
         rotate: 5,
@@ -96,6 +97,8 @@ const iconVariants = {
 
 // Animation variants for buttons
 const buttonVariants = {
+    initial: { opacity: 0, y: 5 },
+    animate: { opacity: 1, y: 0 },
     hover: {
         scale: 1.05,
         transition: { 
@@ -123,6 +126,35 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [photos, setPhotos] = useState([]);
     const fileInputRef = useRef(null);
+    const modalRef = useRef(null);
+
+    // Close when clicking outside the modal content
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                onClose();
+            }
+        };
+        
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [onClose]);
+
+    // Close on escape key press
+    useEffect(() => {
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') {
+                onClose();
+            }
+        };
+        
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [onClose]);
 
     // Cleanup object URLs when component unmounts
     useEffect(() => {
@@ -418,218 +450,165 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
     return (
         <motion.div
-            initial={{opacity: 0}}
-            animate={{opacity: 1}}
-            exit={{opacity: 0}}
-            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
         >
-            <motion.div
-                initial={{opacity: 0, scale: 0.9, y: 20}}
-                animate={{opacity: 1, scale: 1, y: 0}}
-                exit={{opacity: 0, scale: 0.9, y: 20}}
-                transition={{duration: 0.3}}
-                className="bg-white rounded-lg shadow-xl overflow-hidden w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-                onClick={e => e.stopPropagation()}
+            <motion.div 
+                ref={modalRef}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700"
             >
-                {/* Header with photo */}
-                <div className="relative h-56 md:h-64">
+                {/* Заголовок с кнопкой закрытия */}
+                <div className="flex justify-between items-start p-4 border-b border-gray-200 dark:border-gray-700">
+                    <div>
+                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-1">
+                            {restaurant.name}
+                        </h2>
+                        <div className="flex items-center">
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                {restaurant.cuisine}
+                            </span>
+                            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                                {restaurant.priceRange}
+                            </span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
+                    >
+                        <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    </button>
+                </div>
+
+                {/* Изображение ресторана - расположено на всю ширину в верхней части */}
+                <div className="relative w-full">
                     <img
                         src={restaurant.image}
                         alt={restaurant.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-56 object-cover object-center"
                     />
-                    <div
-                        className="absolute top-0 left-0 w-full p-4 flex justify-between bg-gradient-to-b from-black/50 to-transparent">
-                        <motion.button
-                            whileHover={{scale: 1.1}}
-                            whileTap={{scale: 0.9}}
-                            onClick={onClose}
-                            className="p-2 bg-white/90 rounded-full"
-                            aria-label="Закрыть"
-                        >
-                            <X className="w-5 h-5 text-gray-700"/>
-                        </motion.button>
-                        <div className="flex items-center space-x-2">
-                            <div className="flex items-center bg-white/90 p-2 px-3 rounded-full">
-                                <Star className="w-4 h-4 text-yellow-500 mr-1"/>
-                                <span className="text-sm font-bold text-gray-800">{restaurant.avgRating}</span>
-                                <span
-                                    className="text-xs text-gray-500 ml-1">({restaurant.reviews.length} отзывов)</span>
-                            </div>
-                            <motion.button
-                                whileHover={{scale: 1.1}}
-                                whileTap={{scale: 0.9}}
-                                className="p-2 bg-white/90 rounded-full"
-                                aria-label="Добавить в избранное"
-                            >
-                                <Heart className="w-5 h-5 text-gray-700"/>
-                            </motion.button>
-                        </div>
-                    </div>
-
-                    {restaurant.isNew && (
-                        <div
-                            className="absolute top-4 left-16 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                            Новое место
-                        </div>
-                    )}
-
-                    {restaurant.discount && (
-                        <div
-                            className="absolute bottom-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                            Скидка {restaurant.discount}%
-                        </div>
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                 </div>
 
                 {/* Navigation tabs */}
-                <div className="flex border-b border-gray-200">
+                <div className="flex border-b border-gray-200 dark:border-gray-700">
                     <button
                         type="button"
-                        className={`flex-1 py-3 text-center font-medium text-sm ${!showReviewForm ? 'text-gray-800 border-b-2 border-gray-800' : 'text-gray-500'}`}
+                        className={`flex-1 py-3 text-center font-medium text-sm ${
+                            !showReviewForm 
+                              ? 'text-gray-800 dark:text-white border-b-2 border-gray-800 dark:border-white' 
+                              : 'text-gray-500 dark:text-gray-400'
+                        } transition-colors focus:outline-none`}
                         onClick={() => setShowReviewForm(false)}
                     >
                         Информация
                     </button>
                     <button
                         type="button"
-                        className={`flex-1 py-3 text-center font-medium text-sm ${showReviewForm ? 'text-gray-800 border-b-2 border-gray-800' : 'text-gray-500'}`}
+                        className={`flex-1 py-3 text-center font-medium text-sm ${
+                            showReviewForm 
+                              ? 'text-gray-800 dark:text-white border-b-2 border-gray-800 dark:border-white' 
+                              : 'text-gray-500 dark:text-gray-400'
+                        } transition-colors focus:outline-none`}
                         onClick={() => setShowReviewForm(true)}
                     >
-                        Оставить отзыв
+                        Ваш отзыв
                     </button>
                 </div>
 
                 {/* Restaurant info */}
                 {!showReviewForm ? (
-                    <div className="p-4">
-                        <h2 className="text-2xl font-bold text-gray-800">{restaurant.name}</h2>
-
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                {restaurant.cuisine}
-                            </span>
-                            <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                {restaurant.priceRange}
-                            </span>
-                            <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                {restaurant.deliveryTime} мин
-                            </span>
+                    <div className="p-5">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-700">
+                                <Clock className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                            </div>
+                            <div>
+                                <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                                    {restaurant.isOpen ? 'Открыто' : 'Закрыто'} · {restaurant.hours}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Время работы ресторана
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="mt-3 flex items-center">
-                            <motion.div whileHover="hover" variants={iconVariants}>
-                                <Clock className="w-4 h-4 text-green-500 mr-2"/>
-                            </motion.div>
-                            <span className="text-sm font-medium text-green-600">
-                                {restaurant.isOpen ? 'Открыто' : 'Закрыто'} · {restaurant.hours}
-                            </span>
-                        </div>
+                        {restaurant.description && (
+                            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{restaurant.description}</p>
+                            </div>
+                        )}
 
-                        <p className="mt-4 text-gray-700">{restaurant.description}</p>
+                        {/* Compact contact information */}
+                        <div className="grid grid-cols-1 gap-3 mb-6">
+                            {restaurant.address && (
+                                <div className="flex items-center">
+                                    <div className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 mr-3">
+                                        <MapPin className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+                                    </div>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">{restaurant.address}</span>
+                                </div>
+                            )}
+                            
+                            {restaurant.phone && (
+                                <div className="flex items-center">
+                                    <div className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 mr-3">
+                                        <Phone className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+                                    </div>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">{restaurant.phone}</span>
+                                </div>
+                            )}
+                            
+                            {restaurant.website && restaurant.website.indexOf('freepik.com') === -1 && (
+                                <div className="flex items-center">
+                                    <div className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 mr-3">
+                                        <Globe className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+                                    </div>
+                                    <a 
+                                        href={restaurant.website} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                    >
+                                        {restaurant.website}
+                                    </a>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Features section - redesigned to be more minimalist */}
-                        <motion.div 
-                            className="mt-5 pt-5 border-t border-gray-100"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Особенности</h3>
-                            <div className="grid grid-cols-2 gap-3">
-                                {restaurant.features?.map((feature, index) => (
-                                    <motion.div 
-                                        key={index} 
-                                        className="flex items-center bg-gray-50 p-3 rounded-lg border border-gray-100"
-                                        variants={featureBlockVariants}
-                                        whileHover="hover"
-                                        whileTap="tap"
-                                    >
-                                        <motion.div variants={iconVariants}>
-                                            <Check className="w-4 h-4 text-gray-500 mr-2"/>
+                        {restaurant.features && restaurant.features.length > 0 && (
+                            <motion.div 
+                                className="mb-6"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Особенности</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {restaurant.features.map((feature, index) => (
+                                        <motion.div 
+                                            key={index} 
+                                            className="inline-flex items-center px-3 py-1.5 bg-gray-50 dark:bg-gray-700 rounded-full border border-gray-100 dark:border-gray-600"
+                                            variants={featureBlockVariants}
+                                            whileHover="hover"
+                                            whileTap="tap"
+                                        >
+                                            <Check className="w-3 h-3 text-green-500 dark:text-green-400 mr-1.5"/>
+                                            <span className="text-xs text-gray-700 dark:text-gray-300">{feature}</span>
                                         </motion.div>
-                                        <span className="text-sm text-gray-700">{feature}</span>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </motion.div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
 
-                        {/* Contact information - redesigned with cards */}
-                        <motion.div 
-                            className="mt-6"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: 0.1 }}
-                        >
-                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Контакты</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <motion.a
-                                    href={`https://maps.google.com/?q=${restaurant.address}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100"
-                                    variants={featureBlockVariants}
-                                    whileHover="hover"
-                                    whileTap="tap"
-                                >
-                                    <motion.div variants={iconVariants}>
-                                        <MapPin className="w-5 h-5 text-gray-500"/>
-                                    </motion.div>
-                                    <span className="ml-3 text-gray-700 text-sm">{restaurant.address}</span>
-                                </motion.a>
-
-                                <motion.a
-                                    href={`tel:${restaurant.phone.replace(/\D/g, '')}`}
-                                    className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100"
-                                    variants={featureBlockVariants}
-                                    whileHover="hover"
-                                    whileTap="tap"
-                                >
-                                    <motion.div variants={iconVariants}>
-                                        <Phone className="w-5 h-5 text-gray-500"/>
-                                    </motion.div>
-                                    <span className="ml-3 text-gray-700 text-sm">{restaurant.phone}</span>
-                                </motion.a>
-
-                                <motion.div
-                                    className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100"
-                                    variants={featureBlockVariants}
-                                    whileHover="hover"
-                                    whileTap="tap"
-                                >
-                                    <motion.div variants={iconVariants}>
-                                        <Clock className="w-5 h-5 text-gray-500"/>
-                                    </motion.div>
-                                    <span className="ml-3 text-gray-700 text-sm">{restaurant.hours}</span>
-                                </motion.div>
-
-                                {restaurant.website && (
-                                    <motion.a
-                                        href={restaurant.website}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-100"
-                                        variants={featureBlockVariants}
-                                        whileHover="hover"
-                                        whileTap="tap"
-                                    >
-                                        <motion.div variants={iconVariants}>
-                                            <Globe className="w-5 h-5 text-gray-500"/>
-                                        </motion.div>
-                                        <span className="ml-3 text-gray-700 text-sm">{restaurant.website}</span>
-                                    </motion.a>
-                                )}
-                            </div>
-                        </motion.div>
-
-                        {/* Menu button - Enhanced for PDF viewing */}
-                        <motion.div 
-                            className="mt-6"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: 0.2 }}
-                        >
+                        {/* Action buttons */}
+                        <div className="space-y-3">
                             <motion.button
                                 onClick={async () => {
                                     try {
@@ -641,96 +620,76 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                         console.error('Error opening menu:', error);
                                     }
                                 }}
-                                className="flex items-center justify-center bg-gray-700 text-white py-3 px-5 rounded-lg font-medium shadow-sm hover:bg-gray-800 transition-colors w-full"
+                                className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white py-3 px-5 rounded-lg font-medium w-full transition-colors shadow-sm"
                                 variants={buttonVariants}
                                 whileHover="hover"
                                 whileTap="tap"
                             >
-                                <motion.div 
-                                    className="mr-2"
-                                    variants={iconVariants}
-                                >
-                                    <FileText className="w-5 h-5"/>
-                                </motion.div>
+                                <FileText className="w-4 h-4 mr-2"/>
                                 Посмотреть меню
                             </motion.button>
-                        </motion.div>
 
-                        {/* Review button */}
-                        {user ? (
-                            <motion.button
-                                onClick={() => setShowReviewForm(true)}
-                                className="flex items-center justify-center bg-gray-700 text-white py-3 px-5 rounded-lg font-medium shadow-sm hover:bg-gray-800 transition-colors w-full mt-3"
-                                variants={buttonVariants}
-                                whileHover="hover"
-                                whileTap="tap"
-                            >
-                                <motion.div 
-                                    className="mr-2"
-                                    variants={iconVariants}
+                            {user ? (
+                                <motion.button
+                                    
                                 >
-                                    <FileText className="w-5 h-5"/>
+                                    
+                                </motion.button>
+                            ) : (
+                                <motion.div
+                                    className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center shadow-sm"
+                                >
+                                    <User className="w-6 h-6 mx-auto text-gray-400 dark:text-gray-500 mb-2"/>
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Чтобы оставить отзыв, войдите или зарегистрируйтесь</p>
+                                    <button
+                                        className="bg-gray-800 dark:bg-gray-600 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-700 dark:hover:bg-gray-700 transition-colors">
+                                        Войти
+                                    </button>
                                 </motion.div>
-                                Оставить отзыв
-                            </motion.button>
-                        ) : (
-                            <motion.div
-                                className="w-full bg-gray-100 p-4 rounded-lg mt-3 text-center"
-                            >
-                                <User className="w-8 h-8 mx-auto text-gray-400 mb-2"/>
-                                <p className="text-sm text-gray-600 mb-2">Чтобы оставить отзыв, войдите или
-                                    зарегистрируйтесь</p>
-                                <button
-                                    className="bg-gray-700 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800 transition-colors">
-                                    Войти
-                                </button>
-                            </motion.div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 ) : (
-                    <div className="p-4">
-                        <div className="flex items-center mb-4">
-                            <motion.button
-                                whileHover={{scale: 1.1}}
-                                whileTap={{scale: 0.9}}
+                    <div className="p-5">
+                        <div className="flex items-center mb-5">
+                            <button
                                 onClick={() => setShowReviewForm(false)}
-                                className="p-2 mr-3 bg-gray-100 rounded-full"
+                                className="mr-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 focus:outline-none"
                             >
-                                <ChevronLeft className="w-5 h-5 text-gray-700"/>
-                            </motion.button>
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
                             <div>
-                                <h2 className="text-xl font-semibold text-gray-800">Оставить отзыв</h2>
-                                <p className="text-sm text-gray-500">{restaurant.name}</p>
+                                <p className="text-lg font-medium text-gray-800 dark:text-gray-100">{restaurant.name}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Поделитесь своим опытом</p>
                             </div>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-3">
-                                <h3 className="text-lg font-medium text-gray-700">
-                                    Оцените ресторан
-                                </h3>
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Оцените ресторан
+                                    </h3>
 
-                                {/* Rating explanation */}
-                                <div className="text-xs text-gray-500 mb-4 flex justify-between">
-                                    <span>1 - Очень плохо</span>
-                                    <span>3 - Нормально</span>
-                                    <span>5 - Отлично</span>
+                                    {/* Rating explanation */}
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex space-x-3">
+                                        <span>1 - Плохо</span>
+                                        <span>3 - Нормально</span>
+                                        <span>5 - Отлично</span>
+                                    </div>
                                 </div>
 
                                 {ratingCategories.map((category, index) => (
-                                    <motion.div
+                                    <div
                                         key={category.id}
-                                        initial={{opacity: 0, y: 10}}
-                                        animate={{opacity: 1, y: 0}}
-                                        transition={{duration: 0.3, delay: 0.1 + index * 0.05}}
-                                        className="flex items-center bg-gray-100 p-2.5 rounded-lg border border-gray-200"
+                                        className="flex items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600"
                                     >
-                                        <motion.div whileHover={{rotate: 15}} transition={{duration: 0.2}}>
+                                        <div className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-600 mr-3">
                                             {category.icon}
-                                        </motion.div>
-                                        <span className="ml-3 flex-grow text-sm text-gray-600">
-                                        {category.name}
-                                    </span>
+                                        </div>
+                                        <span className="flex-grow text-sm text-gray-700 dark:text-gray-300">
+                                            {category.name}
+                                        </span>
                                         <div className="flex space-x-1">
                                             {[1, 2, 3, 4, 5].map(value => (
                                                 <StarRating
@@ -743,46 +702,35 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                                 />
                                             ))}
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 ))}
-                                <AnimatePresence>
-                                    {showValidation && Object.keys(ratings).length < ratingCategories.length && (
-                                        <motion.p
-                                            initial={{opacity: 0, height: 0}}
-                                            animate={{opacity: 1, height: 'auto'}}
-                                            exit={{opacity: 0, height: 0}}
-                                            transition={{duration: 0.2}}
-                                            className="text-sm text-red-500 mt-2"
-                                        >
-                                            Пожалуйста, оцените все категории
-                                        </motion.p>
-                                    )}
-                                </AnimatePresence>
+                                {showValidation && Object.keys(ratings).length < ratingCategories.length && (
+                                    <p className="text-xs text-red-500 dark:text-red-400">
+                                        Пожалуйста, оцените все категории
+                                    </p>
+                                )}
                             </div>
 
-                            {/* Add photo section - Enhanced with preview and functionality */}
-                            <motion.div
-                                initial={{opacity: 0}}
-                                animate={{opacity: 1}}
-                                transition={{duration: 0.3, delay: 0.3}}
-                                className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300"
+                            {/* Add photo section */}
+                            <div
+                                className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700 border border-dashed border-gray-200 dark:border-gray-600"
                             >
                                 <div className="flex items-center">
-                                    <Camera className="w-5 h-5 text-gray-500 mr-3"/>
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-700">Добавьте фото блюд</p>
-                                        <p className="text-xs text-gray-500">Необязательно, но поможет другим пользователям</p>
+                                    <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-600 mr-3">
+                                        <Camera className="w-4 h-4 text-gray-500 dark:text-gray-300" />
                                     </div>
-                                    <motion.button
-                                        whileHover={{scale: 1.05}}
-                                        whileTap={{scale: 0.95}}
-                                        className="ml-auto bg-gray-700 text-white text-xs px-3 py-1.5 rounded-md flex items-center"
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Добавьте фото блюд</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Необязательно, но поможет другим пользователям</p>
+                                    </div>
+                                    <button
+                                        className="ml-auto bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-white text-xs px-3 py-1.5 rounded-md flex items-center transition-colors"
                                         onClick={() => fileInputRef.current?.click()}
                                         type="button"
                                     >
-                                        <ImagePlus className="w-3.5 h-3.5 mr-1.5" />
+                                        <ImagePlus className="w-3 h-3 mr-1.5" />
                                         Загрузить
-                                    </motion.button>
+                                    </button>
                                     <input 
                                         type="file" 
                                         ref={fileInputRef}
@@ -797,77 +745,61 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 
                                 {/* Photo previews */}
                                 {photos.length > 0 && (
-                                    <motion.div 
+                                    <div 
                                         className="grid grid-cols-5 gap-2 mt-3"
-                                        initial={{opacity: 0, y: 10}}
-                                        animate={{opacity: 1, y: 0}}
-                                        transition={{duration: 0.3}}
                                     >
                                         {photos.map((photo) => (
-                                            <motion.div 
+                                            <div 
                                                 key={photo.id}
                                                 className="relative group rounded-lg overflow-hidden aspect-square"
-                                                initial={{opacity: 0, scale: 0.8}}
-                                                animate={{opacity: 1, scale: 1}}
-                                                exit={{opacity: 0, scale: 0.8}}
-                                                whileHover={{scale: 1.03}}
-                                                layout
                                             >
                                                 <img 
                                                     src={photo.preview} 
                                                     alt="Preview" 
                                                     className="w-full h-full object-cover"
                                                 />
-                                                <motion.button
+                                                <div className="absolute inset-0 bg-black bg-opacity-20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                <button
                                                     type="button"
-                                                    className="absolute top-1 right-1 p-1 bg-gray-800 bg-opacity-70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute top-1 right-1 p-1.5 bg-black bg-opacity-60 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
                                                     onClick={() => handleRemovePhoto(photo.id)}
-                                                    whileHover={{scale: 1.1}}
-                                                    whileTap={{scale: 0.9}}
                                                 >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </motion.button>
-                                            </motion.div>
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
                                         ))}
                                         {/* Placeholder for remaining slots */}
                                         {Array.from({length: Math.min(5 - photos.length, 2)}).map((_, index) => (
-                                            <motion.div 
+                                            <div 
                                                 key={`placeholder-${index}`}
-                                                className="border border-dashed border-gray-300 rounded-lg aspect-square flex items-center justify-center cursor-pointer"
-                                                initial={{opacity: 0, scale: 0.8}}
-                                                animate={{opacity: 1, scale: 1}}
-                                                transition={{delay: 0.1 * index}}
-                                                whileHover={{scale: 1.03}}
+                                                className="border border-dashed border-gray-300 dark:border-gray-500 rounded-lg aspect-square flex items-center justify-center cursor-pointer bg-gray-50 dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors"
                                                 onClick={() => fileInputRef.current?.click()}
                                             >
-                                                <ImagePlus className="w-6 h-6 text-gray-400" />
-                                            </motion.div>
+                                                <ImagePlus className="w-5 h-5 text-gray-400 dark:text-gray-400" />
+                                            </div>
                                         ))}
-                                    </motion.div>
+                                    </div>
                                 )}
                                 {photos.length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-2">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                         {photos.length}/5 фотографий добавлено
                                     </p>
                                 )}
-                            </motion.div>
+                            </div>
 
-                            <motion.div
-                                initial={{opacity: 0}}
-                                animate={{opacity: 1}}
-                                transition={{duration: 0.3, delay: 0.4}}
-                            >
-                                <label className="block text-sm font-medium text-gray-600 mb-2">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                     Ваш отзыв
                                 </label>
                                 <div className="relative w-full">
                                 <textarea
                                     className="
                                         w-full p-3 border rounded-lg
-                                        bg-gray-100 border-gray-200
+                                        bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600
                                         min-h-[120px] resize-none
-                                        text-sm text-gray-700
-                                        focus:ring-1 focus:ring-gray-300 focus:border-gray-300
+                                        text-sm text-gray-700 dark:text-gray-200
+                                        focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-500 
+                                        focus:border-gray-300 dark:focus:border-gray-500
                                         transition-all
                                         pr-10
                                     "
@@ -877,144 +809,124 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                     maxLength={250}
                                     required    
                                 />
-                                    <motion.span
-                                        animate={{
-                                            color: feedback.length > 200 ? "#ef4444" : "#6b7280"
-                                        }}
-                                        className="absolute bottom-2 right-3 text-xs text-gray-500"
+                                    <span
+                                        className={`absolute bottom-2 right-3 text-xs ${
+                                            feedback.length > 200 
+                                                ? "text-red-500 dark:text-red-400" 
+                                                : "text-gray-500 dark:text-gray-400"
+                                        }`}
                                     >
                                         {feedback.length}/250
-                                    </motion.span>
+                                    </span>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     Подробные отзывы помогают другим пользователям сделать правильный выбор
                                 </p>
-                            </motion.div>
+                            </div>
 
-                            <motion.button
-                                whileHover={{scale: 1.03}}
-                                whileTap={{scale: 0.97}}
+                            <button
                                 type="submit"
                                 disabled={submitting}
                                 className={`
-                                w-full bg-gray-700 text-white
-                                px-5 py-2.5 rounded-lg
-                                text-sm font-medium
-                                hover:bg-gray-800
-                                transition-colors
-                                ${submitting ? 'opacity-50 cursor-not-allowed' : ''}
-                            `}
+                                w-full py-3 px-4 rounded-lg text-white font-medium
+                                ${submitting 
+                                    ? 'bg-blue-400 dark:bg-blue-500 cursor-not-allowed' 
+                                    : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'}
+                                transition-colors shadow-sm
+                                `}
                             >
-                                {submitting ? (
-                                    <span className="flex items-center justify-center">
-                                    <motion.span
-                                        animate={{rotate: 360}}
-                                        transition={{
-                                            repeat: Infinity,
-                                            duration: 1,
-                                            ease: "linear"
-                                        }}
-                                        className="inline-block mr-2"
-                                    >
-                                        ⟳
-                                    </motion.span>
-                                    Отправляется...
-                                </span>
-                                ) : 'Отправить отзыв'}
-                            </motion.button>
+                                {submitting ? 'Отправка...' : 'Отправить отзыв'}
+                            </button>
                         </form>
                     </div>
                 )}
 
                 {/* Reviews */}
                 {!showReviewForm && (
-                    <div className="mt-6">
-                        <h3 className="text-lg font-medium text-gray-800 mb-4">Отзывы</h3>
+                    <div className="px-5 pb-5 mb-5 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center justify-between mt-5 mb-4">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Отзывы</h3>
+                            {restaurantReviews.length > 0 && (
+                                <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
+                                    {restaurantReviews.length}
+                                </span>
+                            )}
+                        </div>
                         
                         {loadingReviews ? (
-                            <div className="py-4 text-center text-gray-500">
-                                Загрузка отзывов...
+                            <div className="py-8 text-center">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-300 dark:border-gray-600 border-t-gray-600 dark:border-t-gray-300"></div>
+                                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Загрузка отзывов...</p>
                             </div>
                         ) : restaurantReviews.length > 0 ? (
                             <div className="space-y-4">
                                 {restaurantReviews.map((review) => (
-                                    <motion.div
+                                    <div
                                         key={review.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="p-4 border border-gray-200 rounded-md"
+                                        className="p-4 border border-gray-100 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm"
                                     >
-                                        <div className="flex justify-between mb-2">
+                                        <div className="flex justify-between mb-3">
                                             <div className="flex items-center">
-                                                <div className="flex items-center justify-center bg-gray-200 rounded-full w-8 h-8 mr-2">
-                                                    <User className="w-4 h-4 text-gray-600" />
+                                                <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-full w-8 h-8 mr-2">
+                                                    <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                                                 </div>
                                                 <div>
-                                                    <div className="font-medium text-sm">{review.user_name}</div>
-                                                    <div className="text-xs text-gray-500">{new Date(review.created_at || review.date).toLocaleDateString()}</div>
+                                                    <div className="font-medium text-sm text-gray-800 dark:text-gray-200">{review.user_name}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">{new Date(review.created_at || review.date).toLocaleDateString()}</div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center">
                                                 {[...Array(5)].map((_, i) => (
                                                     <Star
                                                         key={i}
-                                                        className={`w-4 h-4 ${i < Math.round(review.rating) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
+                                                        className={`w-3.5 h-3.5 ${i < Math.round(review.rating) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300 dark:text-gray-600'}`}
                                                     />
                                                 ))}
-                                                <span className="ml-2 text-sm text-gray-600">{review.rating}.0</span>
+                                                <span className="ml-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">{review.rating}.0</span>
                                             </div>
                                         </div>
 
-                                        <p className="text-gray-700 text-sm">{review.text || review.comment}</p>
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{review.text || review.comment}</p>
 
                                         {/* Review photos */}
                                         {review.photos && review.photos.length > 0 && (
-                                            <motion.div 
-                                                className="mt-3 flex gap-2 overflow-x-auto pb-2 snap-x"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ delay: 0.2 }}
-                                            >
+                                            <div className="mt-3 flex gap-2 overflow-x-auto pb-2 snap-x">
                                                 {review.photos.map((photo, index) => (
-                                                    <motion.div 
+                                                    <div 
                                                         key={index}
-                                                        className="flex-shrink-0 w-20 h-20 rounded-md overflow-hidden snap-start"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.98 }}
+                                                        className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden snap-start cursor-pointer hover:opacity-90 transition-opacity"
                                                         onClick={() => {
-                                                            // Open full-sized image in new tab or modal
+                                                            // Open full-sized image in new tab
                                                             window.open(photo.url || photo, '_blank');
                                                         }}
                                                     >
                                                         <img 
                                                             src={photo.url || photo} 
                                                             alt={`Фото блюда ${index + 1}`}
-                                                            className="w-full h-full object-cover cursor-pointer"
+                                                            className="w-full h-full object-cover"
                                                         />
-                                                    </motion.div>
+                                                    </div>
                                                 ))}
-                                            </motion.div>
+                                            </div>
                                         )}
 
                                         {/* Review feedback */}
-                                        <div className="mt-3 flex items-center justify-between">
-                                            <div className="text-xs text-gray-500">
-                                                Этот отзыв был полезен?
+                                        <div className="mt-3 flex items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-3">
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                Был ли отзыв полезен?
                                             </div>
                                             <div className="flex space-x-2">
-                                                <button
-                                                    className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center transition-colors">
+                                                <button className="inline-flex items-center text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors">
                                                     <ThumbsUp className="w-3 h-3 mr-1"/>
-                                                    {review.likes || 0}
+                                                    <span>{review.likes || 0}</span>
                                                 </button>
-                                                <button
-                                                    className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center transition-colors">
+                                                <button className="inline-flex items-center text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors">
                                                     <ThumbsDown className="w-3 h-3 mr-1"/>
-                                                    {review.dislikes || 0}
+                                                    <span>{review.dislikes || 0}</span>
                                                 </button>
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 ))}
                             </div>
                         ) : (
@@ -1022,22 +934,14 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3 }}
-                                className="p-6 bg-gray-50 text-center rounded-lg border border-gray-100 shadow-sm"
+                                className="p-6 bg-gray-50 dark:bg-gray-700 text-center rounded-lg border border-gray-100 dark:border-gray-600 shadow-sm"
                             >
-                                <motion.div 
-                                    className="inline-block mb-3"
-                                    initial={{ scale: 0.8 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ 
-                                        type: "spring",
-                                        stiffness: 400,
-                                        damping: 20
-                                    }}
-                                >
-                                    <Star className="w-10 h-10 text-gray-300 mx-auto" />
-                                </motion.div>
-                                <h4 className="text-base font-medium text-gray-700 mb-2">Ещё нет отзывов</h4>
-                                <p className="text-sm text-gray-500 mb-4">Делитесь своими впечатлениями и помогайте другим сделать выбор</p>
+                                <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-600 inline-flex mx-auto mb-3">
+                                    <Star className="w-5 h-5 text-gray-400 dark:text-gray-300" />
+                                </div>
+                                <h4 className="text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Ещё нет отзывов</h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Будьте первым, кто поделится своими впечатлениями</p>
+                            
                             </motion.div>
                         )}
                     </div>
@@ -1194,46 +1098,69 @@ const ReviewForm = ({ user, onReviewSubmitted }) => {
     // Show empty state if no restaurants
     if (restaurants.length === 0) {
         return (
-            <div className="w-full max-w-4xl mx-auto p-4 text-center">
-                <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">Нет доступных ресторанов</h3>
-                    <p className="text-gray-500 mb-2">В данный момент список ресторанов пуст</p>
-                </div>
+            <div
+                className="flex flex-col items-center justify-center py-10 px-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md"
+            >
+                <Award className="w-10 h-10 mb-4 text-gray-400 dark:text-gray-500" />
+                <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-200">Нет доступных ресторанов</h3>
+                <p className="text-sm text-center max-w-md text-gray-500 dark:text-gray-400">
+                    В данный момент список ресторанов пуст
+                </p>
             </div>
         );
     }
 
     return (
-        <>
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="w-full max-w-4xl mx-auto"
-            >
-                <div className="p-4 bg-white shadow-md rounded-lg border border-gray-200 mb-6">
-                    {/* Изменено: сделал сетку адаптивной */}
-                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {restaurants.map((restaurant, index) => (
-                            <motion.div
-                                key={restaurant.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                            >
-                                <RestaurantButton
-                                    restaurant={restaurant}
-                                    isSelected={selectedRestaurant?.id === restaurant.id}
-                                    onSelect={handleRestaurantSelect}
-                                />
-                            </motion.div>
-                        ))}
+        <div
+            className="w-full overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg shadow-md bg-white dark:bg-gray-800"
+        >
+            <div className="p-4">
+                {!user ? (
+                    <div className="text-center py-10">
+                        <User className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400 mb-4">Войдите в систему, чтобы оставить отзыв</p>
+                        <button
+                            className="py-2 px-6 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg"
+                        >
+                            Войти
+                        </button>
                     </div>
-                </div>
-            </motion.div>
+                ) : (
+                    <>
+                        {/* Restaurant Selection Grid */}
+                        {restaurants.length > 0 ? (
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-3">Выберите ресторан</h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                        {restaurants.map((restaurant) => (
+                                            <RestaurantButton
+                                                key={restaurant.id || restaurant.name}
+                                                restaurant={restaurant}
+                                                isSelected={selectedRestaurant && selectedRestaurant.name === restaurant.name}
+                                                onSelect={handleRestaurantSelect}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                {!selectedRestaurant && (
+                                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                                        Выберите ресторан для написания отзыва
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <p className="text-gray-500 dark:text-gray-400">Загрузка ресторанов...</p>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
 
             <AnimatePresence>
-                {showDetail && selectedRestaurant && (
+                {selectedRestaurant && (
                     <RestaurantDetailModal
                         restaurant={selectedRestaurant}
                         onClose={handleCloseDetail}
@@ -1242,7 +1169,7 @@ const ReviewForm = ({ user, onReviewSubmitted }) => {
                     />
                 )}
             </AnimatePresence>
-        </>
+        </div>
     );
 };
 

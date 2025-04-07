@@ -5,9 +5,7 @@ import { ToastProvider } from './common/context/ToastContext';
 import { AuthProvider, useAuth } from './common/context/AuthContext';
 import { ThemeProvider } from './common/context/ThemeContext';
 import { initCopyProtection } from './utils/copyProtection';
-import BlockedAccountPage from './components/BlockedAccountPage';
 import { Toaster } from 'react-hot-toast';
-import BackgroundParticles from './components/BackgroundParticles';
 
 /**
  * Внутренний компонент приложения, который проверяет блокировку

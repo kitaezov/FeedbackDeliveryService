@@ -112,4 +112,21 @@ router.delete('/avatar', authenticateToken, (req, res) => {
     }
 });
 
+/**
+ * @route PUT /api/profile
+ * @desc Update user profile information
+ * @access Private
+ */
+router.put('/', authenticateToken, (req, res) => {
+    try {
+        return authController.updateProfile(req, res);
+    } catch (error) {
+        console.error('Error in profile update route:', error);
+        res.status(500).json({
+            message: 'Ошибка обновления профиля',
+            details: 'Произошла внутренняя ошибка сервера'
+        });
+    }
+});
+
 module.exports = router; 

@@ -13,10 +13,10 @@ import { TopRestaurants } from '../../restaurants/components';
  */
 export const HomePage = () => {
     return (
-        <Container size="full" className="px-4 sm:px-6 md:px-8 w-full">
+        <Container size="full" className="px-4 sm:px-6 md:px-8 w-full max-w-full">
             {/* Главный баннер */}
-            <section className="py-12 md:py-20 text-center">
-                <div className="max-w-6xl mx-auto">
+            <section className="py-12 md:py-20 text-center w-full">
+                <div className="w-full max-w-full mx-auto">
                     <Heading level={1} className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6">
                         Рейтинг ресторанов от реальных посетителей
                     </Heading>
@@ -43,13 +43,13 @@ export const HomePage = () => {
             </section>
             
             {/* Секция с популярными ресторанами */}
-            <div className="mb-12 w-full">
+            <div className="mb-12 w-full max-w-full">
                 <TopRestaurants />
             </div>
             
             {/* Секция с преимуществами сервиса */}
-            <section className="py-12 mt-12 w-full">
-                <div className="mb-8 text-center">
+            <section className="py-12 mt-12 w-full max-w-full">
+                <div className="mb-8 text-center w-full">
                     <Heading level={2} className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
                         Почему стоит использовать наш сервис
                     </Heading>
@@ -58,7 +58,7 @@ export const HomePage = () => {
                     </p>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
                     <Card className="p-6 text-center">
                         <div className="flex justify-center mb-4">
                             <svg className="w-12 h-12 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -107,8 +107,8 @@ export const HomePage = () => {
             </section>
             
             {/* Призыв к действию */}
-            <section className="py-12 mt-8 bg-primary-50 dark:bg-primary-900 rounded-lg">
-                <div className="text-center">
+            <section className="py-12 mt-8 bg-primary-50 dark:bg-primary-900 rounded-lg w-full max-w-full">
+                <div className="text-center w-full">
                     <Heading level={2} className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
                         Готовы поделиться своим мнением?
                     </Heading>

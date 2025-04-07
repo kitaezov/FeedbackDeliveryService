@@ -5,7 +5,26 @@ import { MessageSquare, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotification } from '../../components/NotificationContext';
 import api from '../../utils/api';
-import { toast } from 'react-hot-toast';
+
+// Animation variants for buttons and elements
+const buttonVariants = {
+    initial: { opacity: 0, y: 5 },
+    animate: { opacity: 1, y: 0 },
+    hover: {
+        scale: 1.05,
+        transition: { 
+            duration: 0.2,
+            type: "spring", 
+            stiffness: 400 
+        }
+    },
+    tap: {
+        scale: 0.95,
+        transition: { 
+            duration: 0.1 
+        }
+    }
+};
 
 const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewReview, isDarkMode }) => {
     const [reviews, setReviews] = useState(initialReviews);
@@ -96,47 +115,31 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
 
     const handleLikeReview = async (reviewId) => {
         if (!user || !user.token) {
-            toast.error('Вы должны войти, чтобы оценить отзыв.');
+            if (notifications) {
+                notifications.notifyInfo('Войдите, чтобы оценить отзыв');
+            } else {
+                alert('Войдите, чтобы оценить отзыв');
+            }
             return;
         }
 
         try {
-            const response = await api.post('/reviews/like', {
+            await api.post('/reviews/like', {
                 reviewId
             });
-
-            if (response.status === 200) {
-                const updatedReviews = reviews.map((review) => {
-                    if (review.id === reviewId) {
-                        return { ...review, likes: (review.likes || 0) + 1 };
-                    }
-                    return review;
-                });
-                
-                setReviews(updatedReviews);
-                toast.success('Отзыв оценен!');
-            }
-        } catch (error) {
-            console.error('Error liking review:', error);
             
-            if (error.response) {
-                if (error.response.status === 400) {
-                    if (error.response.data.message === 'You cannot like your own review') {
-                        toast.error('Вы не можете оценить свой собственный отзыв.');
-                    } else if (error.response.data.message === 'You have already liked this review') {
-                        toast.error('Вы уже оценили этот отзыв.');
-                    } else {
-                        toast.error(error.response.data.message || 'Ошибка при оценке отзыва.');
-                    }
-                } else if (error.response.status === 404) {
-                    toast.error('Отзыв не найден.');
-                } else if (error.response.status === 401) {
-                    toast.error('Необходимо авторизоваться для оценки отзывов.');
-                } else {
-                    toast.error('Произошла ошибка при оценке отзыва.');
-                }
+            // Обновляем лайки локально
+            setReviews(prevReviews => prevReviews.map(review => 
+                review.id === reviewId 
+                    ? { ...review, likes: (review.likes || 0) + 1 } 
+                    : review
+            ));
+        } catch (error) {
+            console.error('Ошибка при оценке отзыва:', error);
+            if (notifications) {
+                
             } else {
-                toast.error('Не удалось подключиться к серверу. Попробуйте позже.');
+               
             }
         }
     };
@@ -161,146 +164,153 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
     };
 
     return (
-        <Card className="w-full overflow-hidden review-section">
-            <CardHeader className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl font-semibold">
-                        {sortMode === 'recent' ? 'Последние отзывы' : 'Популярные отзывы'}
-                    </CardTitle>
-                    <div className="flex items-center space-x-2">
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => {
-                                setSortMode('recent');
-                                setCurrentPage(1);
-                            }}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                sortMode === 'recent'
-                                    ? themeClasses.activeButton
-                                    : themeClasses.button
-                            }`}
-                        >
-                            Новые
-                        </motion.button>
-
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => {
-                                setSortMode('popular');
-                                setCurrentPage(1);
-                            }}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                sortMode === 'popular'
-                                    ? themeClasses.activeButton
-                                    : themeClasses.button
-                            }`}
-                        >
-                            Популярные
-                        </motion.button>
-
-                        {onRefresh && (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
+            <Card className="w-full overflow-hidden review-section border border-gray-200 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30 rounded-2xl">
+                <CardContent className="p-0">
+                    <div className="relative p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <CardTitle className="text-xl font-semibold">
+                            {sortMode === 'recent' ? 'Последние отзывы' : 'Популярные отзывы'}
+                        </CardTitle>
+                        
+                        <div className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center space-x-2">
                             <motion.button
-                                whileHover={{ rotate: 20 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={handleRefresh}
-                                className={`p-2 rounded-full ${themeClasses.button}`}
+                                variants={buttonVariants}
+                                whileHover="hover"
+                                whileTap="tap"
+                                onClick={() => {
+                                    setSortMode('recent');
+                                    setCurrentPage(1);
+                                }}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm hover:shadow-md ${
+                                    sortMode === 'recent'
+                                        ? themeClasses.activeButton
+                                        : themeClasses.button
+                                }`}
                             >
-                                <RefreshCw className={`w-5 h-5 ${isRotating ? 'animate-spin' : ''}`} />
+                                Новые
                             </motion.button>
-                        )}
-                    </div>
-                </div>
-            </CardHeader>
 
-            <CardContent className="p-4 md:p-6">
-                <AnimatePresence>
-                    {paginatedReviews.length === 0 ? (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            className={`flex flex-col items-center justify-center py-12 px-4 ${themeClasses.emptyState} rounded-lg`}
-                        >
-                            <MessageSquare className="w-12 h-12 mb-4 opacity-30" />
-                            <h3 className="text-lg font-medium mb-2">Нет отзывов</h3>
-                            <p className="text-sm text-center max-w-md">
-                                {sortMode === 'recent'
-                                    ? 'Станьте первым, кто оставит отзыв о ресторане!'
-                                    : 'Пока никто не оценил отзывы. Будьте первым!'}
-                            </p>
-                        </motion.div>
-                    ) : (
-                        <div className="grid gap-6 md:gap-8">
-                            <AnimatePresence initial={false}>
-                                {paginatedReviews.map((review) => (
-                                    <motion.div
-                                        key={review.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        <ReviewCard
-                                            review={review}
-                                            user={user}
-                                            isDarkMode={isDarkMode}
-                                            onLike={handleLikeReview}
-                                            onDelete={handleDeleteReview}
-                                        />
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
+                            <motion.button
+                                variants={buttonVariants}
+                                whileHover="hover"
+                                whileTap="tap"
+                                onClick={() => {
+                                    setSortMode('popular');
+                                    setCurrentPage(1);
+                                }}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm hover:shadow-md ${
+                                    sortMode === 'popular'
+                                        ? themeClasses.activeButton
+                                        : themeClasses.button
+                                }`}
+                            >
+                                Популярные
+                            </motion.button>
 
-                            {processedReviews.length > reviewsPerPage && (
-                                <div className="flex justify-center space-x-2 mt-6">
-                                    <motion.button
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                        disabled={currentPage === 1}
-                                        className={`px-3 py-1 rounded-md ${themeClasses.paginationButton} ${
-                                            currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
-                                        }`}
-                                    >
-                                        &larr;
-                                    </motion.button>
-
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNumber => (
-                                        <motion.button
-                                            key={pageNumber}
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={() => setCurrentPage(pageNumber)}
-                                            className={`px-3 py-1 rounded-md ${
-                                                currentPage === pageNumber
-                                                    ? themeClasses.activeButton
-                                                    : themeClasses.paginationButton
-                                            }`}
-                                        >
-                                            {pageNumber}
-                                        </motion.button>
-                                    ))}
-
-                                    <motion.button
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                        disabled={currentPage === totalPages}
-                                        className={`px-3 py-1 rounded-md ${themeClasses.paginationButton} ${
-                                            currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
-                                        }`}
-                                    >
-                                        &rarr;
-                                    </motion.button>
-                                </div>
+                            {onRefresh && (
+                                <motion.button
+                                    variants={buttonVariants}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                    onClick={handleRefresh}
+                                    className={`p-2 rounded-full shadow-sm hover:shadow-md ${themeClasses.button}`}
+                                >
+                                    <RefreshCw className={`w-5 h-5 ${isRotating ? 'animate-spin' : ''}`} />
+                                </motion.button>
                             )}
                         </div>
-                    )}
-                </AnimatePresence>
-            </CardContent>
-        </Card>
+                    </div>
+
+                    <div className="p-4 md:p-6">
+                        <AnimatePresence>
+                            {paginatedReviews.length === 0 ? (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 20 }}
+                                    className={`flex flex-col items-center justify-center py-12 px-4 ${themeClasses.emptyState} rounded-lg border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-300`}
+                                >
+                                    <MessageSquare className="w-12 h-12 mb-4 opacity-30" />
+                                    <h3 className="text-lg font-medium mb-2">Нет отзывов</h3>
+                                    <p className="text-sm text-center max-w-md">
+                                        {sortMode === 'recent'
+                                            ? 'Станьте первым, кто оставит отзыв о ресторане!'
+                                            : 'Пока никто не оценил отзывы. Будьте первым!'}
+                                    </p>
+                                </motion.div>
+                            ) : (
+                                <div className="grid gap-6 md:gap-8">
+                                    <AnimatePresence initial={false}>
+                                        {paginatedReviews.map((review) => (
+                                            <motion.div
+                                                key={review.id}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <ReviewCard
+                                                    review={review}
+                                                    user={user}
+                                                    isDarkMode={isDarkMode}
+                                                    onLike={handleLikeReview}
+                                                    onDelete={handleDeleteReview}
+                                                    className="shadow-md hover:shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-200 rounded-2xl"
+                                                />
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+
+                                    {processedReviews.length > reviewsPerPage && (
+                                        <div className="flex justify-center mt-8">
+                                            <div className="flex items-center space-x-2 shadow-md p-1.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                                                <motion.button
+                                                    variants={buttonVariants}
+                                                    whileHover="hover"
+                                                    whileTap="tap"
+                                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                                    disabled={currentPage === 1}
+                                                    className={`px-3 py-2 rounded-md border text-sm transition-all duration-200 ${
+                                                        currentPage === 1 
+                                                            ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500' 
+                                                            : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 shadow-sm hover:shadow-md'
+                                                    }`}
+                                                >
+                                                    Назад
+                                                </motion.button>
+                                                
+                                                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    {currentPage} из {totalPages}
+                                                </div>
+                                                
+                                                <motion.button
+                                                    variants={buttonVariants}
+                                                    whileHover="hover"
+                                                    whileTap="tap"
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                                    disabled={currentPage === totalPages}
+                                                    className={`px-3 py-2 rounded-md border text-sm transition-all duration-200 ${
+                                                        currentPage === totalPages 
+                                                            ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500' 
+                                                            : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 shadow-sm hover:shadow-md'
+                                                    }`}
+                                                >
+                                                    Вперед
+                                                </motion.button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </CardContent>
+            </Card>
+        </motion.div>
     );
 };
 

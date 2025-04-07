@@ -18,7 +18,48 @@ const getUserNotifications = async (req, res) => {
             [userId]
         );
         
-        res.json(notifications.rows);
+        // Преобразуем временные метки в удобочитаемый формат
+        const formattedNotifications = notifications.rows.map(notification => {
+            // Вычисляем относительное время
+            const createdTime = new Date(notification.created_at);
+            const now = new Date();
+            const diffMs = now - createdTime;
+            const diffSeconds = Math.floor(diffMs / 1000);
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            
+            let timeText;
+            if (diffSeconds < 60) {
+                timeText = `${diffSeconds} секунд назад`;
+                if (diffSeconds === 1) timeText = '1 секунду назад';
+            } else if (diffMinutes < 60) {
+                timeText = `${diffMinutes} минут назад`;
+                if (diffMinutes === 1) timeText = '1 минуту назад';
+                else if (diffMinutes < 5) timeText = `${diffMinutes} минуты назад`;
+            } else if (diffHours < 24) {
+                timeText = `${diffHours} часов назад`;
+                if (diffHours === 1) timeText = '1 час назад';
+                else if (diffHours < 5) timeText = `${diffHours} часа назад`;
+            } else {
+                timeText = `${diffDays} дней назад`;
+                if (diffDays === 1) timeText = '1 день назад';
+                else if (diffDays < 5) timeText = `${diffDays} дня назад`;
+            }
+            
+            return {
+                ...notification,
+                time: timeText
+            };
+        });
+        
+        // Считаем количество непрочитанных уведомлений
+        const unreadCount = notifications.rows.filter(note => !note.is_read).length;
+        
+        res.json({
+            notifications: formattedNotifications,
+            unreadCount
+        });
     } catch (err) {
         console.error('Ошибка при получении уведомлений:', err);
         res.status(500).json({ message: 'Ошибка при получении уведомлений' });
@@ -53,6 +94,54 @@ const createNotification = async (req, res) => {
     } catch (err) {
         console.error('Ошибка при создании уведомления:', err);
         res.status(500).json({ message: 'Ошибка при создании уведомления' });
+    }
+};
+
+/**
+ * Создать стандартное уведомление о новом отзыве
+ */
+const createReviewNotification = async (userId, restaurantName) => {
+    try {
+        await db.query(
+            'INSERT INTO notifications (user_id, message, type, is_read, created_at) VALUES (?, ?, ?, false, NOW())',
+            [userId, `Новый отзыв на ресторан ${restaurantName}`, 'info']
+        );
+        return true;
+    } catch (err) {
+        console.error('Ошибка при создании уведомления о новом отзыве:', err);
+        return false;
+    }
+};
+
+/**
+ * Создать стандартное уведомление об обновлении профиля
+ */
+const createProfileUpdateNotification = async (userId) => {
+    try {
+        await db.query(
+            'INSERT INTO notifications (user_id, message, type, is_read, created_at) VALUES (?, ?, ?, false, NOW())',
+            [userId, 'Обновление профиля', 'success']
+        );
+        return true;
+    } catch (err) {
+        console.error('Ошибка при создании уведомления об обновлении профиля:', err);
+        return false;
+    }
+};
+
+/**
+ * Создать стандартное уведомление с просьбой оценить доставку
+ */
+const createDeliveryRatingNotification = async (userId, restaurantName) => {
+    try {
+        await db.query(
+            'INSERT INTO notifications (user_id, message, type, is_read, created_at) VALUES (?, ?, ?, false, NOW())',
+            [userId, `Оцените доставку ресторана ${restaurantName}`, 'info']
+        );
+        return true;
+    } catch (err) {
+        console.error('Ошибка при создании уведомления об оценке доставки:', err);
+        return false;
     }
 };
 
@@ -132,9 +221,39 @@ const deleteNotification = async (req, res) => {
     }
 };
 
+/**
+ * Отправить уведомление с просьбой оценить доставку
+ */
+const sendDeliveryRatingRequest = async (req, res) => {
+    try {
+        const { restaurantName } = req.body;
+        const userId = req.user.id;
+        
+        if (!restaurantName) {
+            return res.status(400).json({ message: 'Название ресторана обязательно' });
+        }
+        
+        // Создаем уведомление для пользователя
+        const result = await createDeliveryRatingNotification(userId, restaurantName);
+        
+        if (!result) {
+            return res.status(500).json({ message: 'Не удалось создать уведомление' });
+        }
+        
+        res.status(201).json({ message: 'Уведомление успешно отправлено' });
+    } catch (err) {
+        console.error('Ошибка при отправке уведомления о доставке:', err);
+        res.status(500).json({ message: 'Ошибка сервера при отправке уведомления' });
+    }
+};
+
 module.exports = {
     getUserNotifications,
     createNotification,
     markAsRead,
-    deleteNotification
+    deleteNotification,
+    createReviewNotification,
+    createProfileUpdateNotification,
+    createDeliveryRatingNotification,
+    sendDeliveryRatingRequest
 }; 

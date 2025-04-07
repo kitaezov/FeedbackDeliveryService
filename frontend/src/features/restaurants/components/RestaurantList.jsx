@@ -45,11 +45,11 @@ export const RestaurantList = ({
     // Если нет ресторанов, показываем сообщение
     if (restaurants.length === 0) {
         return (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center shadow-md hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                     Рестораны не найдены
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
                     Попробуйте изменить параметры фильтрации или поиска
                 </p>
             </div>
@@ -57,11 +57,11 @@ export const RestaurantList = ({
     }
     
     return (
-        <div className="restaurant-section w-full">
+        <div className="restaurant-section w-full max-w-full">
             {/* Сетка ресторанов */}
-            <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-6 md:gap-8">
+            <div className="grid grid-cols-1 gap-6 md:gap-8 w-full max-w-full">
                 {restaurants.map(restaurant => (
-                    <div key={restaurant.id} className="h-full">
+                    <div key={restaurant.id} className="h-full w-full transform transition-transform hover:scale-[1.01]">
                         <RestaurantCard
                             id={restaurant.id}
                             name={restaurant.name}
@@ -77,7 +77,7 @@ export const RestaurantList = ({
             
             {/* Пагинация */}
             {metadata.totalPages > 1 && (
-                <div className="mt-10">
+                <div className="mt-10 w-full">
                     <Pagination
                         currentPage={metadata.currentPage}
                         totalPages={metadata.totalPages}

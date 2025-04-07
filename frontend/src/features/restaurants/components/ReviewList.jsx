@@ -120,7 +120,7 @@ export const ReviewList = ({
     
     // Сообщение, если нет отзывов
     const noReviewsMessage = !isLoading && reviews.length === 0 ? (
-        <div className="text-center py-10">
+        <div className="text-center py-10 bg-white dark:bg-gray-800 shadow-md hover:shadow-lg rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 w-full transition-all duration-300">
             <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
@@ -159,8 +159,8 @@ export const ReviewList = ({
     }
     
     return (
-        <div className="space-y-3 sm:space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4">
+        <div className="space-y-3 sm:space-y-4 w-full max-w-full">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 w-full">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200">
                     Отзывы {reviews.length > 0 ? `(${reviews.length})` : ''}
                 </h2>
@@ -176,19 +176,19 @@ export const ReviewList = ({
             </div>
 
             {isLoading ? (
-                <div className="py-8 flex justify-center">
+                <div className="py-8 flex justify-center w-full">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-700 dark:border-gray-300"></div>
                 </div>
             ) : reviews.length === 0 ? (
-                <div className="py-6 sm:py-8 text-center text-sm sm:text-base text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="py-6 sm:py-8 text-center text-sm sm:text-base text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg w-full">
                     {noReviewsMessage || 'Отзывов пока нет. Будьте первым, кто оставит отзыв!'}
                 </div>
             ) : (
-                <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-3 sm:space-y-4 w-full max-w-full">
                     {sortedReviews.map((review) => (
                         <div 
                             key={review.id} 
-                            className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+                            className="bg-white dark:bg-gray-800 shadow-md hover:shadow-lg rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 w-full transition-all duration-200"
                         >
                             <div className="p-3 sm:p-4 sm:pb-3 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
                                 <div className="flex items-center w-full sm:w-auto">

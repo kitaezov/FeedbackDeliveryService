@@ -5,6 +5,26 @@ import { Card, CardContent } from './Card';
 import { motion } from 'framer-motion';
 import { restaurantData } from '../features/restaurants/restaurantData';
 
+// Animation variants
+const buttonVariants = {
+    initial: { opacity: 0, y: 5 },
+    animate: { opacity: 1, y: 0 },
+    hover: {
+        scale: 1.05,
+        transition: { 
+            duration: 0.2,
+            type: "spring", 
+            stiffness: 400 
+        }
+    },
+    tap: {
+        scale: 0.95,
+        transition: { 
+            duration: 0.1 
+        }
+    }
+};
+
 const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDarkMode = false }) => {
     const [showDetails, setShowDetails] = useState(false);
     const [localLikes, setLocalLikes] = useState(review.likes || 0);
@@ -70,23 +90,27 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
     };
 
     return (
-        <div className="group relative w-full card-equal">
+        <motion.div 
+            className="group relative w-full"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -5 }}
+            transition={{ duration: 0.3 }}
+        >
             <Card
                 className={`overflow-hidden transition-all duration-300 w-full
                            ${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800 border-none'} 
-                           shadow-[0_4px_20px_rgba(0,0,0,0.05)]
-                           hover:shadow-[0_10px_30px_rgba(0,0,0,0.1)]
-                           rounded-2xl
-                           card-body-fill`}
+                           shadow-md hover:shadow-xl
+                           rounded-2xl border border-gray-200 dark:border-gray-700`}
             >
-                <CardContent className="card-content">
+                <CardContent className="p-6">
                     {/* Профиль и базовая информация */}
                     <div className="flex flex-wrap md:flex-nowrap items-center mb-6 gap-4">
                         <div className="relative">
                             <img
                                 src={review.avatar || restaurantData[1]?.logo}
                                 alt={review.user_name || review.userName || 'Пользователь'}
-                                className="avatar-md rounded-full object-cover
+                                className="w-14 h-14 rounded-full object-cover
                                            ring-2 ring-offset-2 ring-blue-50
                                            transition-transform group-hover:scale-105"
                                 onError={(e) => {
@@ -150,68 +174,83 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                             {isCurrentUserReview && (
                                 <motion.button
                                     onClick={handleDelete}
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
+                                    variants={buttonVariants}
+                                    whileHover="hover"
+                                    whileTap="tap"
                                     disabled={isDeleting}
-                                    className={`transition-all ${
-                                        isDeleting ? 'opacity-50' : 'text-red-500 hover:text-red-600'
-                                    }`}
+                                    className={`p-1.5 rounded-full ${
+                                        isDeleting 
+                                            ? 'opacity-50' 
+                                            : 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100'
+                                    } transition-all shadow-sm hover:shadow`}
                                     title="Удалить отзыв"
                                 >
-                                    <Trash2 className="icon-md" />
+                                    <Trash2 className="w-4 h-4" />
                                 </motion.button>
                             )}
-                            <button
+                            <motion.button
                                 onClick={handleLike}
+                                variants={buttonVariants}
+                                whileHover="hover"
+                                whileTap="tap"
                                 disabled={isCurrentUserReview || !user || isLiked || isLiking}
-                                className={`flex items-center transition-all ${
+                                className={`flex items-center transition-all px-3 py-1.5 rounded-full ${
                                     isLiked
-                                        ? 'text-red-500'
+                                        ? 'text-red-500 bg-red-50'
                                         : isCurrentUserReview 
                                           ? 'text-gray-300 cursor-not-allowed'
                                           : isDarkMode 
-                                            ? 'text-gray-400 hover:text-red-400' 
-                                            : 'text-gray-400 hover:text-red-500'
+                                            ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/20' 
+                                            : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
                                 }`}
                             >
                                 <Heart
-                                    className={`icon-md mr-2 ${isLiking ? 'animate-pulse' : ''}`}
+                                    className={`w-4 h-4 mr-2 ${isLiking ? 'animate-pulse' : ''}`}
                                     fill={isLiked ? 'currentColor' : 'none'}
                                     strokeWidth={1.5}
                                 />
                                 <span className="font-medium">{localLikes}</span>
-                            </button>
+                            </motion.button>
                         </div>
 
-                        <button
+                        <motion.button
                             onClick={() => setShowDetails(!showDetails)}
-                            className={`flex items-center transition-all text-sm font-medium
-                                      ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-600'}`}
+                            variants={buttonVariants}
+                            whileHover="hover"
+                            whileTap="tap"
+                            className={`flex items-center transition-all text-sm font-medium px-3 py-1.5 rounded-lg
+                                      ${isDarkMode ? 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/20' : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50'}`}
                         >
                             {showDetails ? (
                                 <>
                                     <span>Свернуть детали</span>
-                                    <ChevronUp className="icon-sm ml-1" />
+                                    <ChevronUp className="w-4 h-4 ml-1" />
                                 </>
                             ) : (
                                 <>
                                     <span>Показать детали</span>
-                                    <ChevronDown className="icon-sm ml-1" />
+                                    <ChevronDown className="w-4 h-4 ml-1" />
                                 </>
                             )}
-                        </button>
+                        </motion.button>
                     </div>
 
                     {/* Детальные оценки */}
                     {showDetails && (
-                        <div className={`mt-6 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-                            
+                        <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className={`mt-6 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}
+                        >
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {Object.entries(review.ratings || {}).filter(([_, rating]) => rating > 0).map(([category, rating]) => (
-                                    <div
+                                    <motion.div
                                         key={category}
+                                        whileHover={{ y: -2 }}
                                         className={`flex justify-between items-center
-                                                 rounded-lg p-3
+                                                 rounded-xl p-3 shadow-sm hover:shadow transition-all
                                                  ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}
                                     >
                                         <span className={`text-sm mr-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -231,14 +270,14 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                                                 </span>
                                             ))}
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
-                        </div>
+                        </motion.div>
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </motion.div>
     );
 };
 

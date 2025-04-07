@@ -74,16 +74,16 @@ export const Pagination = ({
     
     return (
         <nav className={`flex justify-center mt-6 ${className}`}>
-            <ul className="flex items-center space-x-1">
+            <ul className="flex items-center space-x-2 shadow-sm p-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
                 {/* Кнопка "Предыдущая" */}
                 <li>
                     <button
                         onClick={() => onPageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className={`px-3 py-1 rounded-md border text-sm 
+                        className={`px-3 py-2 rounded-md border text-sm transition-all duration-200
                             ${currentPage === 1 
                                 ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'}`}
                         aria-label="Previous Page"
                     >
                         <svg 
@@ -104,7 +104,7 @@ export const Pagination = ({
                     if (page === 'ellipsis-start' || page === 'ellipsis-end') {
                         return (
                             <li key={page}>
-                                <span className="px-3 py-1 text-gray-500 dark:text-gray-400">
+                                <span className="px-3 py-2 text-gray-500 dark:text-gray-400">
                                     ...
                                 </span>
                             </li>
@@ -116,10 +116,10 @@ export const Pagination = ({
                         <li key={index}>
                             <button
                                 onClick={() => onPageChange(page)}
-                                className={`px-3 py-1 rounded-md border text-sm 
+                                className={`px-3 py-2 rounded-md border text-sm transition-all duration-200
                                     ${currentPage === page 
-                                        ? 'bg-primary-600 border-primary-600 text-white dark:bg-primary-700 dark:border-primary-700' 
-                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                                        ? 'bg-blue-600 border-blue-600 text-white shadow-md dark:bg-blue-700 dark:border-blue-700' 
+                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'}`}
                                 aria-current={currentPage === page ? 'page' : undefined}
                             >
                                 {page}
@@ -133,10 +133,10 @@ export const Pagination = ({
                     <button
                         onClick={() => onPageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className={`px-3 py-1 rounded-md border text-sm 
+                        className={`px-3 py-2 rounded-md border text-sm transition-all duration-200
                             ${currentPage === totalPages 
                                 ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'}`}
                         aria-label="Next Page"
                     >
                         <svg 

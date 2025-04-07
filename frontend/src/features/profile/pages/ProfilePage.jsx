@@ -408,7 +408,7 @@ const ProfilePage = () => {
             const formData = new FormData();
             formData.append('avatar', file);
             
-            const response = await api.post('/api/profile/avatar', formData, {
+            const response = await api.post('/profile/avatar', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
@@ -437,7 +437,7 @@ const ProfilePage = () => {
             console.error('Error uploading avatar:', error);
             setNotification({
                 type: 'error',
-                message: 'Не удалось загрузить аватар: ' + (error.response?.data?.message || error.message || 'неизвестная ошибка')
+                message: 'Не удалось загрузить аватар'
             });
         } finally {
             setIsUploading(false);
@@ -447,14 +447,14 @@ const ProfilePage = () => {
     // Обработчик удаления аватара
     const handleDeleteAvatar = async () => {
         try {
-            const response = await api.delete('/api/profile/avatar');
+            const response = await api.delete('/profile/avatar');
             
             if (response.status === 200) {
                 setProfileData(prev => ({
                     ...prev,
                     avatarUrl: null
                 }));
-                
+        
                 // Обновляем аватар в контексте пользователя
                 if (updateUser) {
                     updateUser({
@@ -462,19 +462,19 @@ const ProfilePage = () => {
                         avatar: null
                     });
                 }
-                
+        
                 setNotification({
                     type: 'success',
                     message: 'Аватар успешно удален'
                 });
-                
+        
                 setShowDeleteConfirm(false);
             }
         } catch (error) {
             console.error('Error deleting avatar:', error);
             setNotification({
                 type: 'error',
-                message: 'Не удалось удалить аватар: ' + (error.response?.data?.message || error.message || 'неизвестная ошибка')
+                message: 'Не удалось удалить аватар'
             });
         }
     };
@@ -709,7 +709,7 @@ const ProfilePage = () => {
                     </div>
                     
                     <AnimatePresence>
-                        {isChangingPassword ? (
+                        {isChangingPassword && (
                             <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
@@ -772,54 +772,10 @@ const ProfilePage = () => {
                                     </motion.button>
                                 </div>
                             </motion.div>
-                        ) : (
-                            <motion.div 
-                                className="space-y-4"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                            >
-                                {/* User stats */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                                    <motion.div 
-                                        className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm flex flex-col items-center justify-center transition-colors duration-300"
-                                        whileHover={{ y: -5 }}
-                                        transition={{ type: "spring", stiffness: 300 }}
-                                    >
-                                        <span className="text-3xl font-bold text-gray-800 dark:text-gray-100">10</span>
-                                        <span className="text-sm text-gray-500 dark:text-gray-300">Отзывов</span>
-                                    </motion.div>
-                                    
-                                    <motion.div 
-                                        className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm flex flex-col items-center justify-center transition-colors duration-300"
-                                        whileHover={{ y: -5 }}
-                                        transition={{ type: "spring", stiffness: 300 }}
-                                    >
-                                        <span className="text-3xl font-bold text-gray-800 dark:text-gray-100">5.0</span>
-                                        <span className="text-sm text-gray-500 dark:text-gray-300">Средняя оценка</span>
-                                    </motion.div>
-                                    
-                                    <motion.div 
-                                        className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm flex flex-col items-center justify-center transition-colors duration-300"
-                                        whileHover={{ y: -5 }}
-                                        transition={{ type: "spring", stiffness: 300 }}
-                                    >
-                                        <span className="text-3xl font-bold text-gray-800 dark:text-gray-100">0</span>
-                                        <span className="text-sm text-gray-500 dark:text-gray-300">Лайков получено</span>
-                                    </motion.div>
-                                </div>
-                                
-                                {/* Reviews list */}
-                                <div className="mt-8">
-                                    <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Мои отзывы</h3>
-                                    
-                                    {/* Add reviews list here */}
-                                </div>
-                            </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
-            </div>
+                    </div>
             
             {/* Модальное окно подтверждения удаления аватара */}
             <AnimatePresence>

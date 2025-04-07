@@ -27,12 +27,12 @@ const NotFoundPage = ({ isDarkMode }) => {
             }}
             style={{ minHeight: '70vh' }}
         >
-            <div className={`w-full max-w-lg border rounded-lg shadow-lg ${
+            <div className={`w-full max-w-lg border rounded-xl shadow-xl ${
                 isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800'
             }`}>
-                <div className="border-b p-6 flex flex-col items-center">
+                <div className="border-b p-8 flex flex-col items-center">
                     <motion.div
-                        className={`mb-4 p-4 rounded-full bg-red-100 dark:bg-red-900/20`}
+                        className={`mb-6 p-5 rounded-full bg-red-100 dark:bg-red-900/20 shadow-md`}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ 
@@ -42,10 +42,10 @@ const NotFoundPage = ({ isDarkMode }) => {
                             delay: 0.2 
                         }}
                     >
-                        <FolderX className={`w-16 h-16 ${isDarkMode ? 'text-red-400' : 'text-red-500'}`} />
+                        <FolderX className={`w-20 h-20 ${isDarkMode ? 'text-red-400' : 'text-red-500'}`} />
                     </motion.div>
                     <motion.h2 
-                        className="text-3xl font-bold text-center"
+                        className="text-4xl font-bold text-center mb-2"
                         variants={{
                             initial: { opacity: 0, y: 20 },
                             animate: { 
@@ -58,7 +58,7 @@ const NotFoundPage = ({ isDarkMode }) => {
                         404
                     </motion.h2>
                     <motion.p 
-                        className="text-xl mt-2 text-center"
+                        className="text-2xl mt-2 text-center font-medium"
                         variants={{
                             initial: { opacity: 0, y: 20 },
                             animate: { 
@@ -72,9 +72,9 @@ const NotFoundPage = ({ isDarkMode }) => {
                     </motion.p>
                 </div>
                 
-                <div className="p-6 text-center">
+                <div className="p-8 text-center">
                     <motion.p 
-                        className={`mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+                        className={`mb-8 text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
                         variants={{
                             initial: { opacity: 0, y: 20 },
                             animate: { 
@@ -89,7 +89,7 @@ const NotFoundPage = ({ isDarkMode }) => {
                     
                     <motion.button
                         onClick={() => navigate('/')}
-                        className={`inline-flex items-center bg-gray-600 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-700 transition-colors`}
+                        className={`inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-lg text-md font-medium shadow-md hover:shadow-lg hover:bg-blue-700 transition-all`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         variants={{
@@ -103,8 +103,6 @@ const NotFoundPage = ({ isDarkMode }) => {
                     >
                         Вернуться на главную
                     </motion.button>
-
-                    
                 </div>
             </div>
         </motion.div>

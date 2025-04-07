@@ -5,6 +5,7 @@
 
 const reviewModel = require('../models/reviewModel');
 const userModel = require('../models/userModel');
+const notificationController = require('./notificationController');
 const { validateRating, validateComment, validateRestaurantName } = require('../utils/validators');
 
 /**
@@ -106,6 +107,9 @@ const createReview = async (req, res) => {
         if (req.app.broadcastReview) {
             req.app.broadcastReview(fullReview);
         }
+        
+        // Создаем уведомление о новом отзыве
+        await notificationController.createReviewNotification(userId, restaurantName);
         
         res.status(201).json({
             message: 'Отзыв успешно создан',
@@ -483,6 +487,7 @@ const createReviewWithPhotos = async (req, res) => {
             restaurant_name: restaurantName,
             avatar: user.avatar || `https://i.pravatar.cc/100?u=${user.name}`,
             likes: 0,
+            photos: photoUrls,
             ratings: {
                 food: foodRating,
                 service: serviceRating,
@@ -496,6 +501,9 @@ const createReviewWithPhotos = async (req, res) => {
         if (req.app.broadcastReview) {
             req.app.broadcastReview(fullReview);
         }
+        
+        // Создаем уведомление о новом отзыве
+        await notificationController.createReviewNotification(userId, restaurantName);
         
         res.status(201).json({
             message: 'Отзыв успешно создан',

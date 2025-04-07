@@ -13,15 +13,13 @@ import {
     Trash2,
     Calendar,
     Coffee,
-    Upload,
-    Camera,
-    ImageOff,
+    UserCircle2,
+    Mail,
+    Key,
+    ArrowLeft,
     CircleAlert,
-    CircleCheck,
-    UserCircle2
+    CircleCheck
 } from "lucide-react";
-import ImageLoader from "../../components/ImageLoader";
-import { getAvatarUrl, isValidImageFile, createImagePreview, optimizeImage, getImageAcceptString } from "../../utils/imageUtils";
 import { useAuth } from './AuthContext';
 import { useTheme } from '../../common/contexts/ThemeContext';
 
@@ -96,355 +94,6 @@ const Notification = ({type, message, onClose}) => {
     );
 };
 
-// В компоненте AvatarUploadModal определим константу для изображения по умолчанию
-const fallbackSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTAgMTJDMTIuMjA5MSAxMiAxNCAxMC4yMDkxIDE0IDhDMTQgNS43OTA4NiAxMi4yMDkxIDQgMTAgNEM3Ljc5MDg2IDQgNiA1Ljc5MDg2IDYgOEM2IDEwLjIwOTEgNy43OTA4NiAxMiAxMCAxMloiIGZpbGw9IiM2QjcyODAiLz48cGF0aCBkPSJNMTAgMEMyLjIzODU4IDAgLTMuMzk1MDZlLTA3IDIuMjM4NTggLTMuOTc5MDNlLTA3IDEwQy00LjU2MzAxZS0wNyAxNy43NjE0IDIuMjM4NTggMjAgMTAgMjBDMTcuNzYxNCAyMCAyMCAxNy43NjE0IDIwIDEwQzIwIDIuMjM4NTggMTcuNzYxNCAwIDEwIDBaTTE2LjkxOTEgMTYuOTE5MUMxNS40MzA4IDE4LjQwNzUgMTIuNzYxMyAxOCAxMCAxOEM3LjIzODc0IDE4IDQuNTY5MTggMTguNDA3NSAzLjA4MDg5IDE2LjkxOTFDMS41OTI1OSAxNS40MzA4IDIgMTIuNzYxMyAyIDEwQzIgNy4yMzg3NCAxLjU5MjU5IDQuNTY5MTggMy4wODA4OSAzLjA4MDg5QzQuNTY5MTggMS41OTI1OSA3LjIzODc0IDIgMTAgMkMxMi43NjEzIDIgMTUuNDMwOCAxLjU5MjU5IDE2LjkxOTEgMy4wODA4OUMxOC40MDc1IDQuNTY5MTggMTggNy4yMzg3NCAxOCAxMEMxOCAxMi43NjEzIDE4LjQwNzUgMTUuNDMwOCAxNi45MTkxIDE2LjkxOTFaIiBmaWxsPSIjNkI3MjgwIi8+PC9zdmc+';
-
-/**
- * Компонент загрузки аватара пользователя
- * 
- * Отображает модальное окно для загрузки, просмотра и удаления аватара пользователя
- * 
- * @param {boolean} isOpen - Флаг открытия модального окна
- * @param {Function} onClose - Функция закрытия модального окна
- * @param {Function} onUpload - Функция загрузки нового аватара
- * @param {string} currentAvatar - URL текущего аватара
- * @param {Function} onDelete - Функция удаления аватара
- * @param {string} debugInfo - Отладочная информация для отображения
- * @param {Function} logDebugInfo - Функция для логирования отладочной информации
- * @returns {JSX.Element|null} - React-компонент модального окна
- */
-const AvatarUploadModal = ({isOpen, onClose, onUpload, currentAvatar, onDelete, debugInfo, logDebugInfo}) => {
-    // Состояния для управления загрузкой файла
-    const [selectedFile, setSelectedFile] = useState(null);
-    const [previewUrl, setPreviewUrl] = useState(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [error, setError] = useState(null);
-    const fileInputRef = useRef(null);
-
-    // Сброс состояния при открытии/закрытии модального окна
-    useEffect(() => {
-        if (!isOpen) {
-            setSelectedFile(null);
-            setPreviewUrl(null);
-            setError(null);
-        }
-    }, [isOpen, currentAvatar, logDebugInfo]);
-
-    /**
-     * Обработчик выбора файла
-     * 
-     * @param {Event} e - Событие изменения input[type=file]
-     */
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) {
-            logDebugInfo("Файл не выбран");
-            return;
-        }
-        
-        logDebugInfo(`Выбран файл: ${file.name} (${file.type}, ${file.size} байт)`);
-        
-        // Проверка размера файла (максимум 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            setError('Размер файла не должен превышать 5MB');
-            setSelectedFile(null);
-            setPreviewUrl(null);
-            logDebugInfo("Ошибка: файл слишком большой");
-            return;
-        }
-        
-        // Проверка типа файла
-        if (!isValidImageFile(file)) {
-            setError('Поддерживаются только форматы JPEG, PNG, GIF и WEBP');
-            setSelectedFile(null);
-            setPreviewUrl(null);
-            logDebugInfo(`Ошибка: неподдерживаемый тип файла ${file.type}`);
-            return;
-        }
-        
-        // Проверим размер файла, если очень маленький, может быть поврежденным
-        if (file.size < 100) {
-            setError('Файл может быть поврежден. Пожалуйста, выберите другой файл.');
-            setSelectedFile(null);
-            setPreviewUrl(null);
-            logDebugInfo(`Предупреждение: подозрительно маленький размер файла (${file.size} байт)`);
-            return;
-        }
-        
-        try {
-            logDebugInfo("Начало создания превью...");
-            // Сначала создаем превью, чтобы проверить, что файл валидный
-            const preview = await createImagePreview(file);
-            
-            // Проверка, что превью действительно создалось
-            if (!preview || preview.length < 100) {
-                throw new Error('Не удалось создать превью, файл может быть поврежден');
-            }
-            
-            logDebugInfo("Превью создано успешно, начинаю оптимизацию...");
-            setPreviewUrl(preview);
-            
-            // Оптимизация изображения перед загрузкой
-            let optimizedFile;
-            
-            // Для GIF-файлов пропускаем оптимизацию, чтобы сохранить анимацию
-            if (file.type === 'image/gif') {
-                logDebugInfo(`GIF файл - пропускаем оптимизацию для сохранения анимации`);
-                optimizedFile = file;
-            } else {
-                optimizedFile = await optimizeImage(file, {
-                    maxWidth: 500,
-                    maxHeight: 500,
-                    quality: 0.8
-                });
-                
-                logDebugInfo(`Изображение оптимизировано: ${file.size} -> ${optimizedFile.size} байт`);
-            }
-            
-            // Установка оптимизированного файла
-            setSelectedFile(optimizedFile);
-        } catch (err) {
-            console.error('Ошибка обработки изображения:', err);
-            setError('Ошибка обработки изображения: ' + (err.message || 'Неизвестная ошибка'));
-            setSelectedFile(null);
-            setPreviewUrl(null);
-            logDebugInfo(`Ошибка обработки: ${err.message}`);
-        }
-    };
-
-    /**
-     * Обработчик загрузки файла
-     */
-    const handleUpload = async () => {
-        if (!selectedFile) {
-            setError('Выберите файл для загрузки');
-            logDebugInfo("Ошибка: файл не выбран");
-            return;
-        }
-
-        setIsUploading(true);
-        setError(null);
-        logDebugInfo("Начало загрузки файла на сервер...");
-        
-        try {
-            await onUpload(selectedFile);
-            logDebugInfo("Файл успешно загружен");
-            onClose();
-        } catch (error) {
-            console.error('Ошибка загрузки аватара:', error);
-            setError(error.response?.data?.message || 'Не удалось загрузить аватар');
-            logDebugInfo(`Ошибка загрузки: ${error.message}`);
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    /**
-     * Обработчик удаления аватара
-     */
-    const handleDelete = async () => {
-        if (!currentAvatar) {
-            setError('Нет аватара для удаления');
-            return;
-        }
-        
-        setIsUploading(true);
-        setError(null);
-        
-        try {
-            await onDelete();
-            onClose();
-        } catch (error) {
-            console.error('Ошибка удаления аватара:', error);
-            setError(error.response?.data?.message || 'Не удалось удалить аватар');
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    /**
-     * Функция вызова диалога выбора файла
-     */
-    const triggerFileInput = () => {
-        fileInputRef.current.click();
-    };
-
-    // Не рендерим ничего, если модальное окно закрыто
-    if (!isOpen) return null;
-
-    return (
-        <motion.div
-            initial={{opacity: 0}}
-            animate={{opacity: 1}}
-            exit={{opacity: 0}}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={onClose}
-        >
-            <motion.div
-                initial={{y: -50, opacity: 0}}
-                animate={{y: 0, opacity: 1}}
-                exit={{y: 50, opacity: 0}}
-                onClick={e => e.stopPropagation()}
-                className="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden"
-            >
-                <div className="p-6">
-                    <h2 className="text-xl font-semibold mb-6">Загрузка аватара</h2>
-
-                    {error && (
-                        <div className="bg-red-50 text-red-700 p-3 rounded-md mb-4 flex items-start">
-                            <CircleAlert className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0"/>
-                            <p className="text-sm">{error}</p>
-                        </div>
-                    )}
-
-                    <div className="flex flex-col items-center mb-6">
-                        <div className="mb-4 relative">
-                            <div
-                                className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-4 border-gray-300"
-                            >
-                                {isUploading ? (
-                                    <motion.div
-                                        animate={{rotate: 360}}
-                                        transition={{repeat: Infinity, duration: 1, ease: "linear"}}
-                                        className="w-12 h-12 flex items-center justify-center"
-                                    >
-                                        <Camera className="w-8 h-8 text-gray-500"/>
-                                    </motion.div>
-                                ) : previewUrl ? (
-                                    <div className="w-full h-full">
-                                        <img
-                                            src={previewUrl}
-                                            alt="Предпросмотр аватара"
-                                            className="w-full h-full object-cover"
-                                            onLoad={() => console.log("Превью успешно загружено")}
-                                            onError={(e) => {
-                                                console.error("Ошибка загрузки превью");
-                                                setPreviewUrl(null);
-                                            }}
-                                        />
-                                    </div>
-                                ) : currentAvatar ? (
-                                    <div className="w-full h-full">
-                                        <img 
-                                            src={currentAvatar && currentAvatar.startsWith('/') 
-                                                ? `${API_URL}${currentAvatar}`.replace(/\/\//g, '/') 
-                                                : currentAvatar}
-                                            alt="Текущий аватар"
-                                            className="w-full h-full object-cover avatar-image"
-                                            onLoad={() => console.log(`Текущий аватар успешно загружен напрямую`)}
-                                            onError={(e) => {
-                                                console.error(`Ошибка загрузки аватара напрямую: ${currentAvatar}`);
-                                                e.target.onerror = null;
-                                                e.target.src = fallbackSrc;
-                                            }}
-                                        />
-                                    </div>
-                                ) : (
-                                    <UserCircle className="w-24 h-24 text-gray-400"/>
-                                )}
-                            </div>
-                            <motion.button
-                                whileHover={{scale: 1.1}}
-                                whileTap={{scale: 0.9}}
-                                onClick={triggerFileInput}
-                                className="absolute bottom-0 right-0 bg-gray-700 text-white p-2 rounded-full shadow-lg"
-                                disabled={isUploading}
-                            >
-                                <Camera className="w-5 h-5"/>
-                            </motion.button>
-                        </div>
-
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept={getImageAcceptString()}
-                            className="hidden"
-                            disabled={isUploading}
-                        />
-
-                        <div className="text-sm text-gray-500 text-center mb-4">
-                            Рекомендуемый размер: 500x500 пикселей <br/>
-                            Поддерживаемые форматы: JPEG, PNG, GIF, WEBP <br/>
-                            Максимальный размер: 5MB
-                        </div>
-
-
-                        <div className="flex space-x-3">
-                            <motion.button
-                                whileHover={{scale: 1.05}}
-                                whileTap={{scale: 0.95}}
-                                onClick={triggerFileInput}
-                                className="px-4 py-2 bg-gray-600 text-white rounded flex items-center space-x-2"
-                                disabled={isUploading}
-                            >
-                                <Upload className="w-4 h-4"/>
-                                <span>Выбрать файл</span>
-                            </motion.button>
-
-                            {currentAvatar && (
-                                <motion.button
-                                    whileHover={{scale: 1.05}}
-                                    whileTap={{scale: 0.95}}
-                                    onClick={() => {
-                                        logDebugInfo("Запрос на удаление аватара");
-                                        handleDelete();
-                                    }}
-                                    className="px-4 py-2 bg-red-600 text-white rounded flex items-center space-x-2"
-                                    disabled={isUploading}
-                                >
-                                    <ImageOff className="w-4 h-4"/>
-                                    <span>Удалить</span>
-                                </motion.button>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-3 border-t pt-4">
-                        <motion.button
-                            whileHover={{scale: 1.05}}
-                            whileTap={{scale: 0.95}}
-                            onClick={onClose}
-                            className="px-4 py-2 bg-gray-200 text-gray-800 rounded"
-                            disabled={isUploading}
-                        >
-                            Отмена
-                        </motion.button>
-                        <motion.button
-                            whileHover={{scale: 1.05}}
-                            whileTap={{scale: 0.95}}
-                            onClick={handleUpload}
-                            disabled={!selectedFile || isUploading}
-                            className={`
-                                px-4 py-2 bg-gray-700 text-white hover:bg-gray-600 rounded flex items-center space-x-2
-                                ${(!selectedFile || isUploading) ? 'opacity-50 cursor-not-allowed' : ''}
-                            `}
-                        >
-                            {isUploading ? (
-                                <>
-                                    <motion.div
-                                        animate={{rotate: 360}}
-                                        transition={{repeat: Infinity, duration: 1, ease: "linear"}}
-                                        className="w-4 h-4"
-                                    >
-                                        ◌
-                                    </motion.div>
-                                    <span>Загрузка...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <CircleCheck className="w-4 h-4"/>
-                                    <span>Сохранить</span>
-                                </>
-                            )}
-                        </motion.button>
-                    </div>
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-};
-
 /**
  * Компонент для отображения пустого списка отзывов
  * 
@@ -457,7 +106,7 @@ const NoReviews = () => (
         initial={{opacity: 0}}
         animate={{opacity: 1}}
         transition={{duration: 0.5}}
-        className="w-full bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col items-center justify-center text-center"
+        className="w-full bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col items-center justify-center text-center border border-gray-200 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30"
     >
         <motion.div
             initial={{scale: 0.8}}
@@ -511,23 +160,6 @@ const ProfilePage = ({ onLogout }) => {
     const [notification, setNotification] = useState(null);
     const [showAdminPanel, setShowAdminPanel] = useState(false);
     const [deleteReviewId, setDeleteReviewId] = useState(null);
-    const [showAvatarModal, setShowAvatarModal] = useState(false);
-    const [avatarLoading, setAvatarLoading] = useState(false);
-    const [debugInfo, setDebugInfo] = useState(null);
-    // Новое состояние для хранения прямого URL аватара
-    const [directAvatarUrl, setDirectAvatarUrl] = useState(
-        user.avatar ? `${API_URL}${user.avatar}`.replace(/\/\//g, '/') : null
-    );
-
-    // Отладочная функция, доступная на уровне всего компонента
-    const logDebugInfo = (info) => {
-        console.log(`[Debug] ${info}`);
-        setDebugInfo(prevInfo => {
-            const newInfo = prevInfo ? `${prevInfo}\n${info}` : info;
-            // Ограничиваем длину лога
-            return newInfo.split('\n').slice(-10).join('\n');
-        });
-    };
 
     /**
      * Форматирует дату для API
@@ -566,11 +198,6 @@ const ProfilePage = ({ onLogout }) => {
                         ...profileData,
                         token // сохраняем текущий токен
                     });
-
-                    // Обновляем прямой URL аватара
-                    if (profileData.avatar) {
-                        updateDirectAvatarUrl(profileData.avatar);
-                    }
                 }
             } catch (error) {
                 console.error('Ошибка загрузки профиля:', error);
@@ -662,297 +289,6 @@ const ProfilePage = ({ onLogout }) => {
 
         fetchUserReviews();
     }, [user.name, user.id, setUser, user.token]);
-
-    /**
-     * Обработчик загрузки аватара
-     * 
-     * @param {File} file - Файл аватара для загрузки
-     * @returns {Promise<void>}
-     */
-    const handleAvatarUpload = async (file) => {
-        setAvatarLoading(true);
-        logDebugInfo(`Начало загрузки файла на сервер...`);
-        
-        try {
-            if (!file) {
-                throw new Error('Файл не выбран');
-            }
-            
-            // Проверка типа файла
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (!allowedTypes.includes(file.type)) {
-                throw new Error('Неподдерживаемый формат файла. Разрешены только JPEG, PNG, GIF и WEBP');
-            }
-            
-            // Проверка размера файла (не более 5 МБ)
-            if (file.size > 5 * 1024 * 1024) {
-                throw new Error('Размер файла превышает 5 МБ');
-            }
-            
-            // Создание FormData для загрузки файла
-            const formData = new FormData();
-            
-            // Для GIF-файлов пропускаем оптимизацию, чтобы сохранить анимацию
-            if (file.type === 'image/gif') {
-                logDebugInfo('GIF файл - пропускаем оптимизацию для сохранения анимации');
-                formData.append('avatar', file);
-            } else {
-                formData.append('avatar', file);
-            }
-            
-            // Получение токена
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token') || user.token;
-            
-            if (!token) {
-                throw new Error('Токен авторизации не найден');
-            }
-            
-            // Отладочная информация
-            logDebugInfo(`Заголовки запроса: Content-Type=multipart/form-data, Authorization=Bearer ${token.substr(0, 10)}...`);
-            
-            // Исправленный эндпоинт для загрузки аватара
-            const response = await api.post('/api/profile/avatar', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            logDebugInfo(`Ответ сервера: ${JSON.stringify(response.data)}`);
-            
-            // Обновление пользователя с новым аватаром
-            if (response.data && (response.data.avatarUrl || response.data.avatar || response.data.user?.avatar)) {
-                const newAvatarUrl = response.data.avatarUrl || response.data.avatar || response.data.user?.avatar;
-                
-                if (!newAvatarUrl) {
-                    throw new Error('Сервер не вернул URL аватара');
-                }
-                
-                // Обновляем пользователя
-                setUser(prevUser => {
-                    const updatedUser = {
-                        ...prevUser,
-                        avatar: newAvatarUrl
-                    };
-                    
-                    // Обновляем глобальное состояние через AuthContext
-                    if (updateAuthUser) {
-                        updateAuthUser(updatedUser);
-                    }
-                    
-                    // Диспатчим событие для обновления UI в других компонентах
-                    const avatarEvent = new CustomEvent('avatar-updated', { 
-                        detail: { 
-                            userId: user.id,
-                            avatarUrl: newAvatarUrl
-                        } 
-                    });
-                    document.dispatchEvent(avatarEvent);
-                    
-                    return updatedUser;
-                });
-                
-                // Обновляем прямой URL аватара
-                updateDirectAvatarUrl(newAvatarUrl);
-                
-                setNotification({
-                    type: 'success',
-                    message: 'Аватар успешно загружен'
-                });
-                
-                logDebugInfo(`Файл успешно загружен`);
-            } else if (response.data && response.data.success) {
-                // Если сервер вернул success, но не вернул URL, пробуем использовать имеющийся URL
-                logDebugInfo(`Сервер вернул успех, но не вернул URL аватара, пробуем использовать старый URL`);
-                
-                // Перезагружаем профиль, чтобы получить актуальные данные
-                try {
-                    const profileResponse = await api.get('/profile');
-                    
-                    if (profileResponse.data && profileResponse.data.user && profileResponse.data.user.avatar) {
-                        const newAvatarUrl = profileResponse.data.user.avatar;
-                        
-                        // Обновляем пользователя
-                        setUser(prevUser => ({
-                            ...prevUser,
-                            avatar: newAvatarUrl
-                        }));
-                        
-                        // Обновляем глобальное состояние
-                        if (updateAuthUser) {
-                            updateAuthUser({...user, avatar: newAvatarUrl});
-                        }
-                        
-                        // Обновляем прямой URL аватара
-                        updateDirectAvatarUrl(newAvatarUrl);
-                        
-                        setNotification({
-                            type: 'success',
-                            message: 'Аватар успешно загружен'
-                        });
-                    } else {
-                        throw new Error('Не удалось получить новый URL аватара');
-                    }
-                } catch (profileError) {
-                    console.error('Ошибка получения профиля после загрузки аватара:', profileError);
-                    throw new Error('Не удалось обновить аватар');
-                }
-            } else {
-                throw new Error('Неожиданный формат ответа сервера');
-            }
-            
-            setShowAvatarModal(false);
-        } catch (error) {
-            console.error('Ошибка загрузки аватара:', error);
-            
-            setNotification({
-                type: 'error',
-                message: 'Не удалось загрузить аватар: ' + (error.message || 'неизвестная ошибка')
-            });
-        } finally {
-            setAvatarLoading(false);
-        }
-    };
-
-    /**
-     * Обработчик удаления аватара
-     */
-    const handleAvatarDelete = async () => {
-        try {
-            setAvatarLoading(true);
-            logDebugInfo(`Запрос на удаление аватара`);
-
-            // Получение токена
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token') || user.token;
-            
-            if (!token) {
-                throw new Error('Токен авторизации не найден');
-            }
-
-            // Отправка запроса на удаление аватара
-            // Исправленный эндпоинт для удаления аватара
-            await api.delete('/api/profile/avatar');
-
-            // Обновление пользователя без аватара
-            setUser(prevUser => {
-                const updatedUser = {
-                    ...prevUser,
-                    avatar: null
-                };
-                
-                // Обновляем глобальное состояние через AuthContext
-                if (updateAuthUser) {
-                    updateAuthUser(updatedUser);
-                }
-                
-                // Диспатчим событие для обновления UI в других компонентах
-                const avatarEvent = new CustomEvent('avatar-updated', { 
-                    detail: { 
-                        userId: user.id,
-                        avatarUrl: null
-                    } 
-                });
-                document.dispatchEvent(avatarEvent);
-                
-                return updatedUser;
-            });
-
-            // Обновляем прямой URL аватара
-            updateDirectAvatarUrl(null);
-            
-            setNotification({
-                type: 'success',
-                message: 'Аватар успешно удален'
-            });
-            
-            setShowAvatarModal(false);
-        } catch (error) {
-            console.error('Ошибка удаления аватара:', error);
-            
-            setNotification({
-                type: 'error',
-                message: 'Не удалось удалить аватар'
-            });
-        } finally {
-            setAvatarLoading(false);
-        }
-    };
-
-    /**
-     * Удаляет отзыв пользователя
-     * 
-     * @param {number} reviewId - Идентификатор отзыва для удаления
-     * @returns {Promise<void>} - Promise, завершающийся после удаления отзыва
-     */
-    const handleDeleteReview = async (reviewId) => {
-        try {
-            // Установка ID удаляемого отзыва для блокировки кнопки
-            setDeleteReviewId(reviewId);
-
-            // Выполнение запроса на удаление с обработкой ошибок
-            const response = await api.delete(`/reviews/${reviewId}`);
-
-            // Обновление локального состояния отзывов
-            const updatedReviews = userReviews.filter(review => review.id !== reviewId);
-            setUserReviews(updatedReviews);
-
-            // Пересчет статистики отзывов
-            const reviewStats = {
-                totalReviews: updatedReviews.length,
-                averageRating: updatedReviews.length
-                    ? (updatedReviews.reduce((sum, review) => sum + (Number(review.rating) || 0), 0) / updatedReviews.length).toFixed(1)
-                    : 0,
-                totalLikes: updatedReviews.reduce((sum, review) => sum + (Number(review.likes) || 0), 0)
-            };
-
-            // Обновление пользователя с новой статистикой
-            setUser({
-                ...user,
-                ...reviewStats,
-                reviews: updatedReviews,
-                // Обновляем аватар только если он пришел в ответе
-                avatar: response.data.avatar || response.data.avatarUrl || response.data.user?.avatar || user.avatar
-            });
-
-            // Показ уведомления об успешном удалении
-            setNotification({
-                type: 'success',
-                message: 'Отзыв успешно удален'
-            });
-        } catch (error) {
-            console.error('Ошибка удаления отзыва:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status,
-                reviewId: reviewId
-            });
-
-            // Определение типа ошибки и соответствующего сообщения
-            let errorMessage = 'Не удалось удалить отзыв';
-            
-            if (error.response?.status === 401 || error.response?.status === 403) {
-                errorMessage = 'Сессия истекла. Пожалуйста, войдите снова';
-            } else if (error.response?.status === 404) {
-                errorMessage = 'Отзыв не найден или уже был удален';
-                // Обновляем список отзывов, удаляя ненайденный отзыв
-                const updatedReviews = userReviews.filter(review => review.id !== reviewId);
-                setUserReviews(updatedReviews);
-            } else if (error.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (!error.response && error.request) {
-                errorMessage = 'Сервер не отвечает. Проверьте подключение к интернету';
-            }
-
-            // Показ уведомления об ошибке
-            setNotification({
-                type: 'error',
-                message: errorMessage
-            });
-        } finally {
-            // Сброс ID удаляемого отзыва
-            setDeleteReviewId(null);
-        }
-    };
 
     /**
      * Закрывает уведомление
@@ -1117,59 +453,81 @@ const ProfilePage = ({ onLogout }) => {
     };
 
     /**
-     * Обновляет прямой URL аватара пользователя
+     * Удаляет отзыв пользователя
      * 
-     * @param {string|null} avatarPath - Путь к файлу аватара или null
+     * @param {number} reviewId - Идентификатор отзыва для удаления
+     * @returns {Promise<void>} - Promise, завершающийся после удаления отзыва
      */
-    const updateDirectAvatarUrl = (avatarPath) => {
-        if (!avatarPath) {
-            // Если аватар не установлен или удален
-            setDirectAvatarUrl(null);
-            return;
-        }
-        
-        // Добавляем временную метку для обхода кэша браузера
-        const cacheParam = `?t=${new Date().getTime()}`;
-        
-        // Создаем полный URL на основе пути к аватару
-        let fullUrl;
-        
-        if (avatarPath.startsWith('http')) {
-            // Если URL уже полный
-            if (avatarPath.includes('?')) {
-                fullUrl = `${avatarPath}&_=${new Date().getTime()}`;
-            } else {
-                fullUrl = `${avatarPath}${cacheParam}`;
-            }
-        } else if (avatarPath.startsWith('/uploads')) {
-            // Для путей, начинающихся с /uploads
-            fullUrl = `${API_URL}${avatarPath}${cacheParam}`;
-        } else if (!avatarPath.startsWith('/')) {
-            // Для путей без начального слеша
-            fullUrl = `${API_URL}/${avatarPath}${cacheParam}`;
-        } else {
-            // В остальных случаях
-            fullUrl = `${API_URL}${avatarPath}${cacheParam}`;
-        }
-        
-        // Обновляем состояние
-        setDirectAvatarUrl(fullUrl);
-        
-        // Предзагрузка аватара для кэширования
+    const handleDeleteReview = async (reviewId) => {
         try {
-            logDebugInfo('Предзагрузка аватара...');
-            const img = new Image();
-            img.onload = () => {
-                logDebugInfo('Аватар успешно загружен и кэширован');
+            // Установка ID удаляемого отзыва для блокировки кнопки
+            setDeleteReviewId(reviewId);
+
+            // Выполнение запроса на удаление с обработкой ошибок
+            const response = await api.delete(`/reviews/${reviewId}`);
+
+            // Обновление локального состояния отзывов
+            const updatedReviews = userReviews.filter(review => review.id !== reviewId);
+            setUserReviews(updatedReviews);
+
+            // Пересчет статистики отзывов
+            const reviewStats = {
+                totalReviews: updatedReviews.length,
+                averageRating: updatedReviews.length
+                    ? (updatedReviews.reduce((sum, review) => sum + (Number(review.rating) || 0), 0) / updatedReviews.length).toFixed(1)
+                    : 0,
+                totalLikes: updatedReviews.reduce((sum, review) => sum + (Number(review.likes) || 0), 0)
             };
-            img.src = fullUrl;
+
+            // Обновление пользователя с новой статистикой
+            setUser({
+                ...user,
+                ...reviewStats,
+                reviews: updatedReviews,
+            });
+
+            // Показ уведомления об успешном удалении
+            setNotification({
+                type: 'success',
+                message: 'Отзыв успешно удален'
+            });
         } catch (error) {
-            console.error('Ошибка предзагрузки аватара:', error);
+            console.error('Ошибка удаления отзыва:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                reviewId: reviewId
+            });
+
+            // Определение типа ошибки и соответствующего сообщения
+            let errorMessage = 'Не удалось удалить отзыв';
+            
+            if (error.response?.status === 401 || error.response?.status === 403) {
+                errorMessage = 'Сессия истекла. Пожалуйста, войдите снова';
+            } else if (error.response?.status === 404) {
+                errorMessage = 'Отзыв не найден или уже был удален';
+                // Обновляем список отзывов, удаляя ненайденный отзыв
+                const updatedReviews = userReviews.filter(review => review.id !== reviewId);
+                setUserReviews(updatedReviews);
+            } else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (!error.response && error.request) {
+                errorMessage = 'Сервер не отвечает. Проверьте подключение к интернету';
+            }
+
+            // Показ уведомления об ошибке
+            setNotification({
+                type: 'error',
+                message: errorMessage
+            });
+        } finally {
+            // Сброс ID удаляемого отзыва
+            setDeleteReviewId(null);
         }
     };
 
     return (
-        <div className="space-y-6 w-full px-4">
+        <div className="space-y-6 w-full max-w-full mx-auto px-4 py-6">
             {/* Уведомление */}
             <AnimatePresence>
                 {notification && (
@@ -1180,80 +538,40 @@ const ProfilePage = ({ onLogout }) => {
                     />
                 )}
             </AnimatePresence>
-
-            {/* Отладочная информация, если включена */}
             
-
-            {/* Модальное окно загрузки аватара */}
-            <AnimatePresence>
-                {showAvatarModal && (
-                    <AvatarUploadModal
-                        isOpen={showAvatarModal}
-                        onClose={() => setShowAvatarModal(false)}
-                        onUpload={handleAvatarUpload}
-                        currentAvatar={directAvatarUrl}
-                        onDelete={handleAvatarDelete}
-                        debugInfo={debugInfo}
-                        logDebugInfo={logDebugInfo}
-                    />
-                )}
-            </AnimatePresence>
+            {/* Кнопка назад */}
+            <motion.button
+                onClick={() => navigate(-1)}
+                whileHover={{ x: -3 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors mb-4 w-full"
+            >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                <span className="text-sm">Назад</span>
+            </motion.button>
 
             {/* User Profile Card */}
             <motion.div
-                initial={{opacity: 0, y: 20}}
-                animate={{opacity: 1, y: 0}}
-                transition={{duration: 0.5}}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
                 className="w-full"
             >
-                <Card>
-                    <CardHeader className="p-6">
+                <Card className="border border-gray-200 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30 dark:bg-gray-800 w-full">
+                    <CardHeader className="p-6 border-b border-gray-100 dark:border-gray-700">
                         <div className="flex justify-between items-center">
-                            <CardTitle className="flex items-center text-xl">
-                                <UserCircle className="w-7 h-7 mr-3 text-gray-600 dark:text-gray-300"/>
+                            <CardTitle className="text-lg font-medium text-gray-800 dark:text-gray-100">
                                 Профиль пользователя
                             </CardTitle>
-                            <div className="flex space-x-3">
-                                <motion.button
-                                    onClick={() => {
-                                        setIsEditing(!isEditing);
-                                        setEditedUser(user);
-                                    }}
-                                    whileHover={{scale: 1.05}}
-                                    whileTap={{scale: 0.95}}
-                                    className={`
-                                        px-4 py-2 rounded 
-                                        flex items-center 
-                                        space-x-2 
-                                        transition-all duration-300 
-                                        ${isEditing
-                                        ? 'bg-gray-600 text-white'
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                                    }`}
-                                    aria-label={isEditing ? "Отменить редактирование" : "Редактировать профиль"}
-                                >
-                                    {isEditing ? (
-                                        <>
-                                            <X className="w-5 h-5 mr-1"/>
-                                            <span>Отмена</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Edit2 className="w-5 h-5 mr-1"/>
-                                            <span>Редактировать</span>
-                                        </>
-                                    )}
-                                </motion.button>
-
+                            <div className="flex gap-2">
                                 {user.role === 'admin' && (
                                     <motion.button
                                         onClick={toggleAdminPanel}
-                                        whileHover={{scale: 1.05}}
-                                        whileTap={{scale: 0.95}}
-                                        className="bg-gray-600 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center"
-                                        aria-label={showAdminPanel ? "Скрыть панель администратора" : "Показать панель администратора"}
+                                        whileHover={{ scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-3 py-1.5 rounded text-sm font-medium shadow-sm hover:shadow transition-all duration-200 flex items-center"
                                     >
-                                        {showAdminPanel ? 'Скрыть панель' : 'Панель администратора'}
+                                        Панель администратора
                                     </motion.button>
                                 )}
                             </div>
@@ -1265,93 +583,107 @@ const ProfilePage = ({ onLogout }) => {
                             {isEditing ? (
                                 <motion.form
                                     key="editForm"
-                                    initial={{opacity: 0}}
-                                    animate={{opacity: 1}}
-                                    exit={{opacity: 0}}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
                                     onSubmit={handleSubmit}
                                     className="space-y-4"
                                 >
-                                    {/* Поле ввода имени */}
-                                    <div>
-                                        <label 
-                                            htmlFor="name" 
-                                            className="block text-sm font-medium text-gray-700"
-                                        >
-                                            Имя
-                                        </label>
-                                        <input
-                                            id="name"
-                                            type="text"
-                                            value={editedUser.name}
-                                            onChange={(e) => handleInputChange('name', e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                            required
-                                            minLength={VALIDATION_RULES.MIN_NAME_LENGTH}
-                                            maxLength={VALIDATION_RULES.MAX_NAME_LENGTH}
-                                        />
-                                        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Поле ввода имени */}
+                                        <div className="space-y-1">
+                                            <label 
+                                                htmlFor="name" 
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >
+                                                Имя
+                                            </label>
+                                            <div className="relative">
+                                                <UserCircle2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                                <input
+                                                    id="name"
+                                                    type="text"
+                                                    value={editedUser.name}
+                                                    onChange={(e) => handleInputChange('name', e.target.value)}
+                                                    className="block w-full pl-10 pr-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:ring-1 focus:ring-gray-500 focus:border-gray-500 dark:focus:border-gray-400"
+                                                    required
+                                                    minLength={VALIDATION_RULES.MIN_NAME_LENGTH}
+                                                    maxLength={VALIDATION_RULES.MAX_NAME_LENGTH}
+                                                />
+                                            </div>
+                                            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                                        </div>
 
-                                    {/* Поле ввода email */}
-                                    <div>
-                                        <label 
-                                            htmlFor="email" 
-                                            className="block text-sm font-medium text-gray-700"
-                                        >
-                                            Email
-                                        </label>
-                                        <input
-                                            id="email"
-                                            type="email"
-                                            value={editedUser.email}
-                                            onChange={(e) => handleInputChange('email', e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                            required
-                                            pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-                                        />
-                                        {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-                                    </div>
+                                        {/* Поле ввода email */}
+                                        <div className="space-y-1">
+                                            <label 
+                                                htmlFor="email" 
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >
+                                                Email
+                                            </label>
+                                            <div className="relative">
+                                                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                                <input
+                                                    id="email"
+                                                    type="email"
+                                                    value={editedUser.email}
+                                                    onChange={(e) => handleInputChange('email', e.target.value)}
+                                                    className="block w-full pl-10 pr-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:ring-1 focus:ring-gray-500 focus:border-gray-500 dark:focus:border-gray-400"
+                                                    required
+                                                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                                                />
+                                            </div>
+                                            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                                        </div>
 
-                                    {/* Поле ввода текущего пароля */}
-                                    <div>
-                                        <label 
-                                            htmlFor="currentPassword" 
-                                            className="block text-sm font-medium text-gray-700"
-                                        >
-                                            Текущий пароль
-                                        </label>
-                                        <input
-                                            id="currentPassword"
-                                            type="password"
-                                            onChange={(e) => handleInputChange('currentPassword', e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                        />
-                                        {errors.currentPassword && <p className="text-red-500 text-sm mt-1">{errors.currentPassword}</p>}
-                                    </div>
+                                        {/* Поле ввода текущего пароля */}
+                                        <div className="space-y-1">
+                                            <label 
+                                                htmlFor="currentPassword" 
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >
+                                                Текущий пароль
+                                            </label>
+                                            <div className="relative">
+                                                <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                                <input
+                                                    id="currentPassword"
+                                                    type="password"
+                                                    onChange={(e) => handleInputChange('currentPassword', e.target.value)}
+                                                    className="block w-full pl-10 pr-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:ring-1 focus:ring-gray-500 focus:border-gray-500 dark:focus:border-gray-400"
+                                                />
+                                            </div>
+                                            {errors.currentPassword && <p className="text-red-500 text-xs mt-1">{errors.currentPassword}</p>}
+                                        </div>
 
-                                    {/* Поле ввода нового пароля */}
-                                    <div>
-                                        <label 
-                                            htmlFor="newPassword" 
-                                            className="block text-sm font-medium text-gray-700"
-                                        >
-                                            Новый пароль (необязательно)
-                                        </label>
-                                        <input
-                                            id="newPassword"
-                                            type="password"
-                                            onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                            minLength={VALIDATION_RULES.MIN_PASSWORD_LENGTH}
-                                        />
-                                        {errors.password &&
-                                            <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+                                        {/* Поле ввода нового пароля */}
+                                        <div className="space-y-1">
+                                            <label 
+                                                htmlFor="newPassword" 
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >
+                                                Новый пароль (необязательно)
+                                            </label>
+                                            <div className="relative">
+                                                <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                                <input
+                                                    id="newPassword"
+                                                    type="password"
+                                                    onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                                                    className="block w-full pl-10 pr-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:ring-1 focus:ring-gray-500 focus:border-gray-500 dark:focus:border-gray-400"
+                                                    minLength={VALIDATION_RULES.MIN_PASSWORD_LENGTH}
+                                                />
+                                            </div>
+                                            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                                        </div>
                                     </div>
 
                                     {/* Ошибки отправки формы */}
                                     {errors.submit && (
                                         <div
-                                            className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+                                            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-md text-sm"
                                             role="alert"
                                         >
                                             {errors.submit}
@@ -1362,98 +694,117 @@ const ProfilePage = ({ onLogout }) => {
                                     <div className="flex justify-end">
                                         <motion.button
                                             type="submit"
-                                            whileHover={{scale: 1.05}}
-                                            whileTap={{scale: 0.95}}
+                                            whileHover={{ scale: 1.02, y: -1 }}
+                                            whileTap={{ scale: 0.98 }}
                                             className="
-                                                px-5 py-2.5
-                                                bg-gray-600 text-white
-                                                rounded-lg
+                                                px-5 py-2
+                                                bg-gradient-to-r from-gray-600 to-gray-700
+                                                text-white
+                                                rounded-md
                                                 text-sm font-medium
+                                                shadow-sm hover:shadow
+                                                transition-all duration-200
                                                 flex items-center
-                                                shadow-md hover:shadow-lg
-                                                transition-all duration-300
                                             "
                                         >
-                                            <Save className="w-4 h-4 mr-2"/>
-                                            Сохранить изменения
+                                            <Save className="w-4 h-4 mr-2 flex-shrink-0"/>
+                                            <span>Сохранить изменения</span>
                                         </motion.button>
                                     </div>
                                 </motion.form>
                             ) : (
                                 <motion.div
                                     key="profileView"
-                                    initial={{opacity: 0}}
-                                    animate={{opacity: 1}}
-                                    exit={{opacity: 0}}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
                                     className="space-y-6"
                                 >
                                     {/* Основная информация профиля */}
-                                    <div className="flex items-center mb-6">
-                                        <div className="avatar-container mr-6 relative">
-                                            <div className="w-24 h-24 rounded-full overflow-hidden">
-                                                {user.avatar ? (
-                                                    <img 
-                                                        src={getAvatarUrl(user.avatar)} 
-                                                        alt="Аватар" 
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            console.error('Ошибка загрузки миниатюры аватара');
-                                                            e.target.src = fallbackSrc;
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
-                                                        <UserCircle2 size={60} className="text-gray-400 dark:text-gray-600" />
-                                                    </div>
-                                                )}
+                                    <div className="flex flex-col md:flex-row gap-6 relative">
+                                        <div className="flex-shrink-0">
+                                            <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-4 border-gray-300 dark:border-gray-600">
+                                                <UserCircle2 size={64} className="text-gray-400 dark:text-gray-300" />
                                             </div>
-                                            <motion.button
-                                                whileHover={{scale: 1.1}}
-                                                whileTap={{scale: 0.9}}
-                                                onClick={() => setShowAvatarModal(true)}
-                                                className="absolute bottom-0 right-0 bg-gray-700 text-white p-2 rounded-full shadow-lg"
-                                                title="Изменить аватар"
-                                            >
-                                                <Camera className="w-5 h-5"/>
-                                            </motion.button>
                                         </div>
-                                        <div>
-                                            <h3 className="text-2xl font-semibold text-gray-700 dark:text-gray-200">{user.name}</h3>
-                                            <p className="text-lg text-gray-600 dark:text-gray-400">{user.email}</p>
+
+                                        <div className="flex-grow">
+                                            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-1">{user.name}</h3>
+                                            <p className="text-gray-600 dark:text-gray-400 mb-2 flex items-center">
+                                                <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                                                {user.email}
+                                            </p>
                                             {user.role === 'admin' && (
-                                                <span
-                                                    className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded mt-2 inline-block dark:bg-gray-700 dark:text-gray-300"
-                                                >
+                                                <span className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-800 dark:text-gray-300 text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center">
+                                                    <Star className="w-3 h-3 mr-1 text-yellow-500" />
                                                     Администратор
                                                 </span>
                                             )}
                                         </div>
+                                        
+                                        <motion.button
+                                            onClick={() => {
+                                                setIsEditing(!isEditing);
+                                                setEditedUser(user);
+                                            }}
+                                            whileHover={{ scale: 1.03 }}
+                                            whileTap={{ scale: 0.97 }}
+                                            className={`
+                                                px-3 py-1.5 rounded 
+                                                flex items-center 
+                                                text-sm font-medium
+                                                absolute top-0 right-0
+                                                transition-all duration-200 
+                                                ${isEditing
+                                                ? 'bg-gray-600 text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                                            }`}
+                                        >
+                                            {isEditing ? (
+                                                <>
+                                                    <X className="w-4 h-4 mr-1.5"/>
+                                                    <span>Отмена</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Edit2 className="w-4 h-4 mr-1.5"/>
+                                                    <span>Редактировать</span>
+                                                </>
+                                            )}
+                                        </motion.button>
                                     </div>
 
                                     {/* Статистика пользователя */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mt-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
                                         <motion.div
-                                            whileHover={{scale: 1.05}}
-                                            className="p-6 bg-gray-100 dark:bg-gray-700 rounded-lg shadow-sm"
+                                            whileHover={{ y: -2 }}
+                                            className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30 transition-all duration-200"
                                         >
-                                            <div className="text-3xl font-bold dark:text-white">{user.totalReviews || 0}</div>
-                                            <div className="text-base text-gray-600 dark:text-gray-300 mt-1">Отзывов</div>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Отзывов</span>
+                                            </div>
+                                            <div className="text-2xl font-bold text-gray-800 dark:text-white">{user.totalReviews || 0}</div>
                                         </motion.div>
 
                                         <motion.div
-                                            whileHover={{scale: 1.05}}
-                                            className="p-6 bg-gray-100 dark:bg-gray-700 rounded-lg shadow-sm"
+                                            whileHover={{ y: -2 }}
+                                            className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30 transition-all duration-200"
                                         >
-                                            <div className="text-3xl font-bold dark:text-white">{user.averageRating || 0}</div>
-                                            <div className="text-base text-gray-600 dark:text-gray-300 mt-1">Средняя оценка</div>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Средняя оценка</span>
+                                            </div>
+                                            <div className="text-2xl font-bold text-gray-800 dark:text-white">{user.averageRating || 0}</div>
                                         </motion.div>
 
                                         <motion.div
-                                            whileHover={{scale: 1.05}}
-                                            className="p-6 bg-gray-100 dark:bg-gray-700 rounded-lg shadow-sm"
+                                            whileHover={{ y: -2 }}
+                                            className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30 transition-all duration-200"
                                         >
-                                            <div className="text-3xl font-bold dark:text-white">{user.totalLikes || 0}</div>
-                                            <div className="text-base text-gray-600 dark:text-gray-300 mt-1">Лайков получено</div>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Получено лайков</span>
+                                            </div>
+                                            <div className="text-2xl font-bold text-gray-800 dark:text-white">{user.totalLikes || 0}</div>
                                         </motion.div>
                                     </div>
                                 </motion.div>
@@ -1465,93 +816,95 @@ const ProfilePage = ({ onLogout }) => {
 
             {/* Карточка отзывов пользователя */}
             <motion.div
-                initial={{opacity: 0, y: 20}}
-                animate={{opacity: 1, y: 0}}
-                transition={{duration: 0.5, delay: 0.2}}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
                 className="w-full"
             >
-                <Card>
-                    <CardHeader className="p-6">
-                        <CardTitle className="flex items-center text-xl">
-                            <Coffee className="w-7 h-7 mr-3 text-gray-600 dark:text-gray-300"/>
-                            <span className="text-gray-800 dark:text-gray-200">Мои отзывы</span>
+                <Card className="border border-gray-200 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30 dark:bg-gray-800">
+                    <CardHeader className="p-6 border-b border-gray-100 dark:border-gray-700">
+                        <CardTitle className="text-lg font-medium text-gray-800 dark:text-gray-100 flex items-center">
+                            <Coffee className="w-5 h-5 mr-2 text-gray-600 dark:text-gray-300"/>
+                            Мои отзывы
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
                         {isLoading ? (
-                            <div className="flex justify-center items-center p-12">
+                            <div className="flex justify-center items-center p-8">
                                 <motion.div
-                                    animate={{rotate: 360}}
+                                    animate={{ rotate: 360 }}
                                     transition={{
                                         repeat: Infinity,
-                                        duration: 1,
+                                        duration: 1.5,
                                         ease: "linear"
                                     }}
-                                    aria-label="Загрузка отзывов"
                                 >
-                                    <Coffee className="w-10 h-10 text-gray-400 dark:text-gray-300"/>
+                                    <Coffee className="w-8 h-8 text-gray-400 dark:text-gray-500"/>
                                 </motion.div>
                             </div>
                         ) : userReviews.length > 0 ? (
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 {userReviews.map(review => (
                                     <motion.div
                                         key={review.id}
-                                        initial={{opacity: 0, y: 10}}
-                                        animate={{opacity: 1, y: 0}}
-                                        exit={{opacity: 0, y: -10}}
-                                        whileHover={{scale: 1.01}}
-                                        className="p-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 relative transition-colors duration-300"
+                                        layout
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        whileHover={{ y: -2 }}
+                                        className="p-5 bg-white dark:bg-gray-750 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow transition-all duration-200"
                                     >
-                                        <div className="absolute top-4 right-4 flex space-x-2">
-                                            <motion.button
-                                                onClick={() => handleDeleteReview(review.id)}
-                                                whileHover={{scale: 1.1}}
-                                                whileTap={{scale: 0.9}}
-                                                disabled={deleteReviewId === review.id}
-                                                className={`text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ${deleteReviewId === review.id ? 'opacity-50' : ''}`}
-                                                title="Удалить отзыв"
-                                                aria-label="Удалить отзыв"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </motion.button>
-                                        </div>
-
-                                        <div className="flex items-center mb-4">
-                                            <h4 className="font-medium text-gray-800 dark:text-gray-200 text-xl">{review.restaurantName}</h4>
-                                            <div className="ml-auto flex items-center">
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="font-medium text-gray-800 dark:text-gray-200 text-lg">{review.restaurantName}</h4>
+                                            <div className="flex space-x-1">
                                                 {Array.from({length: 5}).map((_, i) => (
                                                     <Star
                                                         key={i}
-                                                        className={`w-5 h-5 ${i < Math.round(Number(review.rating))
+                                                        className={`w-4 h-4 ${i < Math.round(Number(review.rating))
                                                             ? 'text-yellow-400 fill-yellow-400'
                                                             : 'text-gray-300 dark:text-gray-600'}`}
-                                                        aria-hidden="true"
                                                     />
                                                 ))}
-                                                <span className="ml-2 text-base font-medium text-gray-700 dark:text-gray-300">
-                                                    {Number(review.rating).toFixed(1)}
-                                                </span>
                                             </div>
                                         </div>
 
-                                        <p className="mb-5 text-gray-600 dark:text-gray-300 text-base leading-relaxed">{review.comment}</p>
+                                        <p className="mt-2 text-gray-600 dark:text-gray-300 text-sm line-clamp-3">{review.comment}</p>
 
-                                        <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-200 dark:border-gray-600 transition-colors duration-300">
-                                            <span className="flex items-center">
-                                                <Calendar className="w-4 h-4 mr-2" />
+                                        <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                            <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                                                <Calendar className="w-3.5 h-3.5 mr-1" />
                                                 {review.date ? formatDate(review.date) : 'Дата не указана'}
-                                            </span>
-                                            <span className="flex items-center">
-                                                <ThumbsUp className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+                                                
+                                                <span className="mx-2">•</span>
+                                                
+                                                <ThumbsUp className="w-3.5 h-3.5 mr-1 text-blue-500" />
                                                 {Number(review.likes) || 0}
-                                            </span>
+                                            </div>
+                                            
+                                            <motion.button
+                                                onClick={() => handleDeleteReview(review.id)}
+                                                whileHover={{ scale: 1.1 }}
+                                                whileTap={{ scale: 0.9 }}
+                                                disabled={deleteReviewId === review.id}
+                                                className={`text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors ${deleteReviewId === review.id ? 'opacity-50' : ''}`}
+                                            >
+                                                {deleteReviewId === review.id ? (
+                                                    <motion.div
+                                                        animate={{ rotate: 360 }}
+                                                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                                    >
+                                                        <Coffee className="w-4 h-4" />
+                                                    </motion.div>
+                                                ) : (
+                                                    <Trash2 className="w-4 h-4" />
+                                                )}
+                                            </motion.button>
                                         </div>
                                     </motion.div>
                                 ))}
                             </div>
                         ) : (
-                            <NoReviews/>
+                            <NoReviews />
                         )}
                     </CardContent>
                 </Card>

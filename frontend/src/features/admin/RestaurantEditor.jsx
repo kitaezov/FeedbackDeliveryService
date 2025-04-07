@@ -159,34 +159,34 @@ const RestaurantEditor = ({ user }) => {
 
     return (
         <div className="container mx-auto px-4 py-4 sm:py-8">
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-                <div className="p-4 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+                <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
                     <div>
-                        <h1 className="text-lg sm:text-2xl font-bold text-gray-800">
+                        <h1 className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white">
                             {isNew ? 'Добавить новый ресторан' : 'Редактировать ресторан'}
                         </h1>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 dark:text-gray-300">
                             {isNew ? 'Заполните форму для создания нового ресторана' : 'Измените данные существующего ресторана'}
                         </p>
                     </div>
                     <button
                         onClick={() => navigate('/admin')}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 sm:px-4 py-1.5 sm:py-2 rounded flex items-center text-sm"
+                        className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded flex items-center text-sm"
                     >
                         <ArrowLeft size={16} className="mr-1" /> Назад
                     </button>
                 </div>
 
                 {error && (
-                    <div className="p-3 sm:p-4 bg-red-100 border border-red-400 text-red-700 rounded mx-3 sm:mx-6 mt-3 sm:mt-6 text-sm sm:text-base">
+                    <div className="p-3 sm:p-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded mx-3 sm:mx-6 mt-3 sm:mt-6 text-sm sm:text-base">
                         {error}
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3 sm:space-y-4 dark:text-gray-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Название ресторана
                             </label>
                             <input
@@ -194,11 +194,11 @@ const RestaurantEditor = ({ user }) => {
                                 name="name"
                                 value={restaurant.name}
                                 onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Адрес
                             </label>
                             <input
@@ -206,13 +206,13 @@ const RestaurantEditor = ({ user }) => {
                                 name="address"
                                 value={restaurant.address}
                                 onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Описание
                         </label>
                         <textarea
@@ -220,13 +220,13 @@ const RestaurantEditor = ({ user }) => {
                             value={restaurant.description}
                             onChange={handleChange}
                             rows="4"
-                            className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                         ></textarea>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 URL изображения
                             </label>
                             <input
@@ -234,11 +234,11 @@ const RestaurantEditor = ({ user }) => {
                                 name="imageUrl"
                                 value={restaurant.imageUrl}
                                 onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Веб-сайт
                             </label>
                             <input
@@ -246,14 +246,14 @@ const RestaurantEditor = ({ user }) => {
                                 name="website"
                                 value={restaurant.website}
                                 onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Телефон
                             </label>
                             <input
@@ -261,11 +261,11 @@ const RestaurantEditor = ({ user }) => {
                                 name="contactPhone"
                                 value={restaurant.contactPhone}
                                 onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Активный ресторан
                             </label>
                             <div className="flex items-center space-x-4">
@@ -275,9 +275,9 @@ const RestaurantEditor = ({ user }) => {
                                         name="isActive"
                                         checked={restaurant.isActive}
                                         onChange={handleChange}
-                                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
                                     />
-                                    <label htmlFor="isActive" className="ml-2 block text-xs sm:text-sm text-gray-700">
+                                    <label htmlFor="isActive" className="ml-2 block text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                                         Активный ресторан
                                     </label>
                                 </div>
@@ -287,7 +287,7 @@ const RestaurantEditor = ({ user }) => {
 
                     <div className="space-y-6">
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 URL для страницы ресторана
                             </label>
                             <div className="flex items-center mb-2">
@@ -297,15 +297,15 @@ const RestaurantEditor = ({ user }) => {
                                     name="autoGenerateLink"
                                     checked={restaurant.autoGenerateLink}
                                     onChange={handleChange}
-                                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
                                 />
-                                <label htmlFor="autoGenerateLink" className="ml-2 block text-xs sm:text-sm text-gray-700">
+                                <label htmlFor="autoGenerateLink" className="ml-2 block text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                                     Генерировать URL автоматически на основе названия
                                 </label>
                             </div>
                             
                             <div className="mt-1 flex rounded-md shadow-sm">
-                                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-sm">
                                     /restaurant/
                                 </span>
                                 <input
@@ -318,11 +318,11 @@ const RestaurantEditor = ({ user }) => {
                                     className={`
                                         flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md 
                                         focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 
-                                        ${restaurant.autoGenerateLink ? 'bg-gray-100 text-gray-500' : 'border-gray-300'}
+                                        ${restaurant.autoGenerateLink ? 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'}
                                     `}
                                 />
                             </div>
-                            <p className="mt-1 text-xs sm:text-sm text-gray-500 flex items-center">
+                            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex items-center">
                                 <LinkIcon size={14} className="mr-1" /> 
                                 {restaurant.autoGenerateLink 
                                     ? "URL будет создан автоматически на основе названия ресторана" 
@@ -333,7 +333,7 @@ const RestaurantEditor = ({ user }) => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Категория кухни
                             </label>
                             <input
@@ -342,18 +342,18 @@ const RestaurantEditor = ({ user }) => {
                                 value={restaurant.category}
                                 onChange={handleChange}
                                 placeholder="Разная, Итальянская, Японская и т.д."
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Ценовой диапазон
                             </label>
                             <select
                                 name="priceRange"
                                 value={restaurant.priceRange}
                                 onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             >
                                 <option value="₽">₽ - Недорого</option>
                                 <option value="₽₽">₽₽ - Средне</option>
@@ -365,7 +365,7 @@ const RestaurantEditor = ({ user }) => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Минимальная цена заказа (₽)
                             </label>
                             <input
@@ -374,11 +374,11 @@ const RestaurantEditor = ({ user }) => {
                                 value={restaurant.minPrice}
                                 onChange={handleChange}
                                 placeholder="Например: 500"
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Время доставки (мин)
                             </label>
                             <input
@@ -387,21 +387,21 @@ const RestaurantEditor = ({ user }) => {
                                 value={restaurant.deliveryTime}
                                 onChange={handleChange}
                                 placeholder="Например: 30-60"
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row mt-3 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row mt-3 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
                         <div className="flex items-center mb-3 sm:mb-0">
                             <input
                                 type="checkbox"
                                 id="featured"
                                 checked={restaurant.featured}
                                 onChange={(e) => setRestaurant(prev => ({ ...prev, featured: e.target.checked }))}
-                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
                             />
-                            <label htmlFor="featured" className="ml-2 block text-xs sm:text-sm text-gray-700">
+                            <label htmlFor="featured" className="ml-2 block text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                                 Отображать на главной странице
                             </label>
                         </div>

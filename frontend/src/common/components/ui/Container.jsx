@@ -16,18 +16,18 @@ export const Container = ({
     size = 'full', 
     padding = true 
 }) => {
-    // Классы для разных размеров контейнера с улучшенной поддержкой десктопов и увеличенной шириной
+    // Классы для разных размеров контейнера - все размеры настроены на максимальную ширину
     const sizeClasses = {
-        sm: 'max-w-full sm:max-w-full md:max-w-full lg:max-w-screen-lg xl:max-w-screen-xl',
-        md: 'max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full',
-        lg: 'max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full',
-        xl: 'max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full',
+        sm: 'max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full 2xl:max-w-full',
+        md: 'max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full 2xl:max-w-full',
+        lg: 'max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full 2xl:max-w-full',
+        xl: 'max-w-full sm:max-w-full md:max-w-full lg:max-w-full xl:max-w-full 2xl:max-w-full',
         '2xl': 'max-w-full w-full',
         'full': 'max-w-full w-full'
     };
     
-    // Улучшенные отступы для десктопов
-    const paddingClasses = padding ? 'px-2 sm:px-3 md:px-4 lg:px-5' : '';
+    // Улучшенные отступы для десктопов - увеличены для лучшего использования пространства
+    const paddingClasses = padding ? 'px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16' : '';
     
     return (
         <div className={`w-full mx-auto ${sizeClasses[size]} ${paddingClasses} ${className}`}>

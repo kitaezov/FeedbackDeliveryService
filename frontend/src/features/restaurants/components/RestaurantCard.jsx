@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../../common/components/ui';
 import { StarRating } from './StarRating';
+import { MapPin } from 'lucide-react';
 
 /**
  * Компонент карточки ресторана
@@ -25,36 +26,39 @@ export const RestaurantCard = ({
     rating,
     reviewCount
 }) => {
-    // Получаем путь к изображению или используем заглушку
-    const imageUrl = image || '/assets/images/restaurant-placeholder.jpg';
-    
     return (
-        <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full w-full">
-            <Link to={`/restaurants/${id}`} className="flex flex-col h-full">
-                <div className="relative w-full">
-                    {/* Изображение ресторана с широким соотношением сторон */}
-                    <div className="aspect-[3/1] w-full relative">
+        <Link to={`/restaurants/${id}`}>
+            <div 
+                className="group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl 
+                transition-all duration-300 overflow-hidden flex flex-col h-full w-full border 
+                border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+            >
+                {/* Изображение ресторана */}
+                <div className="relative overflow-hidden pt-[56.25%] w-full">
+                    {image ? (
                         <img 
-                            src={imageUrl} 
+                            src={image} 
                             alt={name} 
-                            className="w-full h-full object-cover absolute inset-0"
-                            onError={(e) => {
-                                e.target.src = '/assets/images/restaurant-placeholder.jpg';
-                            }}
+                            className="absolute top-0 left-0 w-full h-full object-cover
+                            group-hover:scale-110 transition-transform duration-700 ease-out"
                         />
-                    </div>
+                    ) : (
+                        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+                            <span className="text-gray-400 dark:text-gray-500">Нет изображения</span>
+                        </div>
+                    )}
                     
-                    {/* Бейдж с типом кухни */}
+                    {/* Указатель кухни */}
                     {cuisine && (
-                        <span className="absolute top-3 right-3 bg-primary-500 text-white text-xs font-semibold px-2 py-1 rounded">
+                        <div className="absolute top-3 left-3 bg-white dark:bg-gray-800 px-3 py-1 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm">
                             {cuisine}
-                        </span>
+                        </div>
                     )}
                 </div>
                 
                 {/* Информация о ресторане */}
-                <div className="p-4 flex-grow flex flex-col">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 truncate">
+                <div className="p-5 flex-grow flex flex-col w-full">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {name}
                     </h3>
                     
@@ -68,32 +72,13 @@ export const RestaurantCard = ({
                     
                     {/* Адрес */}
                     {address && (
-                        <div className="flex items-start text-sm text-gray-600 dark:text-gray-400 mt-auto">
-                            <svg 
-                                className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-1 mt-0.5 flex-shrink-0" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24" 
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    strokeWidth={2} 
-                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" 
-                                />
-                                <path 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    strokeWidth={2} 
-                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" 
-                                />
-                            </svg>
-                            <span className="truncate">{address}</span>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 flex items-start">
+                            <MapPin size={16} className="flex-shrink-0 mr-1 mt-0.5 group-hover:text-blue-500 transition-colors" />
+                            <span className="line-clamp-2">{address}</span>
                         </div>
                     )}
                 </div>
-            </Link>
-        </Card>
+            </div>
+        </Link>
     );
 }; 

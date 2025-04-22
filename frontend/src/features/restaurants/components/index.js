@@ -11,4 +11,5 @@ export { ReviewList } from './ReviewList';
 export { StarRating } from './StarRating';
 export { TopRestaurants } from './TopRestaurants';
 export { RestaurantStats } from './RestaurantStats';
-export { RestaurantStatistics } from './RestaurantStatistics'; 
+export { RestaurantStatistics } from './RestaurantStatistics';
+export { default as RestaurantImageUploader } from './RestaurantImageUploader'; 

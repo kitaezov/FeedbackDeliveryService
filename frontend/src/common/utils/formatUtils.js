@@ -51,11 +51,17 @@ export const formatDate = (date, { showTime = false, locale = 'ru-RU' } = {}) =>
     // Проверка на валидность даты
     if (isNaN(dateObj.getTime())) return '';
     
+    // Проверка на то, является ли время полуночью (00:00)
+    const isDefaultTime = dateObj.getHours() === 0 && dateObj.getMinutes() === 0;
+    
+    // Если время 00:00 или showTime=false, не показываем время
+    const shouldShowTime = showTime && !isDefaultTime;
+    
     const options = {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
-        ...(showTime && {
+        ...(shouldShowTime && {
             hour: '2-digit',
             minute: '2-digit'
         })

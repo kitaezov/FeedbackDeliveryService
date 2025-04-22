@@ -92,7 +92,7 @@ const createReview = async (req, res) => {
             userName: user.name,
             date: new Date().toISOString(),
             restaurant_name: restaurantName,
-            avatar: `https://i.pravatar.cc/100?u=${user.name}`,
+            avatar: user.avatar || null,
             likes: 0,
             ratings: {
                 food: foodRating,
@@ -485,7 +485,7 @@ const createReviewWithPhotos = async (req, res) => {
             userName: user.name,
             date: new Date().toISOString(),
             restaurant_name: restaurantName,
-            avatar: user.avatar || `https://i.pravatar.cc/100?u=${user.name}`,
+            avatar: user.avatar || null,
             likes: 0,
             photos: photoUrls,
             ratings: {

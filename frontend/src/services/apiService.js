@@ -2,13 +2,11 @@
  * Базовый сервис для работы с API
  */
 import axios from 'axios';
-
-// Базовый URL API
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import { API_BASE } from '../config';
 
 // Создаем экземпляр axios с базовыми настройками
 const api = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: API_BASE,
     headers: {
         'Content-Type': 'application/json',
     },

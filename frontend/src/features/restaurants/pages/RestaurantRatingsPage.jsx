@@ -134,6 +134,13 @@ const RestaurantRatingsPage = () => {
         </div>
     );
 
+    // Add this utility function for image URLs
+    const getImageUrl = (image) => {
+        if (!image) return null;
+        if (image.startsWith('http')) return image;
+        return `${process.env.REACT_APP_API_URL || ''}${image}`;
+    };
+
     return (
         <div className={`min-h-screen ${themeClasses.background}`}>
             <BackgroundParticles />
@@ -225,8 +232,8 @@ const RestaurantRatingsPage = () => {
                         {filteredRestaurants.length === 0 ? (
                             <div className="text-center py-10">
                                 <Award size={48} className="mx-auto text-gray-400 mb-4" />
-                                <h2 className="text-xl font-semibold mb-2">Рестораны не найдены</h2>
-                                <p className="text-gray-500">Попробуйте изменить параметры поиска</p>
+                                <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Рестораны не найдены</h2>
+                                <p className="text-gray-600 dark:text-gray-400">Попробуйте изменить параметры поиска</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -246,7 +253,7 @@ const RestaurantRatingsPage = () => {
                                             <div className="h-48 bg-gray-300 overflow-hidden">
                                                 {restaurant.imageUrl ? (
                                                     <img 
-                                                        src={restaurant.imageUrl} 
+                                                        src={getImageUrl(restaurant.imageUrl)} 
                                                         alt={restaurant.name} 
                                                         className="w-full h-full object-cover transition-transform hover:scale-105 duration-300" 
                                                     />

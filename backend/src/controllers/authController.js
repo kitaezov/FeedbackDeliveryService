@@ -10,7 +10,18 @@ const { validateEmail, validatePassword, validateName } = require('../utils/vali
 const config = require('../config');
 const fs = require('fs');
 const path = require('path');
-const notificationController = require('./notificationController');
+
+// Safely import notification controller
+let notificationController;
+try {
+    notificationController = require('./notificationController');
+} catch (error) {
+    console.error('Failed to load notification controller:', error);
+    // Create a dummy notification controller if the real one can't be loaded
+    notificationController = {
+        createProfileUpdateNotification: async () => false
+    };
+}
 
 /**
  * Register a new user
@@ -514,8 +525,14 @@ const updateProfile = async (req, res) => {
             });
         }
         
-        // Создаем уведомление об обновлении профиля
-        await notificationController.createProfileUpdateNotification(userId);
+        // Создаем уведомление об обновлении профиля - обернем в try/catch,
+        // чтобы не прерывать основной процесс, если с уведомлениями проблема
+        try {
+            await notificationController.createProfileUpdateNotification(userId);
+        } catch (notificationError) {
+            console.error('Ошибка создания уведомления:', notificationError);
+            // Продолжаем выполнение, не прерывая основной процесс
+        }
         
         // Return updated user data
         res.json({

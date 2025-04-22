@@ -158,7 +158,37 @@ const checkRole = (requiredRole) => {
     };
 };
 
+/**
+ * Middleware для проверки, является ли пользователь администратором
+ * 
+ * @param {Object} req - Объект запроса Express
+ * @param {Object} res - Объект ответа Express
+ * @param {Function} next - Функция перехода к следующему middleware
+ * @returns {Object|void} Возвращает ответ с ошибкой или вызывает next()
+ */
+const isAdmin = (req, res, next) => {
+    // Сначала проверяем, аутентифицирован ли пользователь
+    if (!req.user) {
+        return res.status(401).json({
+            message: 'Требуется авторизация',
+            details: 'Пользователь не аутентифицирован'
+        });
+    }
+    
+    // Проверяем, является ли пользователь администратором
+    if (req.user.role !== 'admin' && req.user.role !== 'head_admin' && req.user.role !== 'super_admin' && req.user.role !== 'глав_админ') {
+        return res.status(403).json({
+            message: 'Доступ запрещен',
+            details: 'Требуются права администратора'
+        });
+    }
+    
+    // Если все проверки пройдены, передаем управление следующему middleware
+    next();
+};
+
 module.exports = {
     authenticateToken,
-    checkRole
+    checkRole,
+    isAdmin
 }; 

@@ -66,7 +66,7 @@ const RestaurantCharts = ({ reviews = [], isDarkMode = false }) => {
             .filter(restaurant => restaurant.totalReviews > 0)
             .map(restaurant => {
                 const {
-                    totalReviews,
+                    totalReviews,   
                     totalRating,
                     totalFoodRating,
                     totalServiceRating,
@@ -179,17 +179,17 @@ const SortButton = ({ sortMode, setSortMode, themeClasses, isDarkMode }) => {
         {
             value: 'rating',
             label: 'По рейтингу',
-            icon: <Star className="w-4 h-4 text-yellow-500" />
+            icon: <Star className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />
         },
         {
             value: 'newest',
             label: 'Новые',
-            icon: <Clock className="w-4 h-4 text-blue-500" />
+            icon: <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
         },
         {
             value: 'likes',
             label: 'Популярные',
-            icon: <ThumbsUp className="w-4 h-4 text-red-500" />
+            icon: <ThumbsUp className="w-4 h-4 text-red-500 dark:text-red-400" />
         }
     ];
 

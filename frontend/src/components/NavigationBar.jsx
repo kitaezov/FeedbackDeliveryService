@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Moon, Sun, Bell, UserCircle2, Search, LogOut, LogIn, Menu, X, Clock, Utensils, ShieldCheck, Star } from 'lucide-react';
+import { Moon, Sun, Bell, UserCircle2, Search, LogOut, LogIn, Menu, X, Clock, Utensils, ShieldCheck, Star, LayoutDashboard, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import api from '../utils/api';
 import notificationService from '../services/notificationService';
+import { useNotification } from './NotificationContext';
 
 /**
  * Получает полный URL аватара пользователя
@@ -137,6 +138,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
     const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
     
     const navigate = useNavigate();
+    const notifyContext = useNotification();
 
     // Ссылки на DOM-элементы для обработки кликов вне компонентов
     const notificationsRef = useRef(null);
@@ -155,13 +157,22 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
             if (response.status === 200) {
                 setNotifications(response.data.notifications || []);
                 setUnreadCount(response.data.unreadCount || 0);
+                
+                // If notifications dropdown is open, mark all as read
+                if (showNotifications) {
+                    const unreadNotifications = response.data.notifications.filter(n => !n.is_read);
+                    for (const notification of unreadNotifications) {
+                        await notificationService.markNotificationAsRead(notification.id);
+                    }
+                    setUnreadCount(0);
+                }
             }
         } catch (error) {
             console.error('Ошибка при загрузке уведомлений:', error);
         } finally {
             setIsLoadingNotifications(false);
         }
-    }, [user]);
+    }, [user, showNotifications]);
 
     // Загружаем уведомления при изменении пользователя
     useEffect(() => {
@@ -194,6 +205,39 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (error) {
             console.error('Ошибка при отметке уведомления:', error);
+        }
+    };
+
+    // Обработчик для удаления уведомления
+    const deleteNotification = async (notificationId) => {
+        if (!user || !user.token) return;
+        
+        try {
+            // Вызываем API для удаления уведомления из базы данных
+            const response = await notificationService.deleteNotification(notificationId);
+            
+            // Только если удаление в БД прошло успешно, обновляем UI
+            if (response && response.message) {
+                // Обновляем локальное состояние
+                setNotifications(prev => prev.filter(notification => notification.id !== notificationId));
+                
+                // Обновляем счетчик непрочитанных, если удалено непрочитанное уведомление
+                const deletedNotification = notifications.find(n => n.id === notificationId);
+                if (deletedNotification && !deletedNotification.is_read) {
+                    setUnreadCount(prev => Math.max(0, prev - 1));
+                }
+                
+                // Показываем уведомление об успешном удалении
+                if (notifyContext) {
+                    notifyContext.notifySuccess('Уведомление успешно удалено');
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка при удалении уведомления:', error);
+            // Показываем уведомление об ошибке
+            if (notifyContext) {
+                notifyContext.notifyError('Не удалось удалить уведомление');
+            }
         }
     };
 
@@ -350,28 +394,6 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                 <span className="text-gray-900 dark:text-white font-bold text-xl">FeedbackDelivery</span>
                             </Link>
                         </motion.div>
-                        
-                        {/* Поисковая строка (перемещена влево и сделана меньше) */}
-                        <motion.div 
-                            className="hidden md:flex ml-4 max-w-xs"
-                            initial={{ opacity: 0, width: '50%' }}
-                            animate={{ opacity: 1, width: '100%' }}
-                            transition={{ 
-                                duration: 0.5,
-                                delay: 0.2 
-                            }}
-                        >
-                            <motion.div 
-                                className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full w-full overflow-hidden"
-                                whileHover={{ 
-                                    boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.3)",
-                                    transition: {
-                                        duration: 0.2
-                                    }
-                                }}
-                            >
-                            </motion.div>
-                        </motion.div>
                     </div>
                     
                     {/* Правая часть навбара */}
@@ -391,6 +413,23 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                 <Star size={20} className="text-yellow-500" />
                             </Link>
                         </motion.div>
+
+                        {/* Кнопка панели менеджера */}
+                        {user?.role === 'manager' && (
+                            <motion.div
+                                variants={buttonVariants}
+                                whileHover="hover"
+                                whileTap="tap"
+                            >
+                                <Link 
+                                    to="/manager" 
+                                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-full flex items-center"
+                                    aria-label="Панель менеджера"
+                                >
+                                    <LayoutDashboard size={20} className="text-blue-500" />
+                                </Link>
+                            </motion.div>
+                        )}
                         
                         {/* Уведомления */}
                         {user && (
@@ -434,7 +473,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                                 <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Уведомления</h3>
                                             </div>
                                             
-                                            <div className="max-h-64 overflow-y-auto">
+                                            <div className="max-h-64 overflow-y-auto scrollbar-hide">
                                                 {isLoadingNotifications ? (
                                                     <div className="py-4 text-center text-gray-500 dark:text-gray-400">
                                                         <motion.div 
@@ -453,7 +492,6 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                                         <motion.div 
                                                             key={notification.id} 
                                                             className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 ${!notification.is_read ? 'bg-gray-100 dark:bg-gray-700/50' : ''}`}
-                                                            onClick={() => markAsRead(notification.id)}
                                                             initial={{ opacity: 0, y: 10 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             transition={{ 
@@ -464,12 +502,24 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                                             whileHover="hover"
                                                             whileTap="tap"
                                                         >
-                                                            <div className="flex">
-                                                                <p className="text-sm text-gray-700 dark:text-gray-300">{notification.message}</p>
+                                                            <div className="flex justify-between">
+                                                                <div className="flex-1" onClick={() => markAsRead(notification.id)}>
+                                                                    <p className="text-sm text-gray-700 dark:text-gray-300">{notification.message}</p>
+                                                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                                                        {notification.time || (notification.createdAt && new Date(notification.createdAt).toLocaleString())}
+                                                                    </p>
+                                                                </div>
+                                                                <button 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        deleteNotification(notification.id);
+                                                                    }}
+                                                                    className="ml-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                                    aria-label="Удалить уведомление"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
                                                             </div>
-                                                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                                                {notification.time || (notification.createdAt && new Date(notification.createdAt).toLocaleString())}
-                                                            </p>
                                                         </motion.div>
                                                     ))
                                                 ) : (
@@ -582,6 +632,26 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                                     Мой профиль
                                                 </motion.button>
                                                 
+                                                {/* Manager Dashboard Link */}
+                                                {(user.role === 'manager' || user.role === 'менеджер') && (
+                                                    <motion.div
+                                                        variants={menuItemVariants}
+                                                        whileHover="hover"
+                                                        whileTap="tap"
+                                                    >
+                                                        <button 
+                                                            onClick={() => {
+                                                                navigate('/manager');
+                                                                setShowProfileMenu(false);
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                                                        >
+                                                            <LayoutDashboard size={16} className="mr-2 text-blue-500" />
+                                                            Панель менеджера
+                                                        </button>
+                                                    </motion.div>
+                                                )}
+                                                
                                                 {(user.role === 'admin' || user.role === 'super_admin' || user.role === 'moderator' || 
                                                 user.role === 'глав_админ' || user.role === 'head_admin' || 
                                                 user.role === 'manager' || user.role === 'менеджер') && (
@@ -590,14 +660,16 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                                         whileHover="hover"
                                                         whileTap="tap"
                                                     >
-                                                        <Link 
-                                                            to="/admin" 
-                                                            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
-                                                            onClick={() => setShowProfileMenu(false)}
+                                                        <button 
+                                                            onClick={() => {
+                                                                navigate('/admin');
+                                                                setShowProfileMenu(false);
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                                                         >
                                                             <ShieldCheck size={16} className="mr-2 text-gray-700 dark:text-gray-400" />
-                                                            Панель администратора
-                                                        </Link>
+                                                            Админ панель
+                                                        </button>
                                                     </motion.div>
                                                 )}
                                                 
@@ -753,6 +825,31 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                     </Link>
                                 </motion.div>
                                 
+                                {/* Mobile Manager Dashboard Link */}
+                                {user && (user.role === 'manager' || user.role === 'менеджер') && (
+                                    <motion.div
+                                        className="w-full"
+                                        initial={{ x: -20, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        transition={{ 
+                                            delay: 0.24,
+                                            duration: 0.3
+                                        }}
+                                        variants={menuItemVariants}
+                                        whileHover="hover"
+                                        whileTap="tap"
+                                    >
+                                        <Link 
+                                            to="/manager" 
+                                            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md flex items-center"
+                                            onClick={() => setMobileMenuOpen(false)}
+                                        >
+                                            <LayoutDashboard size={18} className="mr-2 text-blue-500" />
+                                            Панель менеджера
+                                        </Link>
+                                    </motion.div>
+                                )}
+                                
                                 {user && (user.role === 'admin' || user.role === 'super_admin' || user.role === 'moderator' || 
                                 user.role === 'глав_админ' || user.role === 'head_admin' || 
                                 user.role === 'manager' || user.role === 'менеджер') && (
@@ -768,14 +865,16 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                         whileHover="hover"
                                         whileTap="tap"
                                     >
-                                        <Link 
-                                            to="/admin" 
-                                            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md flex items-center"
-                                            onClick={() => setMobileMenuOpen(false)}
+                                        <button 
+                                            onClick={() => {
+                                                navigate('/admin');
+                                                setMobileMenuOpen(false);
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                                         >
                                             <ShieldCheck size={18} className="mr-2 text-gray-700 dark:text-gray-400" />
-                                            Панель администратора
-                                        </Link>
+                                            Админ панель
+                                        </button>
                                     </motion.div>
                                 )}
                                 

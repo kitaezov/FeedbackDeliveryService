@@ -15,7 +15,11 @@ const morgan = require('morgan');
 const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
+const connectDB = require('./config/mongodb');
 require('dotenv').config();
+
+// Подключение к MongoDB
+connectDB();
 
 // Инициализация приложения Express
 const app = express();
@@ -81,14 +85,16 @@ const restaurantRoutes = require('./routes/restaurantRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const managerRoutes = require('./routes/managerRoutes');
 
 // Регистрация маршрутов
-app.use('/api/auth', authRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/reviews', reviewRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/manager', managerRoutes);
 app.use('/api/profile', profileRoutes);
 
 // Обработка корневого маршрута

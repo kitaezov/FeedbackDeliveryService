@@ -89,7 +89,7 @@ const NotFoundPage = ({ isDarkMode }) => {
                     
                     <motion.button
                         onClick={() => navigate('/')}
-                        className={`inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-lg text-md font-medium shadow-md hover:shadow-lg hover:bg-blue-700 transition-all`}
+                        className={`inline-flex items-center bg-gray-700 text-white px-6 py-3 rounded-lg text-md font-medium shadow-md hover:shadow-lg hover:bg-gray-800 transition-all`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         variants={{

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Link as LinkIcon } from 'lucide-react';
+import { Save, ArrowLeft, Link as LinkIcon, Image } from 'lucide-react';
 import api from '../../utils/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -26,6 +26,30 @@ const RestaurantEditor = ({ user }) => {
         minPrice: '',
         deliveryTime: ''
     });
+    
+    // Function to validate and process image URL
+    const processImageUrl = (url) => {
+        if (!url) return '';
+        
+        // If it's already a valid URL, return it
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/uploads/')) {
+            return url;
+        }
+        
+        // Try to convert to a valid URL
+        try {
+            // If it contains a valid URL without protocol, add the protocol
+            if (url.includes('.') && !url.includes(' ')) {
+                if (!url.match(/^[a-zA-Z]+:\/\//)) {
+                    return 'https://' + url;
+                }
+            }
+        } catch (e) {
+            console.error('Error processing URL:', e);
+        }
+        
+        return url;
+    };
 
     // Check if user is admin
     useEffect(() => {
@@ -43,13 +67,25 @@ const RestaurantEditor = ({ user }) => {
             try {
                 const response = await api.get(`/restaurants/${id}`);
                 
-                // Convert isActive from 0/1 to boolean if needed
-                const restaurantData = response.data.restaurant;
-                if (typeof restaurantData.is_active === 'number') {
-                    restaurantData.is_active = Boolean(restaurantData.is_active);
+                // Check if response has the expected structure
+                if (!response.data) {
+                    throw new Error('Invalid API response: Missing data');
                 }
                 
-                // Set form state
+                // Check different possible response structures
+                const restaurantData = response.data.restaurant || response.data;
+                
+                // Check if restaurantData exists and has the expected properties
+                if (!restaurantData || typeof restaurantData !== 'object') {
+                    throw new Error('Restaurant data not found or invalid');
+                }
+                
+                // Convert isActive from 0/1 to boolean if needed
+                const isActive = restaurantData.is_active !== undefined 
+                    ? Boolean(restaurantData.is_active) 
+                    : true; // Default to true if not provided
+                
+                // Set form state with safe fallbacks for all properties
                 setRestaurant({
                     name: restaurantData.name || '',
                     address: restaurantData.address || '',
@@ -57,7 +93,7 @@ const RestaurantEditor = ({ user }) => {
                     imageUrl: restaurantData.image_url || '',
                     website: restaurantData.website || '',
                     contactPhone: restaurantData.contact_phone || '',
-                    isActive: restaurantData.is_active !== false,
+                    isActive: isActive,
                     slug: restaurantData.slug || '',
                     autoGenerateLink: true,
                     category: restaurantData.category || '',
@@ -67,7 +103,7 @@ const RestaurantEditor = ({ user }) => {
                 });
             } catch (error) {
                 console.error('Error loading restaurant:', error);
-                setError('Не удалось загрузить данные ресторана');
+                setError(`Не удалось загрузить данные ресторана: ${error.message}`);
             } finally {
                 setLoading(false);
             }
@@ -79,6 +115,16 @@ const RestaurantEditor = ({ user }) => {
     // Handle input changes
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        
+        // Special handling for imageUrl field
+        if (name === 'imageUrl') {
+            setRestaurant(prev => ({
+                ...prev,
+                [name]: value // Store raw value for editing
+            }));
+            return;
+        }
+        
         setRestaurant(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
@@ -92,50 +138,56 @@ const RestaurantEditor = ({ user }) => {
         setError(null);
 
         try {
-            // Отладочный вывод значений с формы
-            console.log('Отправляем данные на сервер:');
-            console.log('category:', restaurant.category);
-            console.log('priceRange:', restaurant.priceRange);
-            console.log('minPrice:', restaurant.minPrice);
-            console.log('deliveryTime:', restaurant.deliveryTime);
+            // Validate required fields
+            if (!restaurant.name.trim()) {
+                setError('Название ресторана обязательно');
+                setSaving(false);
+                return;
+            }
+
+            // Generate slug from name if autoGenerateLink is true
+            let slug = restaurant.slug;
+            if (restaurant.autoGenerateLink || !slug || slug.trim() === '') {
+                slug = restaurant.name
+                    .toLowerCase()
+                    .replace(/[^\w\s-]/g, '') // Remove non-word chars
+                    .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+                    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+            }
+
+            // Ensure slug is not empty
+            if (!slug || slug.trim() === '') {
+                setError('Не удалось создать URL для страницы ресторана');
+                setSaving(false);
+                return;
+            }
+            
+            // Process image URL
+            const processedImageUrl = processImageUrl(restaurant.imageUrl);
 
             const formData = {
-                name: restaurant.name,
-                address: restaurant.address,
-                description: restaurant.description,
-                imageUrl: restaurant.imageUrl,
-                website: restaurant.website,
-                contactPhone: restaurant.contactPhone,
-                isActive: restaurant.isActive,
-                autoGenerateLink: restaurant.autoGenerateLink,
-                // Передаем новые поля в формате, который ожидает сервер
-                category: restaurant.category,
-                price_range: restaurant.priceRange,  // snake_case для сервера
-                min_price: restaurant.minPrice,      // snake_case для сервера
-                delivery_time: restaurant.deliveryTime // snake_case для сервера
+                name: restaurant.name.trim(),
+                address: restaurant.address.trim(),
+                description: restaurant.description.trim(),
+                image_url: processedImageUrl,
+                website: restaurant.website.trim(),
+                contact_phone: restaurant.contactPhone.trim(),
+                is_active: restaurant.isActive,
+                slug: slug,
+                category: restaurant.category.trim(),
+                price_range: restaurant.priceRange,
+                min_price: restaurant.minPrice,
+                delivery_time: restaurant.deliveryTime,
+                autoGenerateLink: restaurant.autoGenerateLink
             };
 
-            // Отладочный вывод объекта formData
-            console.log('Форматированные данные для отправки:');
-            console.log('category:', formData.category);
-            console.log('price_range:', formData.price_range);
-            console.log('min_price:', formData.min_price);
-            console.log('delivery_time:', formData.delivery_time);
+            console.log('Sending restaurant data:', formData);
 
             let response;
             if (isNew) {
-                // Create new restaurant
                 response = await api.post('/restaurants', formData);
-                console.log('Ответ от сервера после создания:', response.data);
             } else {
-                // Update existing restaurant
                 response = await api.put(`/restaurants/${id}`, formData);
-                console.log('Ответ от сервера после обновления:', response.data);
-                
-                // If manual slug is set and different from current
-                if (!restaurant.autoGenerateLink && restaurant.slug) {
-                    await api.put(`/restaurants/${id}/slug`, { slug: restaurant.slug });
-                }
             }
 
             navigate('/admin');
@@ -156,6 +208,31 @@ const RestaurantEditor = ({ user }) => {
             </div>
         );
     }
+    
+    // Function to show image preview
+    const getImagePreview = () => {
+        if (!restaurant.imageUrl) return null;
+        
+        const processedUrl = processImageUrl(restaurant.imageUrl);
+        if (!processedUrl) return null;
+        
+        return (
+            <div className="mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Предпросмотр:</p>
+                <div className="h-24 w-48 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden relative">
+                    <img 
+                        src={processedUrl} 
+                        alt="Preview" 
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNGMEYwRjAiLz48cGF0aCBkPSJNODAgMTEwSDEyME0xMDAgOTBWMTMwIiBzdHJva2U9IiNBMEEwQTAiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+';
+                        }}
+                    />
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="container mx-auto px-4 py-4 sm:py-8">
@@ -226,8 +303,8 @@ const RestaurantEditor = ({ user }) => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                URL изображения
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center">
+                                <Image size={14} className="mr-1" /> URL изображения
                             </label>
                             <input
                                 type="text"
@@ -236,6 +313,10 @@ const RestaurantEditor = ({ user }) => {
                                 onChange={handleChange}
                                 className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Укажите полный URL изображения (http://example.com/image.jpg)
+                            </p>
+                            {getImagePreview()}
                         </div>
                         <div>
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -272,6 +353,7 @@ const RestaurantEditor = ({ user }) => {
                                 <div className="flex items-center h-full pt-6">
                                     <input
                                         type="checkbox"
+                                        id="isActive"
                                         name="isActive"
                                         checked={restaurant.isActive}
                                         onChange={handleChange}

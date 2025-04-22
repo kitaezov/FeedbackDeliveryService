@@ -28,4 +28,10 @@ router.delete('/reviews/:id', authenticateToken, checkRole('manager'), adminCont
 // Get all deleted reviews with reasons - Manager or higher
 router.get('/deleted-reviews', authenticateToken, checkRole('manager'), adminController.getDeletedReviews);
 
+// Restaurant management routes
+router.get('/restaurants', authenticateToken, checkRole('admin'), adminController.getRestaurants);
+router.post('/restaurants', authenticateToken, checkRole('admin'), adminController.createRestaurant);
+router.put('/restaurants/:id', authenticateToken, checkRole('admin'), adminController.updateRestaurant);
+router.delete('/restaurants/:id', authenticateToken, checkRole('admin'), adminController.deleteRestaurant);
+
 module.exports = router; 

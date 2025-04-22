@@ -1,7 +1,6 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
-import { Heart, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Heart, ChevronDown, ChevronUp, Trash2, User } from 'lucide-react';
 import { Card, CardContent } from './Card';
 import { motion } from 'framer-motion';
 import { restaurantData } from '../features/restaurants/restaurantData';
@@ -23,6 +22,49 @@ const buttonVariants = {
         transition: { 
             duration: 0.1 
         }
+    }
+};
+
+/**
+ * Форматирует дату в читаемый вид
+ * 
+ * @param {string|Date} dateString - Дата для форматирования
+ * @returns {string} - Отформатированная дата
+ */
+const formatDate = (dateString) => {
+    if (!dateString) return 'Дата не указана';
+    
+    try {
+        const date = new Date(dateString);
+        
+        // Проверка на валидность даты
+        if (isNaN(date.getTime())) {
+            return 'Некорректная дата';
+        }
+        
+        // Проверяем, является ли время полуночью (00:00)
+        const isDefaultTime = date.getHours() === 0 && date.getMinutes() === 0;
+        
+        if (isDefaultTime) {
+            // Форматирование только даты без времени, если время 00:00
+            return date.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } else {
+            // Дата со временем для других случаев
+            return date.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    } catch (error) {
+        console.error('Ошибка форматирования даты:', error);
+        return 'Некорректная дата';
     }
 };
 
@@ -108,17 +150,21 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                     {/* Профиль и базовая информация */}
                     <div className="flex flex-wrap md:flex-nowrap items-center mb-6 gap-4">
                         <div className="relative">
-                            <img
-                                src={review.avatar || restaurantData[1]?.logo}
-                                alt={review.user_name || review.userName || 'Пользователь'}
-                                className="w-14 h-14 rounded-full object-cover
-                                           ring-2 ring-offset-2 ring-blue-50
-                                           transition-transform group-hover:scale-105"
-                                onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = restaurantData[1]?.logo;
-                                }}
-                            />
+                            {review.avatar ? (
+                                <img
+                                    src={review.avatar}
+                                    alt={review.user_name || review.userName || 'Пользователь'}
+                                    className="w-14 h-14 rounded-full object-cover
+                                            ring-2 ring-offset-2 ring-blue-50
+                                            transition-transform group-hover:scale-105"
+                                />
+                            ) : (
+                                <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700
+                                            ring-2 ring-offset-2 ring-blue-50
+                                            transition-transform group-hover:scale-105">
+                                    <User size={24} className="text-gray-500 dark:text-gray-400" />
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex-grow">
@@ -128,15 +174,10 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                                 {review.user_name || review.userName || 'Пользователь'}
                             </h3>
                             <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {review.date || 'Дата не указана'} •
-                                <Link
-                                    to={`/restaurant-ratings?restaurant=${restaurantSlug}`}
-                                    className="ml-1 text-blue-400
-                                               hover:text-blue-600
-                                               transition-colors"
-                                >
-                                    {review.restaurantName || 'Неизвестное заведение'}
-                                </Link>
+                                {formatDate(review.date)}
+                                <span className="ml-1">
+                                    
+                                </span>
                             </div>
                         </div>
 
@@ -229,14 +270,11 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                                 </>
                             ) : (
                                 <>
-                                    <span>Показать детали</span>
-                                    <ChevronDown className="w-4 h-4 ml-1" />
+                    
                                 </>
                             )}
                         </motion.button>
                     </div>
-
-                    {/* Детальные оценки */}
                     {showDetails && (
                         <motion.div 
                             initial={{ opacity: 0, height: 0 }}
@@ -283,116 +321,3 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
 };
 
 export default ReviewCard;
-=======
-import React from 'react';
-import PropTypes from 'prop-types';
-import { Star, ThumbsUp } from 'lucide-react';
-
-/**
- * Компонент карточки отзыва для отображения информации о ресторане
- * @component
- * @param {Object} props - Свойства компонента
- * @param {Object} props.review - Объект с данными отзыва
- * @param {string} props.review.id - Уникальный идентификатор отзыва
- * @param {string} props.review.userName - Имя пользователя
- * @param {string} props.review.avatar - URL аватара пользователя
- * @param {string} props.review.date - Дата отзыва
- * @param {number} props.review.rating - Рейтинг (от 0 до 5)
- * @param {string} props.review.comment - Текст комментария
- * @param {number} props.review.likes - Количество лайков
- * @param {string} props.review.restaurantName - Название ресторана
- */
-const ReviewCard = ({ review }) => {
-    try {
-        // Функция для генерации звёзд рейтинга
-        const renderStars = () => {
-            try {
-                return [...Array(5)].map((_, i) => (
-                    <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                            i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                        }`}
-                        data-testid={`star-${i}`}
-                    />
-                ));
-            } catch (error) {
-                console.error('Ошибка при рендеринге звезд:', error);
-                return null;
-            }
-        };
-
-        // Обработчик ошибок загрузки изображения
-        const handleImageError = (e) => {
-            try {
-                e.currentTarget.src = '/default-avatar.png';
-                console.warn('Ошибка загрузки изображения. Установлено изображение по умолчанию.');
-            } catch (error) {
-                console.error('Ошибка при обработке ошибки загрузки изображения:', error);
-            }
-        };
-
-        return (
-            <div
-                className="p-4 border-b dark:border-gray-700 transform transition-all duration-200 dark:hover:bg-gray-750"
-                data-testid="review-card"
-            >
-                <div className="flex items-start space-x-4">
-                    <img
-                        src={review.avatar}
-                        alt={`${review.userName}'s avatar`}
-                        className="w-10 h-10 rounded-full shadow-md"
-                        onError={handleImageError}
-                        data-testid="avatar-image"
-                    />
-                    <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-semibold">{review.userName}</h3>
-                            <span className="text-sm text-gray-500">{review.date}</span>
-                        </div>
-
-                        <div className="flex items-center space-x-1 my-1" data-testid="rating-stars">
-                            {renderStars()}
-                        </div>
-
-                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                            {review.comment}
-                        </p>
-
-                        <div className="flex items-center space-x-4 mt-2">
-                            <button
-                                className="flex items-center space-x-1 text-gray-500 hover:text-blue-500 transition-colors"
-                                data-testid="like-button"
-                            >
-                                <ThumbsUp className="h-4 w-4" />
-                                <span>{review.likes}</span>
-                            </button>
-                            <span className="text-gray-500 italic">
-                                {review.restaurantName}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    } catch (error) {
-        console.error('Ошибка при рендеринге ReviewCard:', error);
-        return null;
-    }
-};
-
-ReviewCard.propTypes = {
-    review: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        userName: PropTypes.string.isRequired,
-        avatar: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-        rating: PropTypes.number.isRequired,
-        comment: PropTypes.string.isRequired,
-        likes: PropTypes.number.isRequired,
-        restaurantName: PropTypes.string.isRequired
-    }).isRequired
-};
-
-export { ReviewCard };
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1

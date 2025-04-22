@@ -100,77 +100,148 @@ img {
   position: relative;
 }
 
-.img-container img {
+.img-container-square {
+  overflow: hidden;
+  position: relative;
+  padding-bottom: 100%;
+}
+
+.img-container-wide {
+  overflow: hidden;
+  position: relative;
+  padding-bottom: 56.25%;
+}
+
+.img-container-portrait {
+  overflow: hidden;
+  position: relative;
+  padding-bottom: 133.33%;
+}
+
+/* Image container content */
+.img-container img,
+.img-container-square img,
+.img-container-wide img,
+.img-container-portrait img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Image hover effects */
+.img-hover-zoom {
   transition: transform 0.3s ease;
 }
 
-.img-container:hover img {
+.img-hover-zoom:hover {
   transform: scale(1.05);
 }
 
-/* Thumbnail grid */
-.thumbnail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: var(--space-2);
+.img-hover-brightness {
+  transition: filter 0.3s ease;
 }
 
-.thumbnail-grid-lg {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--space-3);
+.img-hover-brightness:hover {
+  filter: brightness(1.1);
 }
 
-/* Image shadows */
-.img-shadow {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+/* Image overlay utilities */
+.img-overlay {
+  position: relative;
 }
 
-.img-shadow-lg {
-  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+.img-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
 }
 
-/* Image borders */
+.img-overlay-light::after {
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 100%);
+}
+
+.img-overlay-dark::after {
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+}
+
+/* Image loading states */
+.img-loading {
+  position: relative;
+  background-color: var(--color-bg-secondary);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Image error states */
+.img-error {
+  position: relative;
+  background-color: var(--color-bg-secondary);
+}
+
+.img-error::after {
+  content: '!';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  color: var(--color-text-secondary);
+}
+
+/* Image lazy loading */
+.img-lazy {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.img-lazy.loaded {
+  opacity: 1;
+}
+
+/* Image filters */
+.img-grayscale {
+  filter: grayscale(100%);
+}
+
+.img-sepia {
+  filter: sepia(100%);
+}
+
+.img-blur {
+  filter: blur(3px);
+}
+
+/* Image border utilities */
 .img-border {
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--color-border);
 }
 
 .img-border-light {
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-border-light);
 }
 
-/* Dark mode adjustments */
-.dark .img-border {
-  border-color: rgba(255, 255, 255, 0.1);
+/* Image shadow utilities */
+.img-shadow {
+  box-shadow: var(--shadow-md);
 }
 
-.dark .img-border-light {
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Image loader animation */
-.img-loading {
-  background: linear-gradient(90deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-/* Dark mode image loader */
-.dark .img-loading {
-  background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%);
-  background-size: 200% 100%;
+.img-shadow-lg {
+  box-shadow: var(--shadow-lg);
 }
 
 /* Image handling styles */

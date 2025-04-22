@@ -150,10 +150,16 @@ const AdminPanel = ({ user }) => {
     const fetchRestaurants = async () => {
         setLoading(prev => ({ ...prev, restaurants: true }));
         try {
-            const response = await api.get('/restaurants');
+            console.log('Отправка запроса на получение ресторанов...');
+            const response = await api.get('/admin/restaurants');
+            console.log('Ответ сервера:', response);
+            console.log('Данные ресторанов:', response.data);
+            console.log('Массив ресторанов:', response.data.restaurants);
             setRestaurants(response.data.restaurants || []);
+            console.log('Состояние restaurants после обновления:', response.data.restaurants || []);
         } catch (error) {
             console.error('Error fetching restaurants:', error);
+            console.error('Детали ошибки:', error.response?.data);
         } finally {
             setLoading(prev => ({ ...prev, restaurants: false }));
         }
@@ -473,42 +479,19 @@ const AdminPanel = ({ user }) => {
     };
 
     // Render restaurant table с обычными кнопками без анимации
-    const renderRestaurantTable = () => (
-        <div className="overflow-x-auto mt-2 sm:mt-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 gap-2">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Управление ресторанами</h2>
-                <div className="flex space-x-2">
-                    <motion.button 
-                        onClick={fetchRestaurants}
-                        className="bg-gray-700 text-white hover:bg-gray-600 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md flex items-center overflow-hidden text-xs sm:text-sm"
-                        variants={{
-                            hover: {
-                                backgroundColor: 'var(--gray-600)',
-                                transition: { 
-                                    duration: 0.2
-                                }
-                            },
-                            tap: {
-                                scale: 0.97,
-                                transition: { 
-                                    duration: 0.1 
-                                }
-                            }
-                        }}
-                        whileHover="hover"
-                        whileTap="tap"
-                        disabled={loading.restaurants}
-                    >
-                        <RefreshCw size={14} className={`mr-1 ${loading.restaurants ? 'animate-spin' : ''}`} />
-                        Обновить
-                    </motion.button>
-                    
-                    <Link to="/admin/restaurant/new">
-                        <motion.button
-                            className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-md flex items-center overflow-hidden text-xs sm:text-sm"
+    const renderRestaurantTable = () => {
+        console.log('Рендеринг таблицы, restaurants:', restaurants);
+        return (
+            <div className="overflow-x-auto mt-2 sm:mt-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 gap-2">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Управление ресторанами</h2>
+                    <div className="flex space-x-2">
+                        <motion.button 
+                            onClick={fetchRestaurants}
+                            className="bg-gray-700 text-white hover:bg-gray-600 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md flex items-center overflow-hidden text-xs sm:text-sm"
                             variants={{
                                 hover: {
-                                    backgroundColor: 'var(--green-600)',
+                                    backgroundColor: '#4B5563',
                                     transition: { 
                                         duration: 0.2
                                     }
@@ -522,142 +505,149 @@ const AdminPanel = ({ user }) => {
                             }}
                             whileHover="hover"
                             whileTap="tap"
+                            disabled={loading.restaurants}
                         >
-                            <Plus size={14} className="mr-1" /> Добавить
+                            <RefreshCw size={14} className={`mr-1 ${loading.restaurants ? 'animate-spin' : ''}`} />
+                            Обновить
                         </motion.button>
-                    </Link>
-                </div>
-            </div>
-            
-            {loading.restaurants ? (
-                <div className="flex justify-center py-6 sm:py-10">
-                    <LoadingSpinner />
-                </div>
-            ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-900">
-                                <tr>
-                                    <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Название</th>
-                                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Статус</th>
-                                    <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">URL</th>
-                                    <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {restaurants.map((restaurant, index) => (
-                                    <motion.tr 
-                                        key={restaurant.id}
-                                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                    >
-                                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
-                                            <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{restaurant.name}</div>
-                                            <div className="sm:hidden mt-1">
-                                                <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                    restaurant.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                }`}>
-                                                    {restaurant.is_active ? 'Активен' : 'Неактивен'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                restaurant.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                            }`}>
-                                                {restaurant.is_active ? 'Активен' : 'Неактивен'}
-                                            </span>
-                                        </td>
-                                        <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                            {restaurant.slug ? (
-                                                <div className="flex items-center">
-                                                    <LinkIcon size={14} className="mr-1" />
-                                                    <span>{restaurant.slug}</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-400 dark:text-gray-600">Не задан</span>
-                                            )}
-                                        </td>
-                                        <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex space-x-2 sm:space-x-3">
-                                                <Link to={`/admin/restaurant/${restaurant.id}`}>
-                                                    <motion.button 
-                                                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 overflow-hidden"
-                                                        variants={{
-                                                            hover: {
-                                                                color: 'var(--indigo-900)',
-                                                                transition: { duration: 0.2 }
-                                                            },
-                                                            tap: {
-                                                                scale: 0.97,
-                                                                transition: { duration: 0.1 }
-                                                            }
-                                                        }}
-                                                        whileHover="hover"
-                                                        whileTap="tap"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </motion.button>
-                                                </Link>
-                                                <Link to={`/admin/restaurant/${restaurant.id}/criteria`}>
-                                                    <motion.button 
-                                                        className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 overflow-hidden"
-                                                        variants={{
-                                                            hover: {
-                                                                color: 'var(--amber-800)',
-                                                                transition: { duration: 0.2 }
-                                                            },
-                                                            tap: {
-                                                                scale: 0.97,
-                                                                transition: { duration: 0.1 }
-                                                            }
-                                                        }}
-                                                        whileHover="hover"
-                                                        whileTap="tap"
-                                                    >
-                                                        <Settings size={16} />
-                                                    </motion.button>
-                                                </Link>
-                                                <motion.button
-                                                    onClick={() => handleDeleteRestaurant(restaurant.id)}
-                                                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 overflow-hidden"
-                                                    variants={{
-                                                        hover: {
-                                                            color: 'var(--red-800)',
-                                                            transition: { duration: 0.2 }
-                                                        },
-                                                        tap: {
-                                                            scale: 0.97,
-                                                            transition: { duration: 0.1 }
-                                                        }
-                                                    }}
-                                                    whileHover="hover"
-                                                    whileTap="tap"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </motion.button>
-                                            </div>
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                                
-                                {restaurants.length === 0 && (
-                                    <tr>
-                                        <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                                            Нет ресторанов для отображения
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                        
+                        <Link to="/admin/restaurant/new">
+                            <motion.button
+                                className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-md flex items-center overflow-hidden text-xs sm:text-sm"
+                                variants={{
+                                    hover: {
+                                        backgroundColor: '#16a34a',
+                                        transition: { 
+                                            duration: 0.2
+                                        }
+                                    },
+                                    tap: {
+                                        scale: 0.97,
+                                        transition: { 
+                                            duration: 0.1 
+                                        }
+                                    }
+                                }}
+                                whileHover="hover"
+                                whileTap="tap"
+                            >
+                                <Plus size={14} className="mr-1" /> Добавить
+                            </motion.button>
+                        </Link>
                     </div>
                 </div>
-            )}
-        </div>
-    );
+                
+                {loading.restaurants ? (
+                    <div className="flex justify-center py-6 sm:py-10">
+                        <LoadingSpinner />
+                    </div>
+                ) : (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-900">
+                                    <tr>
+                                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Название</th>
+                                        <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Статус</th>
+                                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">URL</th>
+                                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {restaurants.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                Нет ресторанов для отображения
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        restaurants.map((restaurant, index) => (
+                                            <motion.tr 
+                                                key={restaurant.id}
+                                                className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.05 }}
+                                            >
+                                                <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
+                                                    <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{restaurant.name}</div>
+                                                    <div className="sm:hidden mt-1">
+                                                        <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                            restaurant.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                        }`}>
+                                                            {restaurant.is_active ? 'Активен' : 'Неактивен'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                        restaurant.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                    }`}>
+                                                        {restaurant.is_active ? 'Активен' : 'Неактивен'}
+                                                    </span>
+                                                </td>
+                                                <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                    {restaurant.slug ? (
+                                                        <div className="flex items-center">
+                                                            <LinkIcon size={14} className="mr-1" />
+                                                            <span>{restaurant.slug}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 dark:text-gray-600">Не задан</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm font-medium">
+                                                    <div className="flex space-x-2 sm:space-x-3">
+                                                        <Link to={`/admin/restaurant/${restaurant.id}`}>
+                                                            <motion.button 
+                                                                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 overflow-hidden"
+                                                                variants={{
+                                                                    hover: {
+                                                                        color: '#3730a3',
+                                                                        transition: { duration: 0.2 }
+                                                                    },
+                                                                    tap: {
+                                                                        scale: 0.97,
+                                                                        transition: { duration: 0.1 }
+                                                                    }
+                                                                }}
+                                                                whileHover="hover"
+                                                                whileTap="tap"
+                                                            >
+                                                                <Edit size={16} />
+                                                            </motion.button>
+                                                        </Link>
+                                                        <motion.button
+                                                            onClick={() => handleDeleteRestaurant(restaurant.id)}
+                                                            className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 overflow-hidden"
+                                                            variants={{
+                                                                hover: {
+                                                                    color: '#991b1b',
+                                                                    transition: { duration: 0.2 }
+                                                                },
+                                                                tap: {
+                                                                    scale: 0.97,
+                                                                    transition: { duration: 0.1 }
+                                                                }
+                                                            }}
+                                                            whileHover="hover"
+                                                            whileTap="tap"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </motion.button>
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // Render users table with proper role permissions
     const renderUsersTable = () => (

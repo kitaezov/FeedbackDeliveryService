@@ -36,14 +36,27 @@ const getUsers = async (req, res) => {
         
         console.log(`Найдено ${users.length} пользователей`);
         
+        // Map database role values back to frontend values
+        const roleMapping = {
+            'user': 'user',
+            'mgr': 'manager',
+            'admin': 'admin',
+            'head': 'head_admin'
+        };
+        
+        const mappedUsers = users.map(user => ({
+            ...user,
+            role: roleMapping[user.role] || user.role
+        }));
+        
         // Dump the first few users for debug
-        if (users.length > 0) {
-            console.log('Пример данных пользователя:', JSON.stringify(users[0], null, 2));
+        if (mappedUsers.length > 0) {
+            console.log('Пример данных пользователя:', JSON.stringify(mappedUsers[0], null, 2));
         }
         
         res.json({
             message: 'Список пользователей получен',
-            users
+            users: mappedUsers
         });
     } catch (error) {
         console.error('Ошибка получения пользователей:', error);
@@ -162,7 +175,7 @@ const updateUserRole = async (req, res) => {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role
+                role: role
             }
         });
     } catch (error) {
@@ -453,6 +466,81 @@ const unblockUser = async (req, res) => {
     }
 };
 
+/**
+ * Get all restaurants
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const getRestaurants = async (req, res) => {
+    try {
+        console.log('Fetching restaurants from database...');
+        const restaurants = await restaurantModel.getAll();
+        console.log('Restaurants fetched:', restaurants);
+        res.json({
+            message: 'Список ресторанов получен',
+            restaurants
+        });
+    } catch (error) {
+        console.error('Ошибка получения ресторанов:', error);
+        res.status(500).json({ message: 'Ошибка получения ресторанов' });
+    }
+};
+
+/**
+ * Create a new restaurant
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const createRestaurant = async (req, res) => {
+    try {
+        const restaurantData = req.body;
+        const newRestaurant = await restaurantModel.create(restaurantData);
+        res.status(201).json({
+            message: 'Ресторан успешно создан',
+            restaurant: newRestaurant
+        });
+    } catch (error) {
+        console.error('Ошибка создания ресторана:', error);
+        res.status(500).json({ message: 'Ошибка создания ресторана' });
+    }
+};
+
+/**
+ * Update a restaurant
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const updateRestaurant = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const restaurantData = req.body;
+        const updatedRestaurant = await restaurantModel.update(id, restaurantData);
+        res.json({
+            message: 'Ресторан успешно обновлен',
+            restaurant: updatedRestaurant
+        });
+    } catch (error) {
+        console.error('Ошибка обновления ресторана:', error);
+        res.status(500).json({ message: 'Ошибка обновления ресторана' });
+    }
+};
+
+/**
+ * Delete a restaurant
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const deleteRestaurant = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await restaurantModel.delete(id);
+        res.json({ message: 'Ресторан успешно удален' });
+    } catch (error) {
+        console.error('Ошибка удаления ресторана:', error);
+        res.status(500).json({ message: 'Ошибка удаления ресторана' });
+    }
+};
+
 module.exports = {
     getUsers,
     updateUserRole,
@@ -460,5 +548,9 @@ module.exports = {
     initializeHeadAdmin,
     getDeletedReviews,
     blockUser,
-    unblockUser
+    unblockUser,
+    getRestaurants,
+    createRestaurant,
+    updateRestaurant,
+    deleteRestaurant
 }; 

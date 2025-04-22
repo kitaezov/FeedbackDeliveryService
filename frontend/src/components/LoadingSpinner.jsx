@@ -1,6 +1,5 @@
 import React from "react";
 import PropTypes from 'prop-types';
-<<<<<<< HEAD
 import { motion } from 'framer-motion';
 
 /**
@@ -98,307 +97,69 @@ const LoadingSpinner = ({
         return logoColors[variant] || logoColors.primary;
     };
 
-    // Получаем цвет для текста под спиннером
+    // Получаем цвет текста на основе темы
     const getTextColor = () => {
-        return isDarkMode ? 'text-gray-200' : 'text-gray-700';
+        return isDarkMode ? 'text-gray-300' : 'text-gray-600';
     };
 
-    // Используем классы для стилизации спиннера
-    const spinnerClasses = [
-        'rounded-full',
-        sizeClasses[size] || sizeClasses.md,
-        getColorClasses(variant),
-        className
-    ].filter(Boolean).join(' ');
+    // Анимация вращения
+    const spinTransition = {
+        repeat: Infinity,
+        ease: "linear",
+        duration: duration
+    };
 
-    // Варианты анимации для спиннера
-    const spinnerVariants = {
-        initial: {
-            opacity: 0,
-            scale: 0.8,
-            rotate: 0
-        },
-        animate: {
-            opacity: 1,
-            scale: 1,
-            rotate: 360,
-            transition: {
-                opacity: { duration: 0.3 },
-                scale: { type: 'spring', stiffness: 300, damping: 15 },
-                rotate: {
-                    duration: duration,
-                    repeat: Infinity,
-                    ease: 'linear'
-                }
-            }
-        },
-        exit: {
-            opacity: 0,
-            scale: 0.8,
-            transition: {
-                duration: 0.2
-            }
+    // Контейнер для спиннера
+    const SpinnerContainer = ({ children }) => {
+        if (inline) {
+            return <div className="inline-flex items-center justify-center">{children}</div>;
         }
-    };
-
-    // Варианты анимации для внешнего спиннера (обратное вращение)
-    const outerSpinnerVariants = {
-        initial: {
-            opacity: 0,
-            scale: 1.2,
-            rotate: 0
-        },
-        animate: {
-            opacity: 0.3,
-            scale: 1.2,
-            rotate: -360,
-            transition: {
-                opacity: { duration: 0.3 },
-                scale: { type: 'spring', stiffness: 200, damping: 20 },
-                rotate: {
-                    duration: duration * 1.5,
-                    repeat: Infinity,
-                    ease: 'linear'
-                }
-            }
-        }
-    };
-
-    // Варианты анимации для контейнера
-    const containerVariants = {
-        initial: { opacity: 0 },
-        animate: {
-            opacity: 1,
-            transition: {
-                duration: 0.3
-            }
-        },
-        exit: {
-            opacity: 0,
-            transition: {
-                duration: 0.3
-            }
-        }
-    };
-
-    // Варианты анимации для текста
-    const textVariants = {
-        initial: {
-            opacity: 0,
-            y: 10
-        },
-        animate: {
-            opacity: 1,
-            y: 0,
-            transition: {
-                delay: 0.2,
-                type: 'spring',
-                stiffness: 300,
-                damping: 15
-            }
-        },
-        exit: {
-            opacity: 0,
-            y: 10,
-            transition: {
-                duration: 0.2
-            }
-        }
-    };
-
-    // Определяем фон для полноэкранного оверлея
-    const overlayClass = isDarkMode 
-        ? 'bg-gray-900 bg-opacity-70 backdrop-blur-sm' 
-        : 'bg-gray-800 bg-opacity-50 backdrop-blur-sm';
-
-    // Если спиннер полноэкранный и не inline
-    if (fullscreen && !inline) {
-        return (
-            <motion.div
-                className="fixed inset-0 flex flex-col items-center justify-center z-50"
-                role="progressbar"
-                aria-label="Загрузка"
-                variants={containerVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                {...props}
-            >
-                <motion.div
-                    className={`absolute inset-0 ${overlayClass}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                />
-
-                <div className="flex flex-col items-center z-10">
-                    <div className="relative">
-                        {/* Основной спиннер */}
-                        <motion.div
-                            className={spinnerClasses}
-                            variants={spinnerVariants}
-                        />
-                        
-                        {/* Внешний спиннер для эффекта (более прозрачный) */}
-                        <motion.div
-                            className={`absolute inset-0 rounded-full ${sizeClasses[size]} ${getBorderWidth()} border-t-transparent ${
-                                variant === 'white' 
-                                    ? 'border-white/20' 
-                                    : isDarkMode 
-                                        ? 'border-gray-500/20' 
-                                        : 'border-gray-300/30'
-                            }`}
-                            variants={outerSpinnerVariants}
-                            initial="initial"
-                            animate="animate"
-                        />
-
-                        {/* Логотип внутри спиннера */}
-                        {showLogo && (
-                            <motion.div
-                                className="absolute inset-0 flex items-center justify-center"
-                                initial={{ opacity: 0, scale: 0.5 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.3, type: 'spring', stiffness: 300, damping: 15 }}
-                            >
-                                <span className={`font-bold ${getLogoColor(variant)} ${
-                                    size === 'xs' ? 'text-[8px]' : 
-                                    size === 'sm' ? 'text-xs' : 
-                                    size === 'md' ? 'text-sm' : 
-                                    size === 'lg' ? 'text-base' : 
-                                    'text-lg'
-                                }`}></span>
-                            </motion.div>
-                        )}
-                    </div>
-
-                    {/* Текст под спиннером */}
-                    {text && (
-                        <motion.p
-                            className={`mt-4 font-medium ${getTextColor()}`}
-                            variants={textVariants}
-                        >
-                            {text}
-                        </motion.p>
-                    )}
-                </div>
-            </motion.div>
-        );
-    }
-
-    // Если спиннер встроенный (не на весь экран)
-    return (
-        <div className="relative inline-flex">
-            {/* Основной спиннер */}
-            <motion.div
-                className={`relative ${spinnerClasses}`}
-                role="progressbar"
-                aria-label="Загрузка"
-                variants={spinnerVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                {...props}
-            />
-            
-            {/* Внешний спиннер для эффекта (более прозрачный) */}
-            <motion.div
-                className={`absolute inset-0 rounded-full ${sizeClasses[size]} ${getBorderWidth()} border-t-transparent ${
-                    variant === 'white' 
-                        ? 'border-white/20' 
-                        : isDarkMode 
-                            ? 'border-gray-500/20' 
-                            : 'border-gray-300/30'
-                }`}
-                variants={outerSpinnerVariants}
-                initial="initial"
-                animate="animate"
-            />
-
-            {/* Логотип внутри спиннера */}
-            {showLogo && (
-                <motion.div
-                    className="absolute inset-0 flex items-center justify-center"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3, type: 'spring', stiffness: 300, damping: 15 }}
-                >
-                    <span className={`font-bold ${getLogoColor(variant)} ${
-                        size === 'xs' ? 'text-[8px]' : 
-                        size === 'sm' ? 'text-xs' : 
-                        size === 'md' ? 'text-sm' : 
-                        size === 'lg' ? 'text-base' : 
-                        'text-lg'
-                    }`}></span>
-                </motion.div>
-            )}
-        </div>
-    );
-=======
-
-/**
- * Компонент отображения индикатора загрузки
- * @component
- * @param {Object} props - Свойства компонента
- * @param {boolean} [props.fullscreen=true] - Отображать на весь экран
- * @param {string} [props.size='16'] - Размер спиннера (в пикселях)
- * @param {string} [props.borderColor='cyan-500'] - Цвет границы спиннера
- * @param {string} [props.className=''] - Дополнительные CSS классы
- */
-const LoadingSpinner = ({
-                            fullscreen = true,
-                            size = '16',
-                            borderColor = 'white',
-                            className = '',
-                            ...props
-                        }) => {
-    try {
-        // Базовые классы для спиннера
-        const spinnerClasses = [
-            'animate-spin',
-            'rounded-full',
-            `h-${size}`,
-            `w-${size}`,
-            'border-4',
-            `border-${borderColor}`,
-            'border-t-transparent',
-            className
-        ].filter(Boolean).join(' ');
-
-        // Если спиннер полноэкранный
+        
         if (fullscreen) {
             return (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                    role="progressbar"
-                    aria-label="Загрузка"
-                    {...props}
-                >
-                    <div className={spinnerClasses}></div>
+                <div className="fixed inset-0 flex items-center justify-center bg-black/5 dark:bg-black/20 backdrop-blur-sm z-50">
+                    {children}
                 </div>
             );
         }
+        
+        return <div className="flex items-center justify-center">{children}</div>;
+    };
 
-        // Если спиннер встроенный
-        return (
-            <div
-                className={spinnerClasses}
-                role="progressbar"
-                aria-label="Загрузка"
-                {...props}
-            />
-        );
-    } catch (error) {
-        console.error('Ошибка при рендеринге LoadingSpinner:', error);
-        return null;
-    }
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
+    return (
+        <SpinnerContainer>
+            <div className={`flex flex-col items-center justify-center ${className}`} {...props}>
+                <motion.div
+                    className={`rounded-full ${sizeClasses[size]} ${getColorClasses(variant)}`}
+                    animate={{ rotate: 360 }}
+                    transition={spinTransition}
+                >
+                    {showLogo && (
+                        <div className={`absolute inset-0 flex items-center justify-center ${getLogoColor(variant)}`}>
+                            <svg className="w-1/2 h-1/2" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                            </svg>
+                        </div>
+                    )}
+                </motion.div>
+                {text && (
+                    <motion.p 
+                        className={`mt-4 text-sm font-medium ${getTextColor()}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        {text}
+                    </motion.p>
+                )}
+            </div>
+        </SpinnerContainer>
+    );
 };
 
+// Проверка типов props
 LoadingSpinner.propTypes = {
     fullscreen: PropTypes.bool,
-<<<<<<< HEAD
     size: PropTypes.oneOf(['xs', 'sm', 'md', 'lg', 'xl']),
     variant: PropTypes.oneOf(['primary', 'secondary', 'accent', 'white', 'food', 'service', 'rating', 'danger', 'gray']),
     className: PropTypes.string,
@@ -409,14 +170,4 @@ LoadingSpinner.propTypes = {
     inline: PropTypes.bool
 };
 
-// Экспорт по умолчанию для обратной совместимости
 export default LoadingSpinner;
-=======
-    size: PropTypes.string,
-    borderColor: PropTypes.string,
-    className: PropTypes.string
-};
-
-
-export { LoadingSpinner };
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1

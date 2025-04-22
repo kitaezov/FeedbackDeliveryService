@@ -4,13 +4,14 @@ import { useAuth } from '../common/hooks/useAuth';
 import { LoadingSpinner } from '../common/components/ui';
 
 /**
- * Компонент для маршрутов, требующих авторизации
+ * Компонент для маршрутов, требующих авторизации и проверки роли
  * 
  * @param {Object} props - Свойства компонента
  * @param {React.ReactNode} props.children - Дочерние компоненты
+ * @param {string[]} [props.allowedRoles] - Массив разрешенных ролей. Если не указан, доступ разрешен любой роли.
  * @returns {React.ReactNode}
  */
-export const ProtectedRoute = ({ children }) => {
+export const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, isAuthLoading } = useAuth();
     const location = useLocation();
     
@@ -25,9 +26,18 @@ export const ProtectedRoute = ({ children }) => {
     
     // Если пользователь не авторизован, перенаправляем на страницу входа
     if (!user) {
-        return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+        return <Navigate to="/auth/login" state={{ from: location.pathname }} replace />;
     }
     
-    // Если пользователь авторизован, рендерим дочерние компоненты
+    // Проверка роли, если указаны разрешенные роли
+    if (allowedRoles && allowedRoles.length > 0) {
+        // Если роль пользователя не входит в список разрешенных, перенаправляем на главную
+        if (!allowedRoles.includes(user.role)) {
+            console.log(`Access denied: User role ${user.role} not in allowed roles [${allowedRoles.join(', ')}]`);
+            return <Navigate to="/" replace />;
+        }
+    }
+    
+    // Если пользователь авторизован и имеет необходимую роль, рендерим дочерние компоненты
     return children;
 }; 

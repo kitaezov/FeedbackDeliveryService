@@ -1,28 +1,28 @@
-<<<<<<< HEAD
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { User, MapPin, DollarSign, Award, Smile, Star, Clock, Phone, Globe, ChevronLeft, X, Heart, ThumbsUp, Check, FileText, Camera, ThumbsDown, ImagePlus, Trash2 } from 'lucide-react';
+import { User, MapPin, DollarSign, Award, Smile, Star, Clock, Phone, Globe, ChevronLeft, X, Heart, ThumbsUp, Check, FileText, Camera, ThumbsDown, ImagePlus, Trash2, Utensils } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import api from '../../utils/api';
 import { API_BASE, API_URL } from '../../config';
 import { restaurantService } from '../../features/restaurants/services/restaurantService';
+import { restaurantPlaceholder, largeRestaurantPlaceholder } from '../../utils/placeholders';
 
 const RestaurantButton = ({ restaurant, isSelected, onSelect }) => (
     <button
         type="button"
         onClick={() => onSelect(restaurant)}
         className={`
-            w-full p-0 rounded-lg transition-all 
-            border relative overflow-hidden shadow-sm
-            ${isSelected
-            ? 'border-gray-400 dark:border-gray-500 ring-2 ring-gray-400 dark:ring-gray-500'
-            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}
+            flex flex-col overflow-hidden rounded-lg border transition-all duration-200
+            ${isSelected 
+                ? 'border-blue-500 ring-2 ring-blue-300 shadow-lg scale-[1.02]' 
+                : 'border-gray-200 dark:border-gray-800 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700'
+            }
         `}
     >
         <div className="w-full pt-[60%] relative">
             <img
-                src={restaurant.image}
+                src={restaurant.image || restaurant.image_url || restaurant.imageUrl || restaurantPlaceholder()}
                 alt={`${restaurant.name} cuisine`}
                 className="absolute top-0 left-0 w-full h-full object-cover"
             />
@@ -32,9 +32,14 @@ const RestaurantButton = ({ restaurant, isSelected, onSelect }) => (
                 {restaurant.name}
             </h3>
             <div className="flex items-center justify-between mt-1">
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {restaurant.cuisine} | {restaurant.priceRange}
-                </p>
+                <div className="flex items-center">
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        {restaurant.category || restaurant.cuisine}
+                    </span>
+                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                        {restaurant.price_range || restaurant.priceRange}
+                    </span>
+                </div>
                 <div className="flex items-center">
                     <Star className="w-3 h-3 text-yellow-500 mr-1" />
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{restaurant.avgRating}</span>
@@ -126,47 +131,42 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
     const [restaurantReviews, setRestaurantReviews] = useState([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [photos, setPhotos] = useState([]);
+    const [reviewType, setReviewType] = useState('inRestaurant'); // 'inRestaurant' or 'delivery'
     const fileInputRef = useRef(null);
     const modalRef = useRef(null);
 
-    // Close when clicking outside the modal content
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (modalRef.current && !modalRef.current.contains(event.target)) {
-                onClose();
-            }
-        };
-        
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [onClose]);
+    // Функция для закрытия формы
+    const handleClose = () => {
+        // Сбрасываем все состояния
+        setShowReviewForm(false);
+        setRatings({});
+        setFeedback('');
+        setPhotos([]);
+        // Закрываем модальное окно
+        if (onClose) {
+            onClose();
+        }
+    };
 
-    // Close on escape key press
+    // Обработчик клика по оверлею
+    const handleOverlayClick = (e) => {
+        // Если клик был по оверлею (не по контенту модального окна)
+        if (e.target === e.currentTarget) {
+            handleClose();
+        }
+    };
+
+    // Обработчик нажатия клавиши Escape
     useEffect(() => {
-        const handleEscape = (event) => {
-            if (event.key === 'Escape') {
-                onClose();
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                handleClose();
             }
         };
-        
+
         document.addEventListener('keydown', handleEscape);
-        return () => {
-            document.removeEventListener('keydown', handleEscape);
-        };
-    }, [onClose]);
-
-    // Cleanup object URLs when component unmounts
-    useEffect(() => {
-        return () => {
-            photos.forEach(photo => {
-                if (photo.preview) {
-                    URL.revokeObjectURL(photo.preview);
-                }
-            });
-        };
-    }, [photos]);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, []);
 
     // Fetch reviews for the restaurant when it's selected
     useEffect(() => {
@@ -192,13 +192,22 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
     if (!restaurant) return null;
 
-    const ratingCategories = [
+    const inRestaurantCategories = [
         {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
         {id: 'service', name: 'Уровень сервиса', icon: <Smile className="w-5 h-5 text-gray-400"/>},
         {id: 'atmosphere', name: 'Атмосфера', icon: <MapPin className="w-5 h-5 text-gray-400"/>},
         {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
         {id: 'cleanliness', name: 'Чистота', icon: <Award className="w-5 h-5 text-gray-400"/>}
     ];
+
+    const deliveryCategories = [
+        {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
+        {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
+        {id: 'deliverySpeed', name: 'Скорость доставки', icon: <Clock className="w-5 h-5 text-gray-400"/>},
+        {id: 'deliveryQuality', name: 'Качество доставки', icon: <Award className="w-5 h-5 text-gray-400"/>}
+    ];
+
+    const ratingCategories = reviewType === 'inRestaurant' ? inRestaurantCategories : deliveryCategories;
 
     const handlePhotoSelect = (e) => {
         if (!e.target.files || e.target.files.length === 0) return;
@@ -315,10 +324,15 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         // Create a JSON object for the ratings to properly structure the data
         const ratingsData = {
             food: parseInt(Math.round(ratings.food || 0), 10),
-            service: parseInt(Math.round(ratings.service || 0), 10),
-            atmosphere: parseInt(Math.round(ratings.atmosphere || 0), 10),
             price: parseInt(Math.round(ratings.price || 0), 10),
-            cleanliness: parseInt(Math.round(ratings.cleanliness || 0), 10)
+            ...(reviewType === 'inRestaurant' ? {
+                service: parseInt(Math.round(ratings.service || 0), 10),
+                atmosphere: parseInt(Math.round(ratings.atmosphere || 0), 10),
+                cleanliness: parseInt(Math.round(ratings.cleanliness || 0), 10)
+            } : {
+                deliverySpeed: parseInt(Math.round(ratings.deliverySpeed || 0), 10),
+                deliveryQuality: parseInt(Math.round(ratings.deliveryQuality || 0), 10)
+            })
         };
         
         // Create a structured review object that matches backend expectations
@@ -328,7 +342,8 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             restaurantName: restaurant.name,
             rating: parseInt(Math.round(averageRating), 10),
             comment: feedback,
-            ratings: ratingsData
+            ratings: ratingsData,
+            reviewType: reviewType
         };
         
         // Convert to JSON for debugging
@@ -450,19 +465,23 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+        <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            onClick={handleOverlayClick}
         >
-            <motion.div 
+            <div 
                 ref={modalRef}
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="relative max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative"
+                onClick={e => e.stopPropagation()}
             >
+                {/* Кнопка закрытия в правом верхнем углу */}
+                <button
+                    onClick={handleClose}
+                    className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 focus:outline-none z-50"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+
                 {/* Заголовок с кнопкой закрытия */}
                 <div className="flex justify-between items-start p-4 border-b border-gray-200 dark:border-gray-700">
                     <div>
@@ -471,27 +490,21 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                         </h2>
                         <div className="flex items-center">
                             <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                                {restaurant.cuisine}
+                                {restaurant.category || restaurant.cuisine}
                             </span>
                             <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                                {restaurant.priceRange}
+                                {restaurant.price_range || restaurant.priceRange}
                             </span>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
-                    >
-                        <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                    </button>
                 </div>
 
                 {/* Изображение ресторана - расположено на всю ширину в верхней части */}
                 <div className="relative w-full">
                     <img
-                        src={restaurant.image}
+                        src={restaurant.image || restaurant.image_url || restaurant.imageUrl || largeRestaurantPlaceholder()}
                         alt={restaurant.name}
-                        className="w-full h-56 object-cover object-center"
+                        className="w-full h-64 object-cover rounded-t-lg"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                 </div>
@@ -553,6 +566,28 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                         <MapPin className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
                                     </div>
                                     <span className="text-sm text-gray-700 dark:text-gray-300">{restaurant.address}</span>
+                                </div>
+                            )}
+                            
+                            {(restaurant.min_price || restaurant.minPrice) && (
+                                <div className="flex items-center">
+                                    <div className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 mr-3">
+                                        <DollarSign className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+                                    </div>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                                        Мин. заказ: {restaurant.min_price || restaurant.minPrice}₽
+                                    </span>
+                                </div>
+                            )}
+                            
+                            {(restaurant.delivery_time || restaurant.deliveryTime) && (
+                                <div className="flex items-center">
+                                    <div className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 mr-3">
+                                        <Clock className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+                                    </div>
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                                        Время доставки: {restaurant.delivery_time || restaurant.deliveryTime} мин
+                                    </span>
                                 </div>
                             )}
                             
@@ -638,46 +673,107 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 </motion.button>
                             ) : (
                                 <motion.div
-                                    className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center shadow-sm"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="p-6 bg-gray-50 dark:bg-gray-700 text-center rounded-lg border border-gray-200 dark:border-gray-600 shadow-lg hover:shadow-xl transition-all duration-300"
                                 >
-                                    <User className="w-6 h-6 mx-auto text-gray-400 dark:text-gray-500 mb-2"/>
-                                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Чтобы оставить отзыв, войдите или зарегистрируйтесь</p>
-                                    <button
-                                        className="bg-gray-800 dark:bg-gray-600 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-700 dark:hover:bg-gray-700 transition-colors">
-                                        Войти
-                                    </button>
+                                    <motion.div 
+                                        className="inline-block mb-4"
+                                        initial={{ scale: 0.8 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ 
+                                            type: "spring",
+                                            stiffness: 400,
+                                            damping: 20
+                                        }}
+                                    >
+                                        <User className="w-10 h-10 mb-3 opacity-30" />
+                                    </motion.div>
+                                    <h4 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-2">Требуется авторизация</h4>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                                        Чтобы выбрать ресторан и оставить отзыв, необходимо войти или зарегистрироваться
+                                    </p>
+                                    <div className="flex justify-center gap-3">
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className="bg-gray-700 text-white px-5 py-2 rounded-md text-sm hover:bg-gray-800 transition-colors shadow-sm"
+                                        >
+                                            Войти
+                                        </motion.button>
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className="bg-white text-gray-700 px-5 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors shadow-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                                        >
+                                            Регистрация
+                                        </motion.button>
+                                    </div>
                                 </motion.div>
                             )}
                         </div>
                     </div>
                 ) : (
                     <div className="p-5">
-                        <div className="flex items-center mb-5">
-                            <button
-                                onClick={() => setShowReviewForm(false)}
-                                className="mr-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 focus:outline-none"
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            <div>
-                                <p className="text-lg font-medium text-gray-800 dark:text-gray-100">{restaurant.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Поделитесь своим опытом</p>
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center">
+                                <button
+                                    onClick={handleClose}
+                                    className="mr-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 focus:outline-none"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                                <div>
+                                    <p className="text-lg font-medium text-gray-800 dark:text-gray-100">{restaurant.name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Поделитесь своим опытом</p>
+                                </div>
                             </div>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-5">
+                            {/* Review type selection */}
+                            <div className="flex items-center justify-between mb-4">
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Тип отзыва:
+                                </label>
+                                <div className="flex space-x-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setReviewType('inRestaurant');
+                                            setRatings({}); // Reset ratings when changing type
+                                        }}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                            reviewType === 'inRestaurant'
+                                                ? 'bg-gray-800 text-white dark:bg-gray-700'
+                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                                        }`}
+                                    >
+                                        В ресторане
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setReviewType('delivery');
+                                            setRatings({}); // Reset ratings when changing type
+                                        }}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                            reviewType === 'delivery'
+                                                ? 'bg-gray-800 text-white dark:bg-gray-700'
+                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                                        }`}
+                                    >
+                                        Доставка
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Оцените ресторан
+                                        Оцените {reviewType === 'inRestaurant' ? 'ресторан' : 'доставку'}
                                     </h3>
-
-                                    {/* Rating explanation */}
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex space-x-3">
-                                        <span>1 - Плохо</span>
-                                        <span>3 - Нормально</span>
-                                        <span>5 - Отлично</span>
-                                    </div>
                                 </div>
 
                                 {ratingCategories.map((category, index) => (
@@ -831,8 +927,8 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 className={`
                                 w-full py-3 px-4 rounded-lg text-white font-medium
                                 ${submitting 
-                                    ? 'bg-blue-400 dark:bg-blue-500 cursor-not-allowed' 
-                                    : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'}
+                                    ? 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed' 
+                                    : 'bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-700'}
                                 transition-colors shadow-sm
                                 `}
                             >
@@ -935,63 +1031,104 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3 }}
-                                className="p-6 bg-gray-50 dark:bg-gray-700 text-center rounded-lg border border-gray-100 dark:border-gray-600 shadow-sm"
+                                className="p-6 bg-gray-50 dark:bg-gray-700 text-center rounded-lg border border-gray-200 dark:border-gray-600 shadow-lg hover:shadow-xl transition-all duration-300"
                             >
-                                <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-600 inline-flex mx-auto mb-3">
-                                    <Star className="w-5 h-5 text-gray-400 dark:text-gray-300" />
-                                </div>
-                                <h4 className="text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Ещё нет отзывов</h4>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Будьте первым, кто поделится своими впечатлениями</p>
-                            
+                                <motion.div 
+                                    className="inline-block mb-4"
+                                    initial={{ scale: 0.8 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ 
+                                        type: "spring",
+                                        stiffness: 400,
+                                        damping: 20
+                                    }}
+                                >
+                                    <Star className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto" />
+                                </motion.div>
+                                <h4 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-2">Нет отзывов</h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                    Пока никто не оставил отзыв
+                                </p>
                             </motion.div>
                         )}
                     </div>
                 )}
-            </motion.div>
-        </motion.div>
-    )}
+            </div>
+        </div>
+    );
+};
+
+RestaurantDetailModal.propTypes = {
+    restaurant: PropTypes.object,
+    onClose: PropTypes.func.isRequired,
+    onReviewSubmitted: PropTypes.func,
+    user: PropTypes.shape({
+        id: PropTypes.number,
+        name: PropTypes.string
+    })
+};
 
 const ReviewForm = ({ user, onReviewSubmitted }) => {
     const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-    const [showDetail, setShowDetail] = useState(false);
     const [restaurants, setRestaurants] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Fetch restaurants from the API
     useEffect(() => {
         const fetchRestaurants = async () => {
             try {
                 setLoading(true);
-                const response = await api.get('/restaurants');
+                const data = await restaurantService.getRestaurants();
                 
-                // Filter only active restaurants
-                const activeRestaurants = response.data.restaurants.filter(
-                    restaurant => restaurant.is_active
-                );
+                console.log('API Response for restaurants:', data);
                 
-                // Transform API data to the format expected by the UI
-                const formattedRestaurants = activeRestaurants.map(restaurant => ({
-                    id: restaurant.id,
-                    name: restaurant.name,
-                    cuisine: restaurant.cuisine || 'Разная',
-                    priceRange: restaurant.price_range || '₽₽',
-                    image: restaurant.image_url || 'https://img.freepik.com/free-photo/restaurant-interior_1127-3392.jpg?w=740',
-                    address: restaurant.address || 'Адрес не указан',
-                    phone: restaurant.contact_phone || 'Телефон не указан',
-                    hours: restaurant.hours || '10:00 - 22:00',
-                    website: restaurant.website || '',
-                    description: restaurant.description || 'Описание отсутствует',
-                    avgRating: restaurant.rating || 0,
-                    slug: restaurant.slug || '',
-                    reviews: [] // We'll fetch reviews separately if needed
+                // Check if data exists and has the expected structure
+                if (!data) {
+                    console.error('Empty response from API');
+                    setError('No data received from server');
+                    setRestaurants([]);
+                    return;
+                }
+                
+                // Handle different API response structures
+                let restaurantsArray = [];
+                if (data.restaurants && Array.isArray(data.restaurants)) {
+                    restaurantsArray = data.restaurants;
+                } else if (Array.isArray(data)) {
+                    restaurantsArray = data;
+                } else {
+                    console.error('Unexpected data structure:', data);
+                    setError('Invalid data format received');
+                    setRestaurants([]);
+                    return;
+                }
+                
+                console.log('Restaurants array:', restaurantsArray);
+                
+                // Ensure all restaurants have consistent field names for display
+                const processedRestaurants = restaurantsArray.map(restaurant => ({
+                    ...restaurant,
+                    // Ensure we have both snake_case and camelCase for compatibility
+                    id: restaurant.id || Math.random().toString(36).substr(2, 9),
+                    name: restaurant.name || 'Unnamed Restaurant',
+                    image: restaurant.image_url || restaurant.imageUrl || restaurantPlaceholder(),
+                    category: restaurant.category || restaurant.cuisine || 'Разное',
+                    cuisine: restaurant.category || restaurant.cuisine || 'Разное',
+                    price_range: restaurant.price_range || restaurant.priceRange || '₽₽',
+                    priceRange: restaurant.price_range || restaurant.priceRange || '₽₽',
+                    min_price: restaurant.min_price || restaurant.minPrice || '',
+                    minPrice: restaurant.min_price || restaurant.minPrice || '',
+                    delivery_time: restaurant.delivery_time || restaurant.deliveryTime || '',
+                    deliveryTime: restaurant.delivery_time || restaurant.deliveryTime || '',
+                    avgRating: restaurant.avg_rating || restaurant.avgRating || 0
                 }));
                 
-                setRestaurants(formattedRestaurants);
-                setLoading(false);
-            } catch (error) {
-                console.error('Error fetching restaurants:', error);
-                setError('Не удалось загрузить список ресторанов');
+                console.log('Processed restaurants:', processedRestaurants);
+                setRestaurants(processedRestaurants);
+            } catch (err) {
+                console.error('Error fetching restaurants:', err);
+                setError('Failed to load restaurants');
+            } finally {
                 setLoading(false);
             }
         };
@@ -1001,258 +1138,69 @@ const ReviewForm = ({ user, onReviewSubmitted }) => {
 
     const handleRestaurantSelect = (restaurant) => {
         setSelectedRestaurant(restaurant);
-        setShowDetail(true);
     };
 
     const handleCloseDetail = () => {
-        setShowDetail(false);
+        setSelectedRestaurant(null);
     };
 
     const handleReviewSubmitted = (reviewData) => {
+        setSelectedRestaurant(null);
         if (onReviewSubmitted) {
             onReviewSubmitted(reviewData);
         }
-        // Можно добавить обновление списка ресторанов с новым отзывом
     };
 
-    if (!user && !showDetail) {
-        return (
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="w-full max-w-md mx-auto p-4 bg-white shadow-md rounded-lg text-center border border-gray-200"
-            >
-                <motion.div
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    transition={{
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 20
-                    }}
-                >
-                    <User className="w-14 h-14 mx-auto text-gray-400 mb-4 animate-pulse"/>
-                </motion.div>
-                <motion.h3
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.3 }}
-                    className="text-xl font-medium text-gray-700 mb-2"
-                >
-                    Требуется авторизация
-                </motion.h3>
-                <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3, duration: 0.3 }}
-                    className="text-gray-500 mb-5 text-sm"
-                >
-                    Чтобы оставить отзыв, войдите или зарегистрируйтесь
-                </motion.p>
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-gray-700 text-white px-5 py-2 rounded-md text-sm hover:bg-gray-800 transition-colors"
-                >
-                    Войти
-                </motion.button>
-            </motion.div>
-        );
-    }
-
-    // Show loading state while fetching restaurants
-    if (loading) {
-        return (
-            <div className="w-full max-w-4xl mx-auto p-4 text-center">
-                <div className="animate-pulse flex flex-col items-center">
-                    <div className="rounded-full bg-gray-200 h-12 w-12 mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/4 mb-2.5"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
-                    <div className="grid grid-cols-4 gap-4 w-full">
-                        {[...Array(8)].map((_, index) => (
-                            <div key={index} className="bg-gray-200 h-40 rounded"></div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Show error state
     if (error) {
         return (
-            <div className="w-full max-w-4xl mx-auto p-4 text-center">
-                <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
-                    <p>{error}</p>
-                    <button 
-                        className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                        onClick={() => window.location.reload()}
-                    >
-                        Попробовать снова
-                    </button>
+            <div className="text-red-500 p-4 text-center">
+                {error}
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="w-full max-w-4xl mx-auto">
+                <div className="text-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-300 dark:border-gray-600 border-t-gray-600 dark:border-t-gray-300"></div>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Загрузка ресторанов...</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                        <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden animate-pulse">
+                            <div className="w-full pt-[60%] bg-gray-200 dark:bg-gray-700"></div>
+                            <div className="p-2">
+                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
     }
 
-    // Show empty state if no restaurants
-    if (restaurants.length === 0) {
-        return (
-            <div
-                className="flex flex-col items-center justify-center py-10 px-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md"
-            >
-                <Award className="w-10 h-10 mb-4 text-gray-400 dark:text-gray-500" />
-                <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-200">Нет доступных ресторанов</h3>
-                <p className="text-sm text-center max-w-md text-gray-500 dark:text-gray-400">
-                    В данный момент список ресторанов пуст
-=======
-import React, { useState } from 'react';
-import PropTypes from 'prop-types';
-import { User } from 'lucide-react';
-
-/**
- * Список ресторанов с их характеристиками
- * @constant {Array<Object>}
- */
-const restaurantsList = [
-    {id: 1, name: "La Belle Cuisine", cuisine: "Французская", priceRange: "₽₽₽"},
-    {id: 2, name: "Family Kitchen", cuisine: "Домашняя", priceRange: "₽₽"},
-    {id: 3, name: "Meat & Grill", cuisine: "Стейк-хаус", priceRange: "₽₽₽"},
-    {id: 4, name: "Italiano Vero", cuisine: "Итальянская", priceRange: "₽₽"},
-    {id: 5, name: "Sea Food Paradise", cuisine: "Морепродукты", priceRange: "₽₽₽₽"},
-    {id: 6, name: "Sushi Master", cuisine: "Японская", priceRange: "₽₽₽"},
-    {id: 7, name: "Spice Garden", cuisine: "Индийская", priceRange: "₽₽"},
-    {id: 8, name: "El Taco Loco", cuisine: "Мексиканская", priceRange: "₽₽"}
-];
-
-/**
- * Категории для оценки ресторана
- * @constant {Array<Object>}
- */
-const ratingCategories = [
-    {
-        id: 'food',
-        name: 'Качество блюд',
-        icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-gray-600">
-            <path d="M3 3l7.5 7.5"/>
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.3-4.3"/>
-        </svg>
-    },
-    {
-        id: 'service',
-        name: 'Уровень сервиса',
-        icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-gray-600">
-            <path d="M15.6 11.6 22 7v10l-6.4-4.4a2 2 0 0 1 0-3.2z"/>
-            <path d="M3.33 7H11a2 2 0 0 1 2 2v10H3.33A1.33 1.33 0 0 1 2 17.33V8.67A1.33 1.33 0 0 1 3.33 7z"/>
-        </svg>
-    },
-    {
-        id: 'atmosphere',
-        name: 'Атмосфера заведения',
-        icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-gray-600">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <path d="M12 12l3-3"/>
-        </svg>
-    },
-    {
-        id: 'price',
-        name: 'Соотношение цена/качество',
-        icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-gray-600">
-            <line x1="12" y1="2" x2="12" y2="22"/>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
-    },
-    {
-        id: 'cleanliness',
-        name: 'Чистота помещения',
-        icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-gray-600">
-            <path d="M20 11V8A8 8 0 0 0 4.4 6.4"/>
-            <path d="M20 20v-3a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v3"/>
-            <circle cx="12" cy="11" r="3"/>
-        </svg>
-    }
-];
-
-/**
- * Компонент формы отзыва о ресторане
- * @component
- * @param {Object} props - Свойства компонента
- * @param {Function} props.onSubmit - Функция обработки отправки формы
- * @param {Object} props.user - Данные пользователя
- * @param {string} props.user.name - Имя пользователя
- * @param {string} props.user.avatar - URL аватара пользователя
- */
-const ReviewForm = ({ onSubmit, user }) => {
-    // Состояния формы - перемещены на верхний уровень компонента
-    const [selectedRestaurant, setSelectedRestaurant] = useState('');
-    const [ratings, setRatings] = useState({});
-    const [hoveredRatings, setHoveredRatings] = useState({});
-    const [feedback, setFeedback] = useState('');
-    const [error, setError] = useState(null);
-
-    // Проверка авторизации
-    if (!user) {
-        return (
-            <div className="text-center py-8">
-                <User className="w-16 h-16 mx-auto text-gray-400 mb-4"/>
-                <h3 className="text-xl font-semibold mb-2">Требуется авторизация</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Чтобы оставить отзыв, необходимо войти или зарегистрироваться
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
-                </p>
-            </div>
-        );
-    }
-
-<<<<<<< HEAD
     return (
-        <div
-            className="w-full overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg shadow-md bg-white dark:bg-gray-800"
-        >
-            <div className="p-4">
-                {!user ? (
-                    <div className="text-center py-10">
-                        <User className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
-                        <p className="text-gray-500 dark:text-gray-400 mb-4">Войдите в систему, чтобы оставить отзыв</p>
-                        <button
-                            className="py-2 px-6 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg"
-                        >
-                            Войти
-                        </button>
-                    </div>
+        <div className="w-full max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {restaurants.length > 0 ? (
+                    restaurants.map((restaurant) => (
+                        <RestaurantButton
+                            key={restaurant.id}
+                            restaurant={restaurant}
+                            isSelected={selectedRestaurant?.id === restaurant.id}
+                            onSelect={handleRestaurantSelect}
+                        />
+                    ))
                 ) : (
-                    <>
-                        {/* Restaurant Selection Grid */}
-                        {restaurants.length > 0 ? (
-                            <div className="space-y-4">
-                                <div>
-                                    <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-3">Выберите ресторан</h3>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                        {restaurants.map((restaurant) => (
-                                            <RestaurantButton
-                                                key={restaurant.id || restaurant.name}
-                                                restaurant={restaurant}
-                                                isSelected={selectedRestaurant && selectedRestaurant.name === restaurant.name}
-                                                onSelect={handleRestaurantSelect}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                                
-                                {!selectedRestaurant && (
-                                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                                        Выберите ресторан для написания отзыва
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="text-center py-8">
-                                <p className="text-gray-500 dark:text-gray-400">Загрузка ресторанов...</p>
-                            </div>
-                        )}
-                    </>
+                    <div className="col-span-full text-center py-12">
+                        <Utensils className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Нет доступных ресторанов</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            В данный момент список ресторанов пуст. Пожалуйста, проверьте позже.
+                        </p>
+                    </div>
                 )}
             </div>
 
@@ -1270,151 +1218,9 @@ const ReviewForm = ({ onSubmit, user }) => {
     );
 };
 
-RestaurantDetailModal.propTypes = {
-    restaurant: PropTypes.object,
-    onClose: PropTypes.func.isRequired,
-    onReviewSubmitted: PropTypes.func,
-    user: PropTypes.shape({
-        id: PropTypes.number,
-        name: PropTypes.string
-    })
-};
-
 ReviewForm.propTypes = {
-    user: PropTypes.shape({
-        id: PropTypes.number,
-        name: PropTypes.string
-    }),
+    user: PropTypes.object,
     onReviewSubmitted: PropTypes.func
-=======
-    /**
-     * Обработчик отправки формы
-     * @param {Event} e - Событие отправки формы
-     */
-    const handleSubmit = (e) => {
-        try {
-            e.preventDefault();
-
-            // Валидация формы
-            if (!selectedRestaurant || Object.keys(ratings).length < ratingCategories.length) {
-                alert('Пожалуйста, оцените все категории');
-                return;
-            }
-
-            // Расчет среднего рейтинга
-            const averageRating = Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length;
-
-            // Формирование объекта отзыва
-            const newReview = {
-                id: Date.now(),
-                restaurantName: selectedRestaurant,
-                rating: averageRating,
-                ratings: ratings,
-                comment: feedback,
-                date: new Date().toISOString().split('T')[0],
-                likes: 0,
-                userName: user.name,
-                avatar: user.avatar
-            };
-
-            // Отправка отзыва и сброс формы
-            onSubmit(newReview);
-            setSelectedRestaurant('');
-            setRatings({});
-            setFeedback('');
-            setError(null);
-        } catch (error) {
-            console.error('Ошибка при отправке формы:', error);
-            setError('Произошла ошибка при отправке формы. Попробуйте еще раз.');
-        }
-    };
-
-    if (error) {
-        return (
-            <div className="text-center py-8 text-red-500">
-                {error}
-            </div>
-        );
-    }
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-                <label className="block text-sm font-medium mb-2">
-                    Выберите ресторан
-                </label>
-                <select
-                    value={selectedRestaurant}
-                    onChange={(e) => setSelectedRestaurant(e.target.value)}
-                    className="w-full p-2 border rounded-lg dark:bg-gray-700"
-                    required
-                >
-                    <option value="">Выберите ресторан</option>
-                    {restaurantsList.map(restaurant => (
-                        <option key={restaurant.id} value={restaurant.name}>
-                            {restaurant.name} - {restaurant.cuisine} ({restaurant.priceRange})
-                        </option>
-                    ))}
-                </select>
-            </div>
-
-            <div className="grid gap-2">
-                {ratingCategories.map(category => (
-                    <div key={category.id} className="flex items-center space-x-2 p-2 border rounded">
-                        {category.icon}
-                        <span>{category.name}</span>
-                        <div className="flex-1 flex justify-end">
-                            {[1, 2, 3, 4, 5].map((value) => (
-                                <button
-                                    key={value}
-                                    type="button"
-                                    className={`w-8 h-8 ${
-                                        ratings[category.id] >= value
-                                            ? 'text-yellow-400'
-                                            : 'text-gray-300'
-                                    }`}
-                                    onClick={() => setRatings(prev => ({...prev, [category.id]: value}))}
-                                    onMouseEnter={() => setHoveredRatings(prev => ({...prev, [category.id]: value}))}
-                                    onMouseLeave={() => setHoveredRatings(prev => ({...prev, [category.id]: 0}))}
-                                >
-                                    ★
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-2">
-                    Ваш отзыв
-                </label>
-                <textarea
-                    className="w-full p-2 border rounded-lg dark:bg-gray-700 min-h-[100px]"
-                    placeholder="Расскажите о вашем опыте..."
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    required
-                />
-            </div>
-
-            <button
-                type="submit"
-                className="w-full bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-                Отправить отзыв
-            </button>
-        </form>
-    );
 };
 
-ReviewForm.propTypes = {
-    onSubmit: PropTypes.func.isRequired,
-    user: PropTypes.shape({
-        name: PropTypes.string.isRequired,
-        avatar: PropTypes.string.isRequired
-    })
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
-};
-
-export { ReviewForm };
+export default ReviewForm;

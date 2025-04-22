@@ -104,7 +104,9 @@ const SideMenu = ({
                                     <span className="font-medium group-hover:text-white">Профиль</span>
                                 </motion.button>
 
-                                {(user.role === 'head-admin' || user.role === 'moderator') && (
+                                {(user.role === 'admin' || user.role === 'super_admin' || user.role === 'moderator' || 
+                                user.role === 'глав_админ' || user.role === 'head_admin' || 
+                                user.role === 'manager' || user.role === 'менеджер') && (
                                     <motion.button
                                         variants={menuItemVariants}
                                         onClick={() => {

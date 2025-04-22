@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
 
@@ -25,6 +26,16 @@ export const Layout = ({
 }) => {
     // Состояние для темного режима
     const [isDarkMode, setIsDarkMode] = useState(false);
+    
+    // Получаем текущий маршрут
+    const location = useLocation();
+    
+    // Проверка на главную страницу и исключение админ и других специальных страниц
+    const isExactHomePage = location.pathname === '/' && !location.search;
+    const isAdminPage = location.pathname.includes('/admin');
+    const isProfilePage = location.pathname.includes('/profile');
+    const isSettingsPage = location.pathname.includes('/settings');
+    const shouldShowFooter = isExactHomePage && !isAdminPage && !isProfilePage && !isSettingsPage;
     
     // Загрузка настроек темы из localStorage при монтировании
     useEffect(() => {
@@ -59,12 +70,12 @@ export const Layout = ({
             />
             
             {/* Основное содержимое */}
-            <main className="flex-grow container mx-auto px-4 py-6">
+            <main className="flex-1 container mx-auto px-4 py-6 mb-6">
                 {children}
             </main>
             
-            {/* Футер */}
-            <Footer isDarkMode={isDarkMode} />
+            {/* Отображаем футер только на главной странице и исключаем специальные страницы */}
+            {shouldShowFooter && <Footer isDarkMode={isDarkMode} />}
         </div>
     );
 };

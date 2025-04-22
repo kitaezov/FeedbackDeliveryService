@@ -75,6 +75,29 @@ const featureIcons = {
     // Добавьте другие соответствия по необходимости
 };
 
+// Utility function to format image URL
+const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // If it's a full URL, use it directly
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+        return image;
+    }
+    
+    // If it starts with a slash, prepend the API base URL
+    if (image.startsWith('/')) {
+        return `${process.env.REACT_APP_API_URL || ''}${image}`;
+    }
+    
+    // If it has a domain but no protocol, add https://
+    if (image.includes('.') && !image.includes(' ') && !image.match(/^[a-zA-Z]+:\/\//)) {
+        return 'https://' + image;
+    }
+    
+    // Otherwise, prepend the API base URL
+    return `${process.env.REACT_APP_API_URL || ''}${image}`;
+};
+
 export const RestaurantDetails = ({ restaurant, onAddReview }) => {
     const [activeTab, setActiveTab] = useState('details');
     
@@ -132,7 +155,7 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
             {/* Изображение ресторана */}
             <div className="relative h-64 w-full">
                 <img 
-                    src={image} 
+                    src={getImageUrl(image)} 
                     alt={name}
                     className="w-full h-full object-cover"
                 />

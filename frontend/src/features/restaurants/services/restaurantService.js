@@ -239,5 +239,36 @@ export const restaurantService = {
             console.error(`Error uploading menu for restaurant ${restaurantId}:`, error);
             throw error;
         }
+    },
+    
+    /**
+     * Загружает изображение ресторана
+     * 
+     * @param {string|number} restaurantId - ID ресторана
+     * @param {File} imageFile - Файл изображения
+     * @returns {Promise<Object>} - Результат операции с URL загруженного изображения
+     */
+    uploadRestaurantImage: async (restaurantId, imageFile) => {
+        try {
+            // Создаем FormData для загрузки файла
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            
+            const response = await api.post(`/restaurants/${restaurantId}/image`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            // Make sure we return the correct response format with imageUrl field
+            if (response.data && !response.data.imageUrl && response.data.image_url) {
+                response.data.imageUrl = response.data.image_url;
+            }
+            
+            return response.data;
+        } catch (error) {
+            console.error(`Error uploading image for restaurant ${restaurantId}:`, error);
+            throw error;
+        }
     }
 }; 

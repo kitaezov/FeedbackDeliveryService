@@ -1,37 +1,48 @@
 import axios from 'axios';
-import { API_BASE } from '../config';
 
-// Создание экземпляра axios с базовым URL
+// Create API instance with base URL from environment or fallback
 const api = axios.create({
-    baseURL: API_BASE
-});
-
-// Интерцептор для добавления токена в заголовки запросов
-api.interceptors.request.use(config => {
-    // Получаем токен из localStorage или sessionStorage
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    
-    // Если токен существует, добавляем его в заголовки
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+    timeout: 10000, // 10 seconds timeout
+    headers: {
+        'Content-Type': 'application/json'
     }
-    
-    console.log('Отправка запроса:', {
-        url: config.url,
-        method: config.method,
-        baseURL: config.baseURL,
-        headers: config.headers
-    });
-    
-    return config;
-}, error => {
-    console.error('Ошибка запроса:', error);
-    return Promise.reject(error);
 });
 
-// Интерцептор для обработки ошибок ответов
+// Request interceptor
+api.interceptors.request.use(
+    (config) => {
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        
+        // If token exists, add it to the headers
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        
+        // Don't set Content-Type for FormData (multipart/form-data)
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type'];
+        }
+        
+        console.log('Отправка запроса:', {
+            url: config.url,
+            method: config.method,
+            baseURL: config.baseURL,
+            headers: config.headers
+        });
+        
+        return config;
+    },
+    (error) => {
+        console.error('Request error:', error);
+        return Promise.reject(error);
+    }
+);
+
+// Response interceptor
 api.interceptors.response.use(
-    response => {
+    (response) => {
         console.log('Ответ с сервера:', {
             status: response.status,
             url: response.config.url,
@@ -39,30 +50,30 @@ api.interceptors.response.use(
         });
         return response;
     },
-    error => {
-        // Подробный вывод информации об ошибке
-        console.error('Ошибка ответа:', {
-            message: error.message,
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            url: error.config?.url,
-            data: error.response?.data
+    (error) => {
+        // Handle errors
+        if (error.response) {
+            // Server responded with an error status
+            console.error('API Error Response:', error.response.data);
             
-        });
-        
-        // Обработка ошибок авторизации
-        if (error.response && error.response.status === 401) {
-            // Удаляем токен при ошибке авторизации
-            localStorage.removeItem('token');
-            sessionStorage.removeItem('token');
-            
-            // Диспатчим событие изменения авторизации
-            const authEvent = new CustomEvent('auth-changed', { 
-                detail: { 
-                    isAuthenticated: false
-                } 
-            });
-            document.dispatchEvent(authEvent);
+            // Handle 401 Unauthorized errors
+            if (error.response.status === 401) {
+                // Clear stored credentials and redirect to login
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                
+                // Emit an event that can be listened to for auth state changes
+                const event = new CustomEvent('auth-error', { 
+                    detail: { message: 'Session expired. Please log in again.' } 
+                });
+                document.dispatchEvent(event);
+            }
+        } else if (error.request) {
+            // Request was made but no response received
+            console.error('API Error Request:', error.request);
+        } else {
+            // Error in setting up the request
+            console.error('API Error Setup:', error.message);
         }
         
         return Promise.reject(error);

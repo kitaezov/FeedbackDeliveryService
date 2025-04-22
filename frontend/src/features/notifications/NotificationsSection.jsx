@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/Card";
-import { Bell, RefreshCw, CheckCircle, Trash2 } from 'lucide-react';
+import { Bell, RefreshCw, CheckCircle, Trash2, Trash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getUserNotifications, markNotificationAsRead, deleteNotification } from '../../services/notificationService';
+import { getUserNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications } from '../../services/notificationService';
 import { useNotification } from '../../components/NotificationContext';
 
 const NotificationItem = ({ notification, onMarkAsRead, onDelete, isDarkMode }) => {
@@ -105,6 +105,17 @@ const NotificationsSection = ({ user, isDarkMode }) => {
         try {
             const data = await getUserNotifications();
             setNotifications(data);
+            
+            // Automatically mark all unread notifications as read when viewed
+            const unreadNotifications = data.filter(notification => !notification.is_read);
+            for (const notification of unreadNotifications) {
+                await markNotificationAsRead(notification.id);
+            }
+            
+            // Update local state to reflect all notifications as read
+            setNotifications(prevNotifications => 
+                prevNotifications.map(notification => ({ ...notification, is_read: true }))
+            );
         } catch (error) {
             if (notifyContext) {
                 notifyContext.notifyError('Не удалось загрузить уведомления');
@@ -167,6 +178,21 @@ const NotificationsSection = ({ user, isDarkMode }) => {
         }
     };
 
+    const handleClearAll = async () => {
+        try {
+            await clearAllNotifications();
+            setNotifications([]);
+            if (notifyContext) {
+                notifyContext.notifySuccess('Все уведомления удалены');
+            }
+        } catch (error) {
+            if (notifyContext) {
+                notifyContext.notifyError('Не удалось удалить уведомления');
+            }
+            console.error('Ошибка при удалении уведомлений', error);
+        }
+    };
+
     const filteredNotifications = filter === 'all' 
         ? notifications 
         : notifications.filter(notification => !notification.is_read);
@@ -215,7 +241,6 @@ const NotificationsSection = ({ user, isDarkMode }) => {
                         >
                             Все
                         </motion.button>
-
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -228,52 +253,47 @@ const NotificationsSection = ({ user, isDarkMode }) => {
                         >
                             Непрочитанные
                         </motion.button>
-
-                        <motion.button
-                            whileHover={{ rotate: 20 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={handleRefresh}
-                            className={`p-2 rounded-full ${themeClasses.button}`}
-                        >
-                            <RefreshCw className={`w-5 h-5 ${isRotating ? 'animate-spin' : ''}`} />
-                        </motion.button>
+                        {notifications.length > 0 && (
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleClearAll}
+                                className="px-4 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors flex items-center"
+                            >
+                                <Trash className="w-4 h-4 mr-1" />
+                                Очистить все
+                            </motion.button>
+                        )}
                     </div>
                 </div>
             </CardHeader>
 
             <CardContent className="p-4">
                 {isLoading ? (
-                    <div className="flex justify-center p-4">
-                        <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
+                    <div className="flex justify-center items-center py-8">
+                        <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="w-6 h-6 border-2 border-gray-300 dark:border-gray-600 border-t-gray-600 dark:border-t-gray-400 rounded-full"
+                        />
                     </div>
                 ) : filteredNotifications.length === 0 ? (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className={`rounded-lg p-8 flex flex-col items-center justify-center ${themeClasses.emptyState}`}
-                    >
-                        <Bell className="w-16 h-16 mb-4 opacity-50" />
-                        <h3 className="text-xl font-medium mb-2">
-                            {filter === 'all' ? 'У вас нет уведомлений' : 'Нет непрочитанных уведомлений'}
-                        </h3>
-                        <p className="text-sm">
-                            {filter === 'all' ? 'Здесь будут отображаться все уведомления' : 'Все уведомления прочитаны'}
-                        </p>
-                    </motion.div>
-                ) : (
-                    <div className="space-y-2">
-                        <AnimatePresence initial={false}>
-                            {filteredNotifications.map((notification) => (
-                                <NotificationItem
-                                    key={notification.id}
-                                    notification={notification}
-                                    onMarkAsRead={handleMarkAsRead}
-                                    onDelete={handleDelete}
-                                    isDarkMode={isDarkMode}
-                                />
-                            ))}
-                        </AnimatePresence>
+                    <div className={`text-center py-8 ${themeClasses.emptyState}`}>
+                        <Bell className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>Нет уведомлений</p>
                     </div>
+                ) : (
+                    <AnimatePresence>
+                        {filteredNotifications.map((notification) => (
+                            <NotificationItem
+                                key={notification.id}
+                                notification={notification}
+                                onMarkAsRead={handleMarkAsRead}
+                                onDelete={handleDelete}
+                                isDarkMode={isDarkMode}
+                            />
+                        ))}
+                    </AnimatePresence>
                 )}
             </CardContent>
         </Card>

@@ -7,7 +7,12 @@ const pool = require('../config/database');
 
 class RestaurantModel {
     constructor() {
-        this.ensureColumnsExist();
+        // Schedule column check for next tick to allow database initialization to complete
+        process.nextTick(() => {
+            this.ensureColumnsExist().catch(err => {
+                console.log('Warning: Initial column check failed, will retry when used:', err.message);
+            });
+        });
     }
     
     /**
@@ -56,6 +61,19 @@ class RestaurantModel {
             }
         } catch (error) {
             console.error('Error ensuring restaurant table columns exist:', error);
+            throw error; // Re-throw to allow caller to handle
+        }
+    }
+
+    /**
+     * Make sure ensureColumnsExist has run before any database operations
+     */
+    async ensureColumnsExistBeforeOperation() {
+        try {
+            await this.ensureColumnsExist();
+        } catch (error) {
+            console.error('Failed to ensure columns exist before operation:', error.message);
+            // Continue anyway as the operation might still succeed
         }
     }
     
@@ -65,49 +83,76 @@ class RestaurantModel {
      * @returns {Promise<Object>} - Created restaurant info
      */
     async create(restaurantData) {
-        const {
-            name,
-            address,
-            description,
-            imageUrl,
-            website,
-            contactPhone,
-            criteria = {},
-            autoGenerateLink = true,
-            category,
-            price_range,
-            min_price,
-            delivery_time
-        } = restaurantData;
-        
-        // Generate a URL-friendly slug from the name if autoGenerateLink is true
-        const slug = autoGenerateLink ? this.generateSlug(name) : null;
-        
-        const [result] = await pool.execute(
-            `INSERT INTO restaurants 
-            (name, address, description, image_url, website, contact_phone, criteria, slug, category, price_range, min_price, delivery_time) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
+        try {
+            // Ensure columns exist before proceeding
+            await this.ensureColumnsExistBeforeOperation();
+            
+            console.log('=== RestaurantModel.create called ===');
+            console.log('Input data:', JSON.stringify(restaurantData, null, 2));
+            
+            const {
                 name,
-                address || null,
-                description || null,
-                imageUrl || null,
-                website || null,
-                contactPhone || null,
-                JSON.stringify(criteria),
-                slug,
-                category || null,
-                price_range || null,
-                min_price || null,
-                delivery_time || null
-            ]
-        );
-        
-        return { 
-            id: result.insertId, 
-            ...restaurantData,
-            slug
-        };
+                address,
+                description,
+                imageUrl,
+                website,
+                contactPhone,
+                criteria = {},
+                autoGenerateLink = true,
+                category,
+                price_range,
+                min_price,
+                delivery_time
+            } = restaurantData;
+            
+            // Generate a URL-friendly slug from the name if autoGenerateLink is true
+            const slug = autoGenerateLink ? this.generateSlug(name) : null;
+            
+            console.log('=== Prepared data for SQL ===');
+            console.log('Name:', name);
+            console.log('Slug:', slug);
+            console.log('Category:', category);
+            console.log('Price Range:', price_range);
+            console.log('Min Price:', min_price);
+            console.log('Delivery Time:', delivery_time);
+            console.log('============================');
+            
+            const [result] = await pool.execute(
+                `INSERT INTO restaurants 
+                (name, address, description, image_url, website, contact_phone, criteria, slug, category, price_range, min_price, delivery_time) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    name,
+                    address || null,
+                    description || null,
+                    imageUrl || null,
+                    website || null,
+                    contactPhone || null,
+                    JSON.stringify(criteria),
+                    slug,
+                    category || null,
+                    price_range || null,
+                    min_price || null,
+                    delivery_time || null
+                ]
+            );
+            
+            console.log('=== SQL execution result ===');
+            console.log('Insert ID:', result.insertId);
+            console.log('===========================');
+            
+            return { 
+                id: result.insertId, 
+                ...restaurantData,
+                slug
+            };
+        } catch (error) {
+            console.error('Error in RestaurantModel.create:', error);
+            console.error('SQL Error Code:', error.code);
+            console.error('SQL Error Message:', error.message);
+            console.error('SQL Error SQL:', error.sql);
+            throw error;
+        }
     }
     
     /**
@@ -129,11 +174,9 @@ class RestaurantModel {
      * @returns {Promise<Array>} - List of restaurants
      */
     async getAll(options = {}) {
-        const { page = 1, limit = 10, name, isActive } = options;
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
-        const offset = (pageNum - 1) * limitNum;
+        await this.ensureColumnsExistBeforeOperation();
         
+        const { page, limit, name, isActive } = options;
         let query = 'SELECT * FROM restaurants WHERE 1=1';
         const queryParams = [];
         
@@ -147,7 +190,14 @@ class RestaurantModel {
             queryParams.push(isActive);
         }
         
-        query += ` ORDER BY name LIMIT ${limitNum} OFFSET ${offset}`;
+        if (page !== undefined && limit !== undefined) {
+            const pageNum = parseInt(page);
+            const limitNum = parseInt(limit);
+            const offset = (pageNum - 1) * limitNum;
+            query += ` ORDER BY name LIMIT ${limitNum} OFFSET ${offset}`;
+        } else {
+            query += ' ORDER BY name';
+        }
         
         const [rows] = await pool.execute(query, queryParams);
         
@@ -160,6 +210,8 @@ class RestaurantModel {
      * @returns {Promise<Object|null>} - Restaurant object or null
      */
     async getById(id) {
+        await this.ensureColumnsExistBeforeOperation();
+        
         const [rows] = await pool.execute(
             'SELECT * FROM restaurants WHERE id = ?',
             [id]
@@ -174,6 +226,8 @@ class RestaurantModel {
      * @returns {Promise<Object|null>} - Restaurant object or null
      */
     async getBySlug(slug) {
+        await this.ensureColumnsExistBeforeOperation();
+        
         const [rows] = await pool.execute(
             'SELECT * FROM restaurants WHERE slug = ?',
             [slug]
@@ -188,6 +242,8 @@ class RestaurantModel {
      * @returns {Promise<Object|null>} - Restaurant object or null
      */
     async getByName(name) {
+        await this.ensureColumnsExistBeforeOperation();
+        
         const [rows] = await pool.execute(
             'SELECT * FROM restaurants WHERE name = ?',
             [name]
@@ -199,103 +255,124 @@ class RestaurantModel {
     /**
      * Update a restaurant
      * @param {number} id - Restaurant ID
-     * @param {Object} restaurantData - Restaurant data to update
+     * @param {Object} restaurantData - Data to update
      * @returns {Promise<boolean>} - Success status
      */
     async update(id, restaurantData) {
-        const {
-            name,
-            address,
-            description,
-            imageUrl,
-            website,
-            contactPhone,
-            isActive,
-            criteria,
-            autoGenerateLink,
-            category,
-            price_range,
-            min_price,
-            delivery_time
-        } = restaurantData;
-        
-        // Build the dynamic UPDATE query
-        let query = 'UPDATE restaurants SET updated_at = NOW()';
-        const queryParams = [];
-        
-        // If name is being updated and autoGenerateLink is true, regenerate the slug
-        if (name !== undefined) {
-            query += ', name = ?';
-            queryParams.push(name);
+        try {
+            await this.ensureColumnsExistBeforeOperation();
             
-            if (autoGenerateLink) {
-                const slug = this.generateSlug(name);
-                query += ', slug = ?';
-                queryParams.push(slug);
+            console.log('=== RestaurantModel.update called ===');
+            console.log('Restaurant ID:', id);
+            console.log('Input data:', JSON.stringify(restaurantData, null, 2));
+            
+            const {
+                name,
+                address,
+                description,
+                imageUrl,
+                website,
+                contactPhone,
+                criteria,
+                isActive,
+                category,
+                price_range,
+                min_price,
+                delivery_time
+            } = restaurantData;
+            
+            // Build set clause and params array for SQL query
+            const setClauses = [];
+            const params = [];
+            
+            if (name !== undefined) {
+                setClauses.push('name = ?');
+                params.push(name);
             }
+            
+            if (address !== undefined) {
+                setClauses.push('address = ?');
+                params.push(address);
+            }
+            
+            if (description !== undefined) {
+                setClauses.push('description = ?');
+                params.push(description);
+            }
+            
+            // Handle image URL properly
+            if (imageUrl !== undefined) {
+                setClauses.push('image_url = ?');
+                params.push(imageUrl);
+            }
+            
+            if (website !== undefined) {
+                setClauses.push('website = ?');
+                params.push(website);
+            }
+            
+            if (contactPhone !== undefined) {
+                setClauses.push('contact_phone = ?');
+                params.push(contactPhone);
+            }
+            
+            if (criteria !== undefined) {
+                setClauses.push('criteria = ?');
+                params.push(JSON.stringify(criteria));
+            }
+            
+            if (isActive !== undefined) {
+                setClauses.push('is_active = ?');
+                params.push(isActive ? 1 : 0);
+            }
+            
+            if (category !== undefined) {
+                setClauses.push('category = ?');
+                params.push(category);
+            }
+            
+            if (price_range !== undefined) {
+                setClauses.push('price_range = ?');
+                params.push(price_range);
+            }
+            
+            if (min_price !== undefined) {
+                setClauses.push('min_price = ?');
+                params.push(min_price);
+            }
+            
+            if (delivery_time !== undefined) {
+                setClauses.push('delivery_time = ?');
+                params.push(delivery_time);
+            }
+            
+            // Add where clause param
+            params.push(id);
+            
+            // If no set clauses, return false
+            if (setClauses.length === 0) {
+                console.log('No fields to update');
+                return false;
+            }
+            
+            // Execute update query
+            const sqlQuery = `UPDATE restaurants SET ${setClauses.join(', ')} WHERE id = ?`;
+            console.log('SQL Query:', sqlQuery);
+            console.log('Params:', params);
+            
+            await pool.execute(sqlQuery, params);
+            
+            // Get updated restaurant to return
+            const [rows] = await pool.execute(
+                'SELECT * FROM restaurants WHERE id = ?',
+                [id]
+            );
+            
+            return rows.length > 0 ? rows[0] : false;
+        } catch (error) {
+            console.error('Error updating restaurant:', error);
+            throw error;
         }
-        
-        if (address !== undefined) {
-            query += ', address = ?';
-            queryParams.push(address);
-        }
-        
-        if (description !== undefined) {
-            query += ', description = ?';
-            queryParams.push(description);
-        }
-        
-        if (imageUrl !== undefined) {
-            query += ', image_url = ?';
-            queryParams.push(imageUrl);
-        }
-        
-        if (website !== undefined) {
-            query += ', website = ?';
-            queryParams.push(website);
-        }
-        
-        if (contactPhone !== undefined) {
-            query += ', contact_phone = ?';
-            queryParams.push(contactPhone);
-        }
-        
-        if (isActive !== undefined) {
-            query += ', is_active = ?';
-            queryParams.push(isActive);
-        }
-        
-        if (criteria !== undefined) {
-            query += ', criteria = ?';
-            queryParams.push(JSON.stringify(criteria));
-        }
-        
-        if (category !== undefined) {
-            query += ', category = ?';
-            queryParams.push(category);
-        }
-        
-        if (price_range !== undefined) {
-            query += ', price_range = ?';
-            queryParams.push(price_range);
-        }
-        
-        if (min_price !== undefined) {
-            query += ', min_price = ?';
-            queryParams.push(min_price);
-        }
-        
-        if (delivery_time !== undefined) {
-            query += ', delivery_time = ?';
-            queryParams.push(delivery_time);
-        }
-        
-        query += ' WHERE id = ?';
-        queryParams.push(id);
-        
-        await pool.execute(query, queryParams);
-        
-        return true;
     }
     
     /**
@@ -304,6 +381,8 @@ class RestaurantModel {
      * @returns {Promise<boolean>} - Success status
      */
     async delete(id) {
+        await this.ensureColumnsExistBeforeOperation();
+        
         await pool.execute('DELETE FROM restaurants WHERE id = ?', [id]);
         return true;
     }
@@ -315,6 +394,8 @@ class RestaurantModel {
      * @returns {Promise<boolean>} - Success status
      */
     async updateCriteria(id, criteria) {
+        await this.ensureColumnsExistBeforeOperation();
+        
         await pool.execute(
             'UPDATE restaurants SET criteria = ?, updated_at = NOW() WHERE id = ?',
             [JSON.stringify(criteria), id]
@@ -330,6 +411,8 @@ class RestaurantModel {
      * @returns {Promise<boolean>} - Success status
      */
     async updateSlug(id, slug) {
+        await this.ensureColumnsExistBeforeOperation();
+        
         const cleanSlug = slug
             .toLowerCase()
             .replace(/[^\w\s-]/g, '') // Remove non-word chars
@@ -350,6 +433,8 @@ class RestaurantModel {
      * @returns {Promise<Array>} - List of matching restaurants
      */
     async search(query) {
+        await this.ensureColumnsExistBeforeOperation();
+        
         // Prepare the search query with wildcards for LIKE operation
         const searchParam = `%${query}%`;
         

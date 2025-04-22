@@ -31,7 +31,7 @@ const CriteriaEditor = ({ user }) => {
                 
                 // Initialize criteria from restaurant data
                 let initialCriteria = [];
-                if (restaurantData.criteria) {
+                if (restaurantData && restaurantData.criteria) {
                     try {
                         const parsedCriteria = typeof restaurantData.criteria === 'string' 
                             ? JSON.parse(restaurantData.criteria) 

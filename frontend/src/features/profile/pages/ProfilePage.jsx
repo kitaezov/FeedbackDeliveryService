@@ -224,14 +224,14 @@ const ProfilePage = () => {
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
-                const response = await api.get('/auth/profile');
+                const response = await api.get('/profile');
                 if (response.data && response.data.user) {
                     const userData = response.data.user;
                     setProfileData({
                         name: userData.name || '',
                         email: userData.email || '',
-                        phone: userData.phone || '',
-                        birthday: userData.birthday ? new Date(userData.birthday).toISOString().split('T')[0] : '',
+                        phone: userData.phoneNumber || '',
+                        birthday: userData.birthDate ? new Date(userData.birthDate).toISOString().split('T')[0] : '',
                         avatarUrl: userData.avatar
                     });
                 }
@@ -312,11 +312,18 @@ const ProfilePage = () => {
     // Обработчик сохранения данных профиля
     const handleSaveProfile = async () => {
         try {
-            const response = await api.put('/auth/profile', {
+            console.log('Sending profile data:', {
                 name: profileData.name,
                 email: profileData.email,
-                phone: profileData.phone,
-                birthday: profileData.birthday
+                phoneNumber: profileData.phone,
+                birthDate: profileData.birthday
+            });
+            
+            const response = await api.put('/profile', {
+                name: profileData.name,
+                email: profileData.email,
+                phoneNumber: profileData.phone,
+                birthDate: profileData.birthday
             });
 
             if (response.status === 200) {
@@ -351,7 +358,7 @@ const ProfilePage = () => {
         }
         
         try {
-            const response = await api.put('/auth/change-password', {
+            const response = await api.put('/profile/change-password', {
                 currentPassword: passwordData.currentPassword,
                 newPassword: passwordData.newPassword
             });

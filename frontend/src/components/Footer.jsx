@@ -1,11 +1,20 @@
 import React from 'react';
 import { Mail, Phone, MessageCircle, Clock } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 export const Footer = ({ isDarkMode }) => {
     const currentYear = new Date().getFullYear();
+    const location = useLocation();
+    
+    const isOnlyHomePage = location.pathname === '/';
+    
+    // Only show footer on homepage
+    if (!isOnlyHomePage) {
+        return null;
+    }
     
     return (
-        <footer className={`w-full border-t mt-12 ${
+        <footer className={`w-full border-t mt-9 ${
             isDarkMode ? 'bg-gray-900 border-gray-800 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'
         }`}>
             <div className="container-responsive py-6">
@@ -60,5 +69,34 @@ export const Footer = ({ isDarkMode }) => {
         </footer>
     );
 };
+
+// CSS для обеспечения футера всегда внизу страницы
+export const FooterStyle = () => (
+    <style jsx global>{`
+        html, body, #__next, #root {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        main {
+            flex: 1 0 auto;
+        }
+        
+        .min-h-screen {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mt-auto {
+            margin-top: auto;
+        }
+        
+        body {
+            /* Removed the padding-bottom that was needed for fixed footer */
+        }
+    `}</style>
+);
 
 export default Footer;

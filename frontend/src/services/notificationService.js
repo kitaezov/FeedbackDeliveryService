@@ -8,6 +8,22 @@ const api = axios.create({
     baseURL: API_BASE,
 });
 
+// Интерцептор для добавления токена в заголовки запросов
+api.interceptors.request.use(config => {
+    // Получаем токен из localStorage или sessionStorage
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    
+    // Если токен существует, добавляем его в заголовки
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
+}, error => {
+    console.error('Ошибка запроса:', error);
+    return Promise.reject(error);
+});
+
 /**
  * Устанавливает токен авторизации для запросов
  */
@@ -107,13 +123,20 @@ export const createNotification = async (data) => {
  * Пометить уведомление как прочитанное
  */
 export const markNotificationAsRead = async (notificationId) => {
-    // Для демонстрационных уведомлений возвращаем успешный ответ
-    if (notificationId && notificationId.startsWith('demo-')) {
-        return { success: true };
-    }
-    
     try {
-        const response = await api.put(`/notifications/${notificationId}/read`);
+        // Проверяем, что notificationId существует и является строкой
+        if (!notificationId) {
+            throw new Error('Notification ID is required');
+        }
+
+        const notificationIdStr = String(notificationId);
+        
+        // Для демонстрационных уведомлений возвращаем успешный ответ
+        if (notificationIdStr.startsWith('demo-')) {
+            return { success: true };
+        }
+        
+        const response = await api.put(`/notifications/${notificationIdStr}/read`);
         return response.data;
     } catch (error) {
         console.error('Ошибка при обновлении уведомления:', error);
@@ -125,13 +148,21 @@ export const markNotificationAsRead = async (notificationId) => {
  * Удалить уведомление
  */
 export const deleteNotification = async (notificationId) => {
-    // Для демонстрационных уведомлений возвращаем успешный ответ
-    if (notificationId && notificationId.startsWith('demo-')) {
-        return { success: true };
-    }
-    
     try {
-        const response = await api.delete(`/notifications/${notificationId}`);
+        // Проверяем, что notificationId существует
+        if (!notificationId) {
+            throw new Error('Notification ID is required');
+        }
+        
+        // Преобразуем notificationId в строку
+        const notificationIdStr = String(notificationId);
+        
+        // Для демонстрационных уведомлений возвращаем успешный ответ
+        if (notificationIdStr.startsWith('demo-')) {
+            return { success: true };
+        }
+        
+        const response = await api.delete(`/notifications/${notificationIdStr}`);
         return response.data;
     } catch (error) {
         console.error('Ошибка при удалении уведомления:', error);
@@ -152,11 +183,25 @@ export const requestDeliveryRating = async (restaurantName) => {
     }
 };
 
+/**
+ * Удалить все уведомления пользователя
+ */
+export const clearAllNotifications = async () => {
+    try {
+        const response = await api.delete('/notifications');
+        return response.data;
+    } catch (error) {
+        console.error('Ошибка при удалении уведомлений:', error);
+        throw error;
+    }
+};
+
 export default {
     getUserNotifications,
     createNotification,
     markNotificationAsRead,
     deleteNotification,
     requestDeliveryRating,
+    clearAllNotifications,
     setAuthToken
 }; 

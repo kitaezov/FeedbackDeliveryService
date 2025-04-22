@@ -6,6 +6,10 @@ import { AuthProvider, useAuth } from './common/context/AuthContext';
 import { ThemeProvider } from './common/context/ThemeContext';
 import { initCopyProtection } from './utils/copyProtection';
 import { Toaster } from 'react-hot-toast';
+import RestaurantManagement from './features/admin/RestaurantManagement';
+import { FooterStyle } from './components/Footer';
+import BlockedAccountPage from './components/BlockedAccountPage';
+import BackgroundParticles from './components/BackgroundParticles';
 
 /**
  * Внутренний компонент приложения, который проверяет блокировку
@@ -55,6 +59,7 @@ const App = () => {
     <ThemeProvider>
       <AuthProvider>
         <ToastProvider>
+          <FooterStyle />
           <AppContent />
           <Toaster
             position="top-right"

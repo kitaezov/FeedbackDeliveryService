@@ -1,0 +1,70 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect x="0" y="0" width="800" height="600" fill="#1a202c" />
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial" font-size="24" fill="white" text-anchor="middle">Схема интерфейса авторизации и регистрации</text>
+  
+  <!-- Login Form Box -->
+  <rect x="100" y="80" width="280" height="400" rx="10" fill="#2d3748" stroke="#4a5568" stroke-width="2" />
+  <text x="240" y="115" font-family="Arial" font-size="20" fill="white" text-anchor="middle">Форма авторизации</text>
+  
+  <!-- Login Form Elements -->
+  <rect x="120" y="140" width="240" height="50" rx="5" fill="#1a202c" stroke="#4a5568" stroke-width="1" />
+  <text x="140" y="165" font-family="Arial" font-size="14" fill="#a0aec0">Email</text>
+  <rect x="120" y="130" width="24" height="24" rx="12" fill="none" stroke="#a0aec0" stroke-width="1" opacity="0" />
+  <text x="132" y="165" font-family="Arial" font-size="14" fill="#a0aec0">✉</text>
+  
+  <rect x="120" y="210" width="240" height="50" rx="5" fill="#1a202c" stroke="#4a5568" stroke-width="1" />
+  <text x="140" y="235" font-family="Arial" font-size="14" fill="#a0aec0">Пароль</text>
+  <text x="132" y="235" font-family="Arial" font-size="14" fill="#a0aec0">🔒</text>
+  <text x="340" y="235" font-family="Arial" font-size="14" fill="#a0aec0">👁</text>
+  
+  <rect x="120" y="280" width="20" height="20" rx="2" fill="none" stroke="#a0aec0" stroke-width="1" />
+  <text x="150" y="295" font-family="Arial" font-size="14" fill="white">Запомнить меня</text>
+  
+  <rect x="120" y="320" width="240" height="50" rx="5" fill="#2b6cb0" stroke="#4a5568" stroke-width="1" />
+  <text x="240" y="350" font-family="Arial" font-size="14" fill="white" text-anchor="middle">Войти</text>
+  <text x="150" y="350" font-family="Arial" font-size="14" fill="white">↪</text>
+  
+  <text x="120" y="400" font-family="Arial" font-size="14" fill="#a0aec0">№1. Модальное окно авторизации</text>
+  <text x="120" y="425" font-family="Arial" font-size="14" fill="#a0aec0">№2. Заголовок "Войти" с иконкой</text>
+  <text x="120" y="450" font-family="Arial" font-size="14" fill="#a0aec0">№3. Кнопка закрытия (X)</text>
+  
+  <!-- Registration Form Box -->
+  <rect x="420" y="80" width="280" height="450" rx="10" fill="#2d3748" stroke="#4a5568" stroke-width="2" />
+  <text x="560" y="115" font-family="Arial" font-size="20" fill="white" text-anchor="middle">Форма регистрации</text>
+  
+  <!-- Registration Form Elements -->
+  <rect x="440" y="140" width="240" height="50" rx="5" fill="#1a202c" stroke="#4a5568" stroke-width="1" />
+  <text x="460" y="165" font-family="Arial" font-size="14" fill="#a0aec0">Имя</text>
+  <text x="452" y="165" font-family="Arial" font-size="14" fill="#a0aec0">👤</text>
+  
+  <rect x="440" y="210" width="240" height="50" rx="5" fill="#1a202c" stroke="#4a5568" stroke-width="1" />
+  <text x="460" y="235" font-family="Arial" font-size="14" fill="#a0aec0">Email</text>
+  <text x="452" y="235" font-family="Arial" font-size="14" fill="#a0aec0">✉</text>
+  
+  <rect x="440" y="280" width="240" height="50" rx="5" fill="#1a202c" stroke="#4a5568" stroke-width="1" />
+  <text x="460" y="305" font-family="Arial" font-size="14" fill="#a0aec0">Пароль</text>
+  <text x="452" y="305" font-family="Arial" font-size="14" fill="#a0aec0">🔒</text>
+  <text x="660" y="305" font-family="Arial" font-size="14" fill="#a0aec0">👁</text>
+  
+  <rect x="440" y="350" width="20" height="20" rx="2" fill="none" stroke="#a0aec0" stroke-width="1" />
+  <text x="470" y="365" font-family="Arial" font-size="14" fill="white">Запомнить меня</text>
+  
+  <rect x="440" y="390" width="240" height="50" rx="5" fill="#2b6cb0" stroke="#4a5568" stroke-width="1" />
+  <text x="560" y="420" font-family="Arial" font-size="14" fill="white" text-anchor="middle">Зарегистрироваться</text>
+  <text x="470" y="420" font-family="Arial" font-size="14" fill="white">👤</text>
+  
+  <text x="440" y="460" font-family="Arial" font-size="14" fill="#a0aec0">№1. Модальное окно регистрации</text>
+  <text x="440" y="485" font-family="Arial" font-size="14" fill="#a0aec0">№2. Заголовок "Регистрация" с иконкой</text>
+  <text x="440" y="510" font-family="Arial" font-size="14" fill="#a0aec0">№3. Кнопка закрытия (X)</text>
+  
+  <!-- Arrows connecting common elements -->
+  <line x1="240" y1="520" x2="560" y2="520" stroke="#4299e1" stroke-width="2" />
+  <text x="400" y="540" font-family="Arial" font-size="14" fill="#4299e1" text-anchor="middle">Общий темный фон приложения</text>
+  
+  <!-- Legend -->
+  <rect x="100" y="550" width="600" height="30" rx="5" fill="#2d3748" stroke="#4a5568" stroke-width="1" />
+  <text x="400" y="570" font-family="Arial" font-size="14" fill="white" text-anchor="middle">Схема элементов интерфейса авторизации и регистрации пользователя</text>
+</svg>

@@ -18,6 +18,7 @@ const { app, server } = require('./src/app');
 const { initializeDatabase } = require('./src/services/databaseService');
 const userModel = require('./src/models/userModel');
 const setupSupportTables = require('./src/scripts/setup_support');
+const setupManagerTables = require('./src/scripts/setup_manager');
 
 // Инициализация базы данных перед запуском сервера
 (async () => {
@@ -27,6 +28,9 @@ const setupSupportTables = require('./src/scripts/setup_support');
         
         // Инициализация таблиц для центра поддержки
         await setupSupportTables();
+        
+        // Инициализация таблиц для управления отзывами менеджерами
+        await setupManagerTables();
         
         // Настройка порта для HTTP и WebSocket серверов
         const PORT = process.env.PORT || 5000;

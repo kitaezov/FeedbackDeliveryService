@@ -118,11 +118,28 @@ const createReviewNotification = async (userId, restaurantName) => {
  */
 const createProfileUpdateNotification = async (userId) => {
     try {
-        await db.query(
-            'INSERT INTO notifications (user_id, message, type, is_read, created_at) VALUES (?, ?, ?, false, NOW())',
-            [userId, 'Обновление профиля', 'success']
-        );
-        return true;
+        // Проверяем, существует ли функция запроса и таблица уведомлений
+        const checkTable = async () => {
+            try {
+                await db.query('SELECT 1 FROM notifications LIMIT 1');
+                return true;
+            } catch (err) {
+                console.warn('Таблица notifications не существует или не доступна:', err.message);
+                return false;
+            }
+        };
+        
+        // Если таблица существует, добавляем уведомление
+        if (await checkTable()) {
+            await db.query(
+                'INSERT INTO notifications (user_id, message, type, is_read, created_at) VALUES (?, ?, ?, false, NOW())',
+                [userId, 'Обновление профиля', 'success']
+            );
+            return true;
+        } else {
+            console.warn('Пропуск создания уведомления - таблица не существует');
+            return false;
+        }
     } catch (err) {
         console.error('Ошибка при создании уведомления об обновлении профиля:', err);
         return false;
@@ -247,6 +264,26 @@ const sendDeliveryRatingRequest = async (req, res) => {
     }
 };
 
+/**
+ * Удалить все уведомления пользователя
+ */
+const clearAllNotifications = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // Удаляем все уведомления пользователя
+        await db.query(
+            'DELETE FROM notifications WHERE user_id = ?',
+            [userId]
+        );
+        
+        res.json({ message: 'Все уведомления успешно удалены' });
+    } catch (err) {
+        console.error('Ошибка при удалении уведомлений:', err);
+        res.status(500).json({ message: 'Ошибка при удалении уведомлений' });
+    }
+};
+
 module.exports = {
     getUserNotifications,
     createNotification,
@@ -255,5 +292,6 @@ module.exports = {
     createReviewNotification,
     createProfileUpdateNotification,
     createDeliveryRatingNotification,
-    sendDeliveryRatingRequest
+    sendDeliveryRatingRequest,
+    clearAllNotifications
 }; 

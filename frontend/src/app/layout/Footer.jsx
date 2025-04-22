@@ -2,6 +2,7 @@
  * Компонент футера приложения
  * 
  * Отображает информацию внизу страницы
+ * Отображается только на главной странице
  */
 
 import React from 'react';
@@ -20,7 +21,7 @@ export const Footer = ({ isDarkMode = false }) => {
     
     return (
         <footer className={`
-            w-full border-t mt-12
+            w-full border-t mt-auto
             ${isDarkMode ? 'bg-gray-900 text-gray-300 border-gray-800' : 'bg-gray-100 text-gray-700 border-gray-200'}
         `}>
             <div className="container max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">

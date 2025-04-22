@@ -7,8 +7,10 @@ import { HomePage } from '../features/home/pages/HomePage';
 import { LoginPage, RegisterPage } from '../features/auth/pages';
 import { restaurantRoutes } from '../features/restaurants/routes';
 import { supportRoutes } from './supportRoutes';
+import { adminRoutes } from './adminRoutes';
 import { ProfilePage } from '../features/profile/pages/ProfilePage';
 import { ProtectedRoute } from './ProtectedRoute';
+import ManagerDashboard from '../features/manager/ManagerDashboard';
 
 /**
  * Создание роутера приложения
@@ -28,7 +30,6 @@ export const router = createBrowserRouter([
             
             // Маршруты для фичи "Рестораны"
             ...restaurantRoutes.map(route => {
-                // Добавляем проверку авторизации для маршрутов, требующих авторизации
                 if (route.requireAuth) {
                     return {
                         ...route,
@@ -43,25 +44,46 @@ export const router = createBrowserRouter([
             
             // Профиль пользователя
             {
-                path: '/profile',
+                path: 'profile',
                 element: <ProtectedRoute><ProfilePage /></ProtectedRoute>,
+            },
+        ],
+    },
+    
+    // Маршрут панели менеджера (отдельный корневой путь)
+    {
+        path: '/manager',
+        element: (
+            <ProtectedRoute allowedRoles={['manager', 'admin', 'head_admin']}>
+                <MainLayout />
+            </ProtectedRoute>
+        ),
+        children: [
+            {
+                index: true,
+                element: <ManagerDashboard />,  
             },
         ],
     },
     
     // Лэйаут для страниц авторизации
     {
-        path: '/',
+        path: 'auth',
         element: <AuthLayout />,
         children: [
             {
-                path: '/login',
+                path: 'login',
                 element: <LoginPage />,
             },
             {
-                path: '/register',
+                path: 'register',
                 element: <RegisterPage />,
             },
         ],
     },
+
+    // Админ-панель
+    ...adminRoutes,
+    
+    // Note: Admin routes use AdminLayout which does not include a footer component
 ]); 

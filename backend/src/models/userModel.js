@@ -61,7 +61,20 @@ class UserModel {
             [id]
         );
         
-        return rows.length > 0 ? rows[0] : null;
+        if (rows.length === 0) return null;
+        
+        // Map database role values to frontend values
+        const roleMapping = {
+            'user': 'user',
+            'mgr': 'manager',
+            'admin': 'admin',
+            'head': 'head_admin'
+        };
+        
+        const user = rows[0];
+        user.role = roleMapping[user.role] || user.role;
+        
+        return user;
     }
     
     /**
@@ -168,12 +181,16 @@ class UserModel {
         try {
             console.log(`UserModel: Updating user ${id} role to "${role}"`);
             
-            // Ensure role is one of the valid roles
-            const validRoles = ['user', 'manager', 'admin', 'head_admin'];
-            if (!validRoles.includes(role)) {
-                console.error(`UserModel: Invalid role value: "${role}"`);
-                throw new Error('Invalid role value');
-            }
+            // Map longer role names to shorter ones that fit in the database
+            const roleMapping = {
+                'user': 'user',
+                'manager': 'manager',  // Changed from 'mgr' to 'manager'
+                'admin': 'admin',
+                'head_admin': 'head_admin'  // Changed from 'head' to 'head_admin'
+            };
+            
+            const dbRole = roleMapping[role] || 'user';
+            console.log(`UserModel: Mapped role "${role}" to database value "${dbRole}"`);
             
             // Check if the user exists before updating
             const [userCheck] = await pool.execute(
@@ -189,7 +206,7 @@ class UserModel {
             console.log(`UserModel: Executing SQL to update role`);
             const [result] = await pool.execute(
                 'UPDATE users SET role = ? WHERE id = ?',
-                [role, id]
+                [dbRole, id]
             );
             
             console.log(`UserModel: Role update result:`, result);
@@ -408,55 +425,79 @@ class UserModel {
     }
 
     /**
-     * Ensure default users exist in the database
-     * This method creates default users if the database is empty
-     * @returns {Promise<boolean>} - Success status
+     * Create a user with a specific role
+     * @param {Object} userData - User data including name, email, password, and role
+     * @returns {Promise<Object>} - Created user info
+     */
+    async createUser(userData) {
+        const { name, email, password, role } = userData;
+        
+        try {
+            const [result] = await pool.execute(
+                'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+                [name, email, password, role]
+            );
+            
+            // Get the created user with timestamp
+            const [userRows] = await pool.execute(
+                'SELECT id, name, email, role, created_at FROM users WHERE id = ?',
+                [result.insertId]
+            );
+            
+            return userRows[0] || {
+                id: result.insertId,
+                name,
+                email,
+                role,
+                created_at: new Date()
+            };
+        } catch (error) {
+            console.error('Error creating user with role:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Ensure the existence of default users for testing
+     * @returns {Promise<void>}
      */
     async ensureDefaultUsers() {
         try {
-            console.log('UserModel: Проверка наличия пользователей в системе...');
+            // Check if we already have users
+            const [userCount] = await pool.execute('SELECT COUNT(*) as count FROM users');
             
-            // Check if any users exist
-            const [rows] = await pool.execute('SELECT COUNT(*) as count FROM users');
-            const userCount = rows[0].count;
-            
-            console.log(`UserModel: Текущее количество пользователей в системе: ${userCount}`);
-            
-            if (userCount === 0) {
-                console.log('UserModel: Пользователи не найдены. Создание демонстрационных пользователей...');
+            // Only create default users if the database is empty (except for the head admin)
+            if (userCount[0].count <= 1) {
+                console.log('Creating default testing users...');
                 
-                // Create demo admin (In addition to head admin that is created separately)
-                const adminPassword = await bcrypt.hash('admin123', 10);
-                await pool.execute(
-                    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-                    ['Администратор', 'admin@example.com', adminPassword, 'admin']
-                );
-                console.log('UserModel: Создан пользователь admin@example.com с ролью admin');
+                // Create a standard user
+                await this.createUser({
+                    name: 'Test User',
+                    email: 'user@example.com',
+                    password: await bcrypt.hash('password123', 10),
+                    role: 'user'
+                });
                 
-                // Create demo manager
-                const managerPassword = await bcrypt.hash('manager123', 10);
-                await pool.execute(
-                    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-                    ['Менеджер', 'manager@example.com', managerPassword, 'manager']
-                );
-                console.log('UserModel: Создан пользователь manager@example.com с ролью manager');
+                // Create a manager
+                await this.createUser({
+                    name: 'Test Manager',
+                    email: 'manager@example.com',
+                    password: await bcrypt.hash('password123', 10),
+                    role: 'manager'
+                });
                 
-                // Create demo user
-                const userPassword = await bcrypt.hash('user123', 10);
-                await pool.execute(
-                    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-                    ['Пользователь', 'user@example.com', userPassword, 'user']
-                );
-                console.log('UserModel: Создан пользователь user@example.com с ролью user');
+                // Create an admin
+                await this.createUser({
+                    name: 'Test Admin',
+                    email: 'admin@example.com',
+                    password: await bcrypt.hash('password123', 10),
+                    role: 'admin'
+                });
                 
-                return true;
+                console.log('Default testing users created successfully!');
             }
-            
-            console.log('UserModel: В системе уже есть пользователи, создание демонстрационных пользователей не требуется');
-            return false;
         } catch (error) {
-            console.error('UserModel: Ошибка при создании демонстрационных пользователей:', error);
-            throw error;
+            console.error('Error ensuring default users:', error);
         }
     }
 }

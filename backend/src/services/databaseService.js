@@ -195,6 +195,35 @@ async function initializeErrorReportTables() {
 }
 
 /**
+ * Initialize restaurants table
+ */
+async function initializeRestaurantsTable() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS restaurants (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                address VARCHAR(255),
+                description TEXT,
+                image_url VARCHAR(255),
+                website VARCHAR(255),
+                contact_phone VARCHAR(20),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE,
+                criteria JSON,
+                slug VARCHAR(100)
+            )
+        `);
+        
+        console.log('Таблица ресторанов создана или уже существует');
+    } catch (error) {
+        console.error('Ошибка инициализации таблицы ресторанов:', error);
+        throw error;
+    }
+}
+
+/**
  * Run SQL migrations from files
  */
 async function runMigrations() {
@@ -212,7 +241,18 @@ async function runMigrations() {
                 const statements = sql.split(';').filter(statement => statement.trim() !== '');
                 
                 for (const statement of statements) {
-                    await pool.query(statement);
+                    if (statement.trim() === '') continue;
+                    
+                    try {
+                        await pool.query(statement);
+                    } catch (error) {
+                        // Игнорируем ошибки о дублировании столбцов (код 1060)
+                        if (error.errno === 1060) {
+                            console.log(`Внимание: Столбец уже существует, пропускаем: ${error.message}`);
+                        } else {
+                            throw error;
+                        }
+                    }
                 }
             }
             
@@ -237,6 +277,7 @@ async function initializeDatabase() {
         await initializeReviewsTable();
         await initializeDeletedReviewsTable();
         await initializeErrorReportTables();
+        await initializeRestaurantsTable();
         await runMigrations();
         
         console.log('Инициализация базы данных завершена успешно');

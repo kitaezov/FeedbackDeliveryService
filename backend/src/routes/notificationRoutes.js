@@ -20,6 +20,9 @@ router.put('/:id/read', authenticateToken, notificationController.markAsRead);
 // Удаление уведомления
 router.delete('/:id', authenticateToken, notificationController.deleteNotification);
 
+// Удаление всех уведомлений пользователя
+router.delete('/', authenticateToken, notificationController.clearAllNotifications);
+
 // Отправить уведомление с просьбой оценить доставку
 router.post('/delivery-rating', authenticateToken, notificationController.sendDeliveryRatingRequest);
 

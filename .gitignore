@@ -1,5 +1,4 @@
 # Project exclude paths
-<<<<<<< HEAD
 /frontend/dist/
 
 # Node.js
@@ -27,6 +26,3 @@ yarn-error.log
 dist/
 build/
 node_modules
-=======
-/frontend/dist/
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1

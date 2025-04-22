@@ -1,34 +1,34 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { Header } from '../common/components/Header';
-import { Footer } from '../common/components/Footer';
-import { Toast } from '../common/components/ui';
-import SupportWebSocketListener from '../components/support/SupportWebSocketListener';
+import { Outlet, useLocation } from 'react-router-dom';
+import NavigationBar from '../components/NavigationBar';
+import Footer from '../components/Footer';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
- * Основной лейаут приложения с хедером и футером
+ * Основной макет приложения с навигацией и футером
+ * Футер будет отображаться внизу страницы, только на главной странице
  */
 export const MainLayout = () => {
+    const location = useLocation();
+    const { isDarkMode } = useTheme?.() || { isDarkMode: false };
+    
+    // Проверяем, что мы находимся только на главной странице
+    const isHomePage = location.pathname === '/';
+    
     return (
-        <>
-            {/* Основной контейнер с относительным позиционированием */}
-            <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 relative w-full">
-                <Header />
-                
-                <main className="flex-grow relative z-10 w-full container-responsive px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16">
-                    <div className="py-6 w-full">
-                        <Outlet />
-                    </div>
-                </main>
-                
-                <Footer />
-                
-                {/* Компонент для отображения уведомлений */}
-                <Toast />
-
-                {/* Компонент для прослушивания WebSocket-событий центра поддержки */}
-                <SupportWebSocketListener />
-            </div>
-        </>
+        <div className="fixed bottom-0 left-0">
+            {/* Навигация */}
+            <NavigationBar />
+            
+            {/* Основное содержимое */}
+            <main className="flex-grow container mx-auto px-4 py-6">
+                <Outlet />
+            </main>
+            
+            {/* Футер отображается только на главной странице */}
+            {isHomePage && <Footer isDarkMode={isDarkMode} />}
+        </div>
     );
-}; 
+};
+
+export default MainLayout; 

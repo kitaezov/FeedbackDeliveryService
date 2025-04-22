@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * Основные стили приложения
  * 
@@ -47,6 +46,16 @@
   
   .text-shadow-none {
     text-shadow: none;
+  }
+  
+  /* Утилита для скрытия полосы прокрутки */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer и Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;             /* Chrome, Safari и Opera */
   }
   
   /* Утилиты для решения проблем с контрастом текста */
@@ -98,7 +107,6 @@
     aspect-ratio: 16/9;
   }
   
-  /* Улучшенная поддержка равномерных карточек */
   .card-equal-height {
     display: flex;
     flex-direction: column;
@@ -110,159 +118,128 @@
   }
 }
 
-/* Стили для тега body */
-=======
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
-body {
+/* Базовые стили для HTML и body */
+html, body {
   margin: 0;
+  padding: 0;
+  min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-<<<<<<< HEAD
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
-  /* Предотвращаем сжатие по ширине на мобильных устройствах */
-  min-width: 320px;
 }
 
-/* Стили для тега code - для отображения программного кода */
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-  @apply bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm;
-}
-
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-} 
- 
 #root {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
-
-/* Обеспечиваем правильное отображение футера */
 footer {
-  flex-shrink: 0;
+  margin-top: auto;
 }
 
-/* Обеспечиваем растягивание основного контента */
 main {
-  flex: 1 0 auto;
+  flex: 1;
 }
 
-/* Предотвращаем сжатие контейнеров */
 .container {
   width: 100%;
-  max-width: 100% !important;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  margin-left: auto;
   margin-right: auto;
-} 
+  margin-left: auto;
+  padding-right: 1rem;
+  padding-left: 1rem;
+}
 
 @media (min-width: 640px) {
   .container {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    max-width: 100% !important;
+    max-width: 640px;
   }
 }
 
 @media (min-width: 768px) {
   .container {
-    padding-left: 2rem;
-    padding-right: 2rem;
-    max-width: 100% !important;
+    max-width: 768px;
   }
 }
 
 @media (min-width: 1024px) {
   .container {
-    max-width: 100% !important;
-    padding-left: 2.5rem;
-    padding-right: 2.5rem;
+    max-width: 1024px;
   }
 }
 
 @media (min-width: 1280px) {
   .container {
-    max-width: 100% !important;
-    padding-left: 3rem;
-    padding-right: 3rem;
+    max-width: 1280px;
   }
 }
 
 @media (min-width: 1536px) {
   .container {
-    max-width: 100% !important;
-    padding-left: 4rem;
-    padding-right: 4rem;
+    max-width: 1536px;
   }
 }
 
-/* Компоненты списков - обеспечиваем достаточную ширину */
 .restaurant-section,
-.review-section,
-section {
-  width: 100%;
-  max-width: 100% !important;
-  margin-left: auto;
-  margin-right: auto;
+.review-section {
+  padding: 2rem 0;
 }
 
 @media (min-width: 1024px) {
   .restaurant-section,
-  .review-section,
-  section {
-    max-width: 100% !important;
+  .review-section {
+    padding: 3rem 0;
   }
 }
 
 @media (min-width: 1280px) {
   .restaurant-section,
-  .review-section,
-  section {
-    max-width: 100% !important;
+  .review-section {
+    padding: 4rem 0;
   }
 }
 
 @media (min-width: 1536px) {
   .restaurant-section,
-  .review-section,
-  section {
-    max-width: 100% !important;
+  .review-section {
+    padding: 5rem 0;
   }
 }
 
-/* Обеспечиваем правильное соотношение сторон у изображений */
 img {
   max-width: 100%;
   height: auto;
+  display: block;
 }
 
-/* Animation delay utilities */
 .animation-delay-2000 {
   animation-delay: 2s;
 }
 
 .animation-delay-4000 {
   animation-delay: 4s;
-=======
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
+}
+
+/* Ensure the page content takes minimum space to push footer down */
+.flex-grow {
+  /* min-height: calc(100vh - 200px); /* Account for header and footer height */
+}
+
+body {
+  min-height: 100vh;
+  /* display: flex; */
+  /* flex-direction: column; */
+}
+
+#root {
+  /* display: flex; */
+  /* flex-direction: column; */
+  min-height: 100vh;
 }

@@ -1,7 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 
-<<<<<<< HEAD
-/**
+/*
  * Конфигурационный файл Tailwind CSS
  * 
  * Определяет настройки для фреймворка CSS, включая:
@@ -74,15 +73,5 @@ module.exports = {
     },
   },
   // Дополнительные плагины Tailwind
-=======
-// tailwind.config.js
-module.exports = {
-  content: [
-    "./src/**/*.{js,jsx,ts,tsx}",  // Убедитесь, что пути настроены правильно
-  ],
-  theme: {
-    extend: {},
-  },
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
   plugins: [],
 }

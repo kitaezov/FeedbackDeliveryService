@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * Конфигурационный файл PostCSS
  * 
@@ -10,11 +9,5 @@ module.exports = {
     plugins: {
         tailwindcss: {}, // Плагин для обработки Tailwind CSS
         autoprefixer: {}, // Автоматически добавляет вендорные префиксы для поддержки разных браузеров
-=======
-module.exports = {
-    plugins: {
-        tailwindcss: {},
-        autoprefixer: {},
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
     },
 }

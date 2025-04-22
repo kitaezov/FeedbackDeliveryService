@@ -1,9 +1,5 @@
 import React from "react";
-<<<<<<< HEAD
 import PropTypes from 'prop-types';
-=======
-import PropTypes from 'prop-types'; // Добавляем проверку типов props
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
 
 /**
  * Компонент анимированной кнопки с эффектами наведения и нажатия
@@ -16,7 +12,6 @@ import PropTypes from 'prop-types'; // Добавляем проверку ти�
  * @returns {React.Element} Анимированная кнопка
  */
 const AnimatedButton = ({
-<<<<<<< HEAD
     children,
     className = '',
     type = 'button',
@@ -24,15 +19,6 @@ const AnimatedButton = ({
     disabled = false,
     ...props
 }) => {
-=======
-                            children,
-                            className = '',
-                            type = 'button',
-                            onClick,
-                            disabled = false,
-                            ...props
-                        }) => {
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1
     /**
      * Обработчик клика по кнопке с проверкой состояния
      * @param {Event} e - Событие клика
@@ -83,9 +69,5 @@ AnimatedButton.defaultProps = {
     disabled: false
 };
 
-<<<<<<< HEAD
 export { AnimatedButton };
 export default AnimatedButton;
-=======
-export { AnimatedButton };
->>>>>>> c0de413dc1865264c2ef241c20aa63fec52080b1

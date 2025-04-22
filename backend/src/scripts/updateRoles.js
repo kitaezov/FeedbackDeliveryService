@@ -26,7 +26,7 @@ async function updateRoles() {
         console.log('Ensuring head_admin exists...');
         const [headAdminRows] = await pool.query(
             'SELECT * FROM users WHERE email = ?',
-            ['admin@yandex.ru']
+            ['ajdasjd@gamail.com']
         );
         
         if (headAdminRows.length === 0) {
@@ -35,15 +35,15 @@ async function updateRoles() {
             
             await pool.query(
                 'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-                ['Head Admin', 'admin@yandex.ru', hashedPassword, 'head_admin']
+                ['Head Admin', 'ajdasjd@gamail.com', hashedPassword, 'head_admin']
             );
             
-            console.log('Created head_admin user: admin@yandex.ru');
+            console.log('Created head_admin user: ajdasjd@gamail.com');
         } else if (headAdminRows[0].role !== 'head_admin') {
             // Update existing admin@yandex.ru to head_admin
             await pool.query(
                 'UPDATE users SET role = ? WHERE email = ?',
-                ['head_admin', 'admin@yandex.ru']
+                ['head_admin', 'ajdasjd@gamail.com']
             );
             
             console.log('Updated admin@yandex.ru to head_admin role');

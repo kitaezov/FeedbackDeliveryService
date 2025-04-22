@@ -98,62 +98,7 @@ const RestaurantImageUploader = ({ restaurantId, onImageUploaded, currentImage }
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    {isUploading ? (
-                        <div className="text-center">
-                            <motion.div 
-                                animate={{ rotate: 360 }}
-                                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                                className="mx-auto mb-3"
-                            >
-                                <Loader size={32} className="text-blue-500" />
-                            </motion.div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Загрузка изображения...</p>
-                        </div>
-                    ) : success ? (
-                        <div className="text-center">
-                            <Check size={32} className="mx-auto mb-3 text-green-500" />
-                            <p className="text-sm text-green-600 dark:text-green-400">Изображение успешно загружено</p>
-                        </div>
-                    ) : (
-                        <>
-                            {currentImage ? (
-                                <div className="relative w-full h-full">
-                                    <img 
-                                        src={currentImage.startsWith('http://') || currentImage.startsWith('https://') 
-                                            ? currentImage 
-                                            : currentImage.startsWith('/') 
-                                                ? `${process.env.REACT_APP_API_URL || ''}${currentImage}`
-                                                : currentImage.includes('.') && !currentImage.includes(' ') && !currentImage.match(/^[a-zA-Z]+:\/\//)
-                                                    ? `https://${currentImage}`
-                                                    : `${process.env.REACT_APP_API_URL || ''}${currentImage}`
-                                        }
-                                        alt="Текущее изображение ресторана" 
-                                        className="w-full h-full object-cover rounded-lg opacity-50"
-                                        onError={(e) => {
-                                            e.target.onerror = null;
-                                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNGMEYwRjAiLz48cGF0aCBkPSJNODAgMTEwSDEyME0xMDAgOTBWMTMwIiBzdHJva2U9IiNBMEEwQTAiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+';
-                                        }}
-                                    />
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <ImagePlus size={32} className="mx-auto mb-3 text-blue-500" />
-                                        <p className="text-sm text-center text-gray-700 dark:text-gray-300">
-                                            <span className="font-medium">Нажмите для загрузки</span> или перетащите новое изображение
-                                        </p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <Upload size={32} className="mx-auto mb-3 text-gray-400" />
-                                    <p className="mb-2 text-sm text-gray-700 dark:text-gray-300">
-                                        <span className="font-medium">Нажмите для загрузки</span> или перетащите изображение
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF или WEBP (макс. 5MB)</p>
-                                </>
-                            )}
-                        </>
-                    )}
-                </div>
+                
                 <input 
                     type="file" 
                     className="hidden" 

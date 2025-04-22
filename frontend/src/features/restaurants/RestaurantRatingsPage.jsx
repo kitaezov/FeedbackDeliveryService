@@ -667,75 +667,53 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                 }`}
             >
                 <div className="block h-full flex flex-col">
-                    <Link to={`/restaurant/${slug || id}`} className="block">
-                        <div className="relative overflow-hidden h-48">
-                            <motion.div className="absolute inset-0" variants={imageVariants}>
-                                {image_url ? (
-                                    <img 
-                                        src={image_url} 
-                                        alt={name} 
-                                        className="w-full h-full object-cover" 
-                                    />
-                                ) : (
-                                    <div className={`w-full h-full flex items-center justify-center ${
-                                        isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
-                                    }`}>
-                                        <Award size={48} className="text-gray-400 dark:text-gray-500" />
-                                    </div>
-                                )}
-                            </motion.div>
-                            
-                            {/* Указатель кухни */}
-                            {cuisine && (
-                                <div className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-medium shadow-sm ${
-                                    isDarkMode 
-                                        ? 'bg-gray-800 text-gray-300' 
-                                        : 'bg-white text-gray-700'
+                    <div className="relative overflow-hidden h-48">
+                        <motion.div className="absolute inset-0" variants={imageVariants}>
+                            {image_url ? (
+                                <img 
+                                    src={image_url} 
+                                    alt={name} 
+                                    className="w-full h-full object-cover" 
+                                />
+                            ) : (
+                                <div className={`w-full h-full flex items-center justify-center ${
+                                    isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
                                 }`}>
-                                    {cuisine}
+                                    <Award size={48} className="text-gray-400 dark:text-gray-500" />
                                 </div>
                             )}
-                        </div>
-                    </Link>
+                        </motion.div>
+                        
+                        {/* Указатель кухни */}
+                        {cuisine && (
+                            <div className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-medium shadow-sm ${
+                                isDarkMode 
+                                    ? 'bg-gray-800 text-gray-300' 
+                                    : 'bg-white text-gray-700'
+                            }`}>
+                                {cuisine}
+                            </div>
+                        )}
+                    </div>
                     
                     <div className="p-5 flex-grow flex flex-col">
-                        <Link to={`/restaurant/${slug || id}`} className="block">
-                            <h3 className={`font-semibold text-lg mb-2 ${
-                                isDarkMode ? 'text-white' : 'text-gray-800'
+                        <h3 className={`font-semibold text-lg mb-2 ${
+                            isDarkMode ? 'text-white' : 'text-gray-800'
+                        }`}>
+                            {name}
+                        </h3>
+                        
+                        <div className="flex items-center mb-3">
+                        </div>
+                        
+                        {address && (
+                            <div className={`text-sm flex items-start mb-4 ${
+                                isDarkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
-                                {name}
-                            </h3>
-                            
-                            <div className="flex items-center mb-3">
-                                <div className="flex items-center">
-                                    {Array.from({ length: 5 }).map((_, i) => (
-                                        <Star
-                                            key={i}
-                                            size={16}
-                                            fill={i < Math.round(rating || 0) ? "#FFB800" : "none"}
-                                            stroke={i < Math.round(rating || 0) ? "#FFB800" : "#94a3b8"}
-                                            className="mr-1"
-                                        />
-                                    ))}
-                                </div>
-                                <span className={`text-sm ml-2 ${
-                                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                                }`}>
-                                    <span className="font-medium text-yellow-600 dark:text-yellow-500">
-                                        {rating ? rating.toFixed(1) : hasReviews && firstReview && typeof firstReview.rating === 'number' ? firstReview.rating.toFixed(1) : 'Н/О'}
-                                    </span>
-                                </span>
+                                <MapPin size={16} className="flex-shrink-0 mr-1 mt-0.5" />
+                                <span className="line-clamp-2">{address}</span>
                             </div>
-                            
-                            {address && (
-                                <div className={`text-sm flex items-start mb-4 ${
-                                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                }`}>
-                                    <MapPin size={16} className="flex-shrink-0 mr-1 mt-0.5" />
-                                    <span className="line-clamp-2">{address}</span>
-                                </div>
-                            )}
-                        </Link>
+                        )}
                         
                         {/* Reviews section - shows when button is clicked */}
                         <AnimatePresence>

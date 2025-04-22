@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   // Check if the user is authenticated on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const token = localStorage.getItem('token');
       if (token) {
         try {
           const response = await api.get('/auth/profile');
@@ -47,7 +47,6 @@ export const AuthProvider = ({ children }) => {
           console.error('Authentication error:', error);
           // If token is invalid, remove it
           localStorage.removeItem('token');
-          sessionStorage.removeItem('token');
         }
       }
       setIsLoading(false);
@@ -114,7 +113,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       console.log('Отправка запроса на вход в систему:', credentials);
-      const response = await api.post('/auth/login', credentials);
+      const response = await api.post('auth/login', credentials);
       
       const { token, user: userData } = response.data;
       
@@ -128,12 +127,8 @@ export const AuthProvider = ({ children }) => {
         };
       }
       
-      // Save token
-      if (credentials.rememberMe) {
-        localStorage.setItem('token', token);
-      } else {
-        sessionStorage.setItem('token', token);
-      }
+      // Always save token to localStorage for session persistence
+      localStorage.setItem('token', token);
       
       // Update state
       setUser({
@@ -166,7 +161,6 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = () => {
     localStorage.removeItem('token');
-    sessionStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
     

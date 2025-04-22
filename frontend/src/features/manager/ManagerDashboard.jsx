@@ -5,7 +5,7 @@ import {
     MapPin, MessageSquare, CheckCircle2, AlertCircle,
     DownloadCloud, RefreshCw
 } from 'lucide-react';
-import api from '../../utils/api';
+import useBackendApi from '../../hooks/useBackendApi';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -276,7 +276,7 @@ const SimplePieChart = ({ data }) => (
 
 const ManagerDashboard = () => {
     const [restaurants, setRestaurants] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [reviews, setReviews] = useState([]);
     const [selectedRestaurant, setSelectedRestaurant] = useState(null);
     const [timeRange, setTimeRange] = useState('week');
     const [searchTerm, setSearchTerm] = useState('');
@@ -306,44 +306,20 @@ const ManagerDashboard = () => {
     });
     const [chartPeriod, setChartPeriod] = useState('week');
     const [chartData, setChartData] = useState({
-        ratings: {
-            labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-            datasets: [{
-                label: 'Средний рейтинг',
-                data: [0, 0, 0, 0, 0, 0, 0],
-                borderColor: 'rgb(59, 130, 246)',
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            }]
-        },
-        volumeByDay: {
-            labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-            datasets: [{
-                label: 'Количество отзывов',
-                data: [0, 0, 0, 0, 0, 0, 0],
-                backgroundColor: 'rgba(99, 102, 241, 0.5)',
-            }]
-        },
-        categoryDistribution: {
-            labels: ['Еда', 'Обслуживание', 'Атмосфера', 'Цена', 'Чистота'],
-            datasets: [{
-                label: 'Категории',
-                data: [0, 0, 0, 0, 0],
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.6)',
-                    'rgba(54, 162, 235, 0.6)',
-                    'rgba(255, 206, 86, 0.6)',
-                    'rgba(75, 192, 192, 0.6)',
-                    'rgba(153, 102, 255, 0.6)',
-                ],
-            }]
-        }
+        ratings: null,
+        volumeByDay: null,
+        categoryDistribution: null
     });
-    const [reviews, setReviews] = useState([]);
 
+    // Use our custom hook for API calls
+    const { loading: apiLoading, error: apiError, fetchData, postData } = useBackendApi();
+    const [loading, setLoading] = useState(true);
+
+    // On component mount, load all data
     useEffect(() => {
-        // Load data on component mount
         loadAllData();
-        // Fetch data every 5 minutes
+        
+        // Auto-refresh data every 5 minutes
         const interval = setInterval(() => {
             console.log('Автоматическое обновление данных...');
             loadAllData();
@@ -362,230 +338,156 @@ const ManagerDashboard = () => {
 
     // Fetch restaurants if not already loaded
     useEffect(() => {
-        const getRestaurants = async () => {
-            try {
-                const response = await api.get('/manager/restaurants');
-                console.log('Получены данные о ресторанах:', response.data);
-                setRestaurants(response.data);
-            } catch (error) {
-                console.error('Ошибка при получении данных о ресторанах:', error);
-            }
-        };
-
         if (restaurants.length === 0) {
             getRestaurants();
         }
     }, [restaurants.length]);
 
+    const getRestaurants = async () => {
+        try {
+            const data = await fetchData('manager/restaurants');
+            console.log('Получены данные о ресторанах:', data);
+            
+            // Получаем отзывы для расчета рейтингов и количества отзывов
+            const reviewsData = await fetchData('manager/reviews');
+            console.log(`Получено ${reviewsData.length} отзывов для обработки рейтингов ресторанов`);
+            
+            // Обрабатываем данные ресторанов с учетом отзывов
+            const processedRestaurants = data.map(restaurant => {
+                try {
+                    // Находим все отзывы для текущего ресторана
+                    const restaurantReviews = reviewsData.filter(review => {
+                        try {
+                            // Проверяем все возможные поля для связи ресторана с отзывом
+                            return (review.restaurantId === restaurant.id) || 
+                                   (review.restaurant_id === restaurant.id) ||
+                                   (review.restaurantName === restaurant.name) || 
+                                   (review.restaurant_name === restaurant.name);
+                        } catch (error) {
+                            console.warn(`Ошибка при фильтрации отзыва для ресторана ${restaurant.name}:`, error);
+                            return false;
+                        }
+                    });
+                    
+                    console.log(`Ресторан "${restaurant.name}": найдено ${restaurantReviews.length} отзывов`);
+                    
+                    // Рассчитываем средний рейтинг на основе отзывов
+                    let avgRating = 0;
+                    if (restaurantReviews.length > 0) {
+                        const ratingsSum = restaurantReviews.reduce((sum, review) => 
+                            sum + (Number(review.rating) || 0), 0);
+                        avgRating = ratingsSum / restaurantReviews.length;
+                        console.log(`Ресторан "${restaurant.name}": средний рейтинг ${avgRating.toFixed(1)}`);
+                    }
+                    
+                    // Обновляем данные ресторана
+                    return {
+                        ...restaurant,
+                        rating: avgRating || restaurant.rating || 0,
+                        reviews: restaurantReviews.length,
+                        reviewCount: restaurantReviews.length
+                    };
+                } catch (error) {
+                    console.error(`Ошибка при обработке ресторана ${restaurant.name}:`, error);
+                    return restaurant;
+                }
+            });
+            
+            // Обновляем состояние с обработанными данными
+            setRestaurants(processedRestaurants);
+        } catch (error) {
+            console.error('Ошибка при получении данных о ресторанах:', error);
+        }
+    };
+
     const loadAllData = async () => {
         setLoading(true);
         
         try {
-            console.log('Начинаем загрузку данных...');
+            console.log('Начинаем загрузку данных из базы данных...');
             
-            // Попытка получения реальных данных
-            try {
-                // Получаем данные из API
-                const reviewsData = await fetchReviewsFromDatabase();
-                console.log('Отзывы загружены, количество:', reviewsData.length);
-                
-                // Используем загруженные отзывы для расчета статистики
-                await calculateStatsFromDatabase();
-                
-                // Подготавливаем данные для графиков
-                await fetchChartDataFromDatabase();
-            } catch (error) {
-                console.error('Ошибка при загрузке данных из API, генерируем тестовые данные:', error);
-                
-                // Если получение данных не удалось, генерируем тестовые данные
-                const mockReviews = [
-                    {
-                        id: 1,
-                        user: { id: 1, name: 'Иван Иванов', email: 'ivan@example.com' },
-                        restaurant: { id: 1, name: 'Итальянский Ресторан' },
-                        rating: 4,
-                        text: 'Отличная еда и превосходное обслуживание! Паста была восхитительной.',
-                        createdAt: new Date().toISOString(),
-                        responded: false,
-                        response: '',
-                        responseDate: null
-                    },
-                    {
-                        id: 2,
-                        user: { id: 2, name: 'Алиса Смирнова', email: 'alisa@example.com' },
-                        restaurant: { id: 2, name: 'Азиатский Фьюжн' },
-                        rating: 5,
-                        text: 'Удивительные вкусы и красивая подача. Обязательно вернусь!',
-                        createdAt: new Date(Date.now() - 86400000).toISOString(), // вчера
-                        responded: false,
-                        response: '',
-                        responseDate: null
-                    },
-                    {
-                        id: 3,
-                        user: { id: 3, name: 'Борис Петров', email: 'boris@example.com' },
-                        restaurant: { id: 1, name: 'Итальянский Ресторан' },
-                        rating: 3,
-                        text: 'Еда была хорошей, но обслуживание было немного медленным. Ждал основное блюдо 30 минут.',
-                        createdAt: new Date(Date.now() - 2*86400000).toISOString(), // позавчера
-                        responded: false,
-                        response: '',
-                        responseDate: null
-                    }
-                ];
-                
-                setReviews(mockReviews);
-                
-                // Устанавливаем статистику на основе тестовых данных
-                const mockStats = {
-                    totalReviews: mockReviews.length,
-                    respondedReviews: mockReviews.filter(r => r.responded).length,
-                    pendingReviews: mockReviews.filter(r => !r.responded).length,
-                    averageRating: mockReviews.reduce((sum, r) => sum + r.rating, 0) / mockReviews.length,
-                    totalRestaurants: 2
-                };
-                
-                setStats(mockStats);
-                
-                // Устанавливаем тестовые данные для графиков
-                setChartData({
-                    ratings: {
-                        labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                        datasets: [{
-                            label: 'Средний рейтинг',
-                            data: [3.5, 4.0, 3.8, 4.2, 4.5, 3.9, 4.1],
-                            borderColor: 'rgb(59, 130, 246)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                        }]
-                    },
-                    volumeByDay: {
-                        labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                        datasets: [{
-                            label: 'Количество отзывов',
-                            data: [5, 8, 3, 6, 10, 12, 4],
-                            backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                        }]
-                    },
-                    categoryDistribution: {
-                        labels: ['Итальянский Ресторан', 'Азиатский Фьюжн'],
-                        datasets: [{
-                            label: 'Количество отзывов',
-                            data: [2, 1],
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.6)',
-                                'rgba(54, 162, 235, 0.6)',
-                            ],
-                        }]
-                    }
-                });
-                
-                console.log('Сгенерированы тестовые данные для отображения');
-            }
+            // Параллельная загрузка всех данных
+            await Promise.all([
+                fetchReviewsFromDatabase(),
+                calculateStatsFromDatabase(),
+                fetchChartDataFromDatabase()
+            ]);
+            
+            console.log('Все данные успешно загружены из базы данных');
         } catch (error) {
-            console.error('Критическая ошибка при загрузке данных:', error);
+            console.error('Ошибка при загрузке данных из базы данных:', error);
+            console.log('Убедитесь, что сервер базы данных запущен и доступен');
         } finally {
             setLoading(false);
             console.log('Загрузка данных завершена');
         }
     };
-
+    
     const fetchReviewsFromDatabase = async () => {
         try {
-            console.log('Запрос отзывов из базы данных...');
-            // Corrected API path based on backend routes
-            const response = await api.get('/manager/reviews');
+            const data = await fetchData('manager/reviews');
+            console.log(`Найдено ${data.length} отзывов из базы данных`, data);
             
-            if (response.data && Array.isArray(response.data)) {
-                console.log(`Найдено ${response.data.length} отзывов`);
-                setReviews(response.data);
-                return response.data;
-            } else if (response.data) {
-                // Fallback handling if data is returned but not as an array
-                console.log('Данные получены в неожиданном формате, пытаемся адаптировать:', response.data);
-                
-                let reviews = [];
-                if (typeof response.data === 'object') {
-                    if (Array.isArray(response.data.reviews)) {
-                        reviews = response.data.reviews;
-                    } else if (Array.isArray(response.data.data)) {
-                        reviews = response.data.data;
-                    } else {
-                        // If it's a single object, wrap it in an array
-                        reviews = [response.data];
-                    }
-                }
-                
-                console.log(`Адаптированы данные, получено ${reviews.length} отзывов`);
-                setReviews(reviews);
-                return reviews;
-            } else {
-                console.error('API вернул неожиданный формат данных:', response.data);
-                throw new Error('Неверный формат данных отзывов');
+            if (!Array.isArray(data)) {
+                console.error('Ответ сервера не является массивом:', data);
+                setReviews([]);
+                return [];
             }
+            
+            // Filter out invalid reviews
+            const validReviews = data.filter(review => {
+                if (!review || typeof review !== 'object') {
+                    console.warn('Невалидный отзыв (не объект):', review);
+                    return false;
+                }
+                return true;
+            });
+            
+            if (validReviews.length === 0 && data.length > 0) {
+                console.warn('Все полученные отзывы недействительны. Проверьте формат данных от сервера.');
+            }
+            
+            setReviews(validReviews);
+            return validReviews;
         } catch (error) {
             console.error('Ошибка при получении отзывов из базы данных:', error);
-            // Return empty array instead of throwing error to avoid breaking the dashboard
+            setReviews([]);
             return [];
         }
     };
 
     const calculateStatsFromDatabase = async () => {
         try {
-            console.log('Запрос статистики из базы данных...');
-            // Corrected API path based on backend routes
-            const response = await api.get('/manager/analytics/stats');
+            const data = await fetchData('manager/analytics/stats');
+            console.log('Получена статистика:', data);
             
-            if (response.data) {
-                console.log('Получена статистика:', response.data);
-                
-                // Сохраняем предыдущие значения статистики
-                setPrevStats({...stats});
-                
-                // Устанавливаем новые значения статистики
-                setStats(response.data);
-                
-                // Рассчитываем тренды
-                calculateTrends(response.data);
-                
-                return response.data;
-            } else {
-                console.error('API вернул неожиданный формат данных статистики');
-                // Return current stats instead of throwing error
-                return stats;
-            }
+            // Сохраняем предыдущие значения статистики
+            setPrevStats({...stats});
+            
+            // Устанавливаем новые значения статистики
+            setStats(data);
+            
+            // Рассчитываем тренды
+            calculateTrends(data);
+            
+            return data;
         } catch (error) {
             console.error('Ошибка при получении статистики из базы данных:', error);
-            // Return current stats instead of throwing error
             return stats;
         }
     };
 
     const fetchChartDataFromDatabase = async () => {
         try {
-            console.log('Запрос данных для графиков из базы данных...');
-            // Corrected API path based on backend routes
-            const response = await api.get('/manager/analytics/charts', {
-                params: { period: chartPeriod }
-            });
+            const data = await fetchData('manager/analytics/charts', { period: chartPeriod });
+            console.log('Получены данные для графиков:', data);
             
-            if (response.data) {
-                console.log('Получены данные для графиков:', response.data);
-                
-                // Устанавливаем данные для графиков
-                setChartData(response.data);
-                
-                return response.data;
-            } else {
-                console.error('API вернул неожиданный формат данных для графиков');
-                // Return current chart data instead of throwing error
-                return chartData;
-            }
+            // Устанавливаем данные для графиков
+            setChartData(data);
+            
+            return data;
         } catch (error) {
-            console.error('Ошибка при получении данных для графиков из базы данных:', error);
-            // In case of error, generate some default chart data
-            console.log('Используем локальные данные для графиков');
-            
-            // Use current chart data instead of throwing error
+            console.error('Ошибка при получении данных для графиков:', error);
             return chartData;
         }
     };
@@ -634,15 +536,16 @@ const ManagerDashboard = () => {
 
     const handleResponse = async (reviewId, responseText) => {
         try {
-            console.log(`Отправка ответа на отзыв ${reviewId}...`);
-            await api.post(`/manager/reviews/${reviewId}/response`, { text: responseText });
+            await postData('manager/reviews/respond', {
+                reviewId,
+                responseText
+            });
             
-            console.log('Ответ успешно отправлен');
-            // После успешного ответа обновляем данные
-            loadAllData();
+            // Обновляем список отзывов после ответа
+            await fetchReviewsFromDatabase();
+            await calculateStatsFromDatabase();
         } catch (error) {
-            console.error('Ошибка при отправке ответа:', error);
-            alert('Не удалось отправить ответ. Пожалуйста, попробуйте еще раз.');
+            console.error('Ошибка при ответе на отзыв:', error);
         }
     };
 
@@ -651,26 +554,42 @@ const ManagerDashboard = () => {
     };
 
     const filteredReviews = reviews.filter(review => {
+        // Ensure all required data is available
+        if (!review || !review.text) {
+            console.warn('Skipping invalid review:', review);
+            return false;
+        }
+        
         // Status filter
         if (filters.status === 'pending' && review.responded) return false;
         if (filters.status === 'responded' && !review.responded) return false;
         
         // Rating filter
-        if (filters.rating !== 'all' && review.rating !== parseInt(filters.rating)) return false;
+        if (filters.rating !== 'all' && parseInt(review.rating) !== parseInt(filters.rating)) return false;
         
-        // Search filter (name, text content)
-        if (filters.search && !review.text.toLowerCase().includes(filters.search.toLowerCase()) && 
-            !review.user?.name?.toLowerCase().includes(filters.search.toLowerCase())) {
-            return false;
+        // Search filter (name, text content, restaurant name)
+        if (filters.search && filters.search.trim() !== '') {
+            const searchTerm = filters.search.toLowerCase().trim();
+            const textMatch = review.text && review.text.toLowerCase().includes(searchTerm);
+            const userMatch = review.user?.name && review.user.name.toLowerCase().includes(searchTerm);
+            const restaurantMatch = review.restaurant?.name && review.restaurant.name.toLowerCase().includes(searchTerm);
+            
+            if (!textMatch && !userMatch && !restaurantMatch) return false;
         }
         
         return true;
     });
 
     // Sort reviews (newest first)
-    const sortedReviews = [...filteredReviews].sort((a, b) => 
-        new Date(b.createdAt) - new Date(a.createdAt)
-    );
+    const sortedReviews = [...filteredReviews].sort((a, b) => {
+        // Handle potential missing dates by using current time as fallback
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date();
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date();
+        return dateB - dateA;
+    });
+    
+    console.log(`Filtered reviews: ${filteredReviews.length} of ${reviews.length} total`);
+    console.log(`Current filters:`, filters);
 
     const refreshData = () => {
         loadAllData();
@@ -798,7 +717,7 @@ const ManagerDashboard = () => {
             className="container mx-auto px-4 py-6"
         >
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold dark:text-white">Панель управления</h1>
+                <h1 className="text-2xl font-bold dark:text-white">Панель менеджера</h1>
                 <div className="flex gap-2">
                     <button 
                         onClick={refreshData}
@@ -824,22 +743,19 @@ const ManagerDashboard = () => {
                     value={stats.totalReviews}
                     icon={MessageSquare}
                     color="text-blue-500"
-                    trend={trends.totalReviews}
-                />
+                 />
                 <StatCard
                     title="Средний рейтинг"
                     value={Number(stats.averageRating).toFixed(1)}
                     icon={Star}
                     color="text-yellow-500"
-                    trend={trends.averageRating}
-                />
+                 />
                 <StatCard
                     title="Ожидают ответа"
                     value={stats.pendingReviews}
                     icon={Clock}
                     color="text-orange-500"
-                    trend={trends.pendingReviews}
-                />
+                 />
                 <StatCard
                     title="Рестораны"
                     value={stats.totalRestaurants}
@@ -977,12 +893,7 @@ const ManagerDashboard = () => {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Название
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Рейтинг
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Отзывы
-                                    </th>
+                  
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Тип
                                     </th>
@@ -996,34 +907,23 @@ const ManagerDashboard = () => {
                                     <tr key={restaurant.id}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {restaurant.name}
+                                                {restaurant.name || 'Без названия'}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                                                <span className="text-sm text-gray-900 dark:text-white">
-                                                    {typeof restaurant.rating === 'number' ? restaurant.rating.toFixed(1) : 'Нет'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900 dark:text-white">
-                                                {restaurant.reviews || restaurant.reviewCount || 0}
-                                            </div>
-                                        </td>
+                             
+            
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                {restaurant.type || restaurant.category || 'Общий'}
+                                                {restaurant.type || restaurant.category || restaurant.cuisine || 'Общий'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                restaurant.status === 'active' || restaurant.status === 'открыт' 
+                                                restaurant.status === 'active' || restaurant.status === 'открыт' || restaurant.status === 1 
                                                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
                                                 : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                                             }`}>
-                                                {restaurant.status || 'активен'}
+                                                {restaurant.status === 1 ? 'активен' : restaurant.status || 'неактивен'}
                                             </span>
                                         </td>
                                     </tr>

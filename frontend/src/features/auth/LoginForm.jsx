@@ -295,7 +295,7 @@ const LoginModal = ({
         try {
             // Если это регистрация, отправляем запрос на регистрацию напрямую
             if (isRegistration) {
-                const response = await api.post('/auth/register', loginData);
+                const response = await api.post('auth/register', loginData);
                 
                 const userWithToken = {
                     ...response.data.user,
@@ -306,7 +306,7 @@ const LoginModal = ({
                 if (loginData.rememberMe) {
                     localStorage.setItem('token', response.data.token);
                 } else {
-                    sessionStorage.setItem('token', response.data.token);
+                    localStorage.setItem('token', response.data.token);
                 }
                 
                 // Вызываем обработчик успешного входа
@@ -324,19 +324,15 @@ const LoginModal = ({
                 onClose();
             } else {
                 // Стандартный вход в систему
-                const response = await api.post('/auth/login', loginData);
+                const response = await api.post('auth/login', loginData);
                 
                 const userWithToken = {
                     ...response.data.user,
                     token: response.data.token
                 };
 
-                // Сохраняем токен в localStorage или sessionStorage в зависимости от выбора пользователя
-                if (loginData.rememberMe) {
-                    localStorage.setItem('token', response.data.token);
-                } else {
-                    sessionStorage.setItem('token', response.data.token);
-                }
+                // Сохраняем токен в localStorage для сохранения сессии при обновлении страницы
+                localStorage.setItem('token', response.data.token);
                 
                 // Вызываем обработчик успешного входа
                 onLoginSuccess(userWithToken);

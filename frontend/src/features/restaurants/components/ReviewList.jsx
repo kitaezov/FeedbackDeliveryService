@@ -3,9 +3,8 @@ import PropTypes from 'prop-types';
 import { Card } from '../../../common/components/ui/Card';
 import { StarRating } from './StarRating';
 import { Button } from '../../../common/components/ui/Button';
-import { LoadingSpinner } from '../../../common/components/ui/LoadingSpinner';
-import { PlusCircle, Edit, Trash } from 'lucide-react';
-import { User } from 'lucide-react';
+import { Spinner } from '../../../common/components/ui/Spinner';
+import { PlusCircle, Edit, Trash, Star, User } from 'lucide-react';
 
 /**
  * Компонент карточки отзыва
@@ -145,7 +144,7 @@ export const ReviewList = ({
     if (isLoading) {
         return (
             <div className="flex justify-center py-10">
-                <LoadingSpinner size="large" />
+                <Spinner size="large" />
             </div>
         );
     }

@@ -265,6 +265,12 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         emptyState: isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-50 text-gray-600'
     };
 
+    // Add debugging logs
+    console.log('ReviewsSection initialReviews:', initialReviews);
+    console.log('ReviewsSection current reviews:', reviews);
+    console.log('ReviewsSection processedReviews:', processedReviews);
+    console.log('ReviewsSection paginatedReviews:', paginatedReviews);
+
     return (
         <div className="mb-8">
             <div className={`

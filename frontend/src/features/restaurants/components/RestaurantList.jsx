@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { RestaurantCard } from './RestaurantCard';
-import { LoadingSpinner, Pagination, Alert } from '../../../common/components/ui';
+import { Spinner, Pagination, Alert } from '../../../common/components/ui';
 import { useDebounce } from '../../../common/hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Coffee, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -136,7 +136,7 @@ export const RestaurantList = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
             >
-                <LoadingSpinner size="large" />
+                <Spinner size="large" />
             </motion.div>
         );
     }

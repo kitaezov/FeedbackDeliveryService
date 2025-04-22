@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { StarRating } from './StarRating';
 import { Button, Card, Badge } from '../../../common/components/ui';
 import { formatAddress } from '../../../common/utils/formatUtils';
-import { FileText, Clock, Map, Phone, Mail, Globe, Coffee, Utensils, DollarSign, Wifi, Music, Parking, Check, Star } from 'lucide-react';
+import { FileText, Clock, Map, Phone, Mail, Globe, Coffee, Utensils, DollarSign, Wifi, Music, Car, Check, Star } from 'lucide-react';
 import { restaurantService } from '../services/restaurantService';
 
 /**
@@ -68,7 +68,7 @@ const buttonVariants = {
 // Сопоставление особенностей с иконками
 const featureIcons = {
     "Wi-Fi": Wifi,
-    "Парковка": Parking,
+    "Парковка": Car,
     "Живая музыка": Music,
     "Доставка": Utensils,
     "Веранда": Coffee,

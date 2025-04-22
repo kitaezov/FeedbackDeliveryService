@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import { restaurantService } from '../services/restaurantService';
 import { 
     Card, 
-    Heading, 
     Button, 
-    LoadingSpinner 
+    Spinner 
 } from '../../../common/components/ui';
 import { RestaurantCard } from './RestaurantCard';
 
@@ -46,9 +45,9 @@ export const TopRestaurants = ({ limit = 6, title = 'Популярные рес
         <section className="w-full max-w-full">
             <div className="flex justify-between items-center mb-8 w-full">
                 <div>
-                    <Heading level={2} className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                         {title}
-                    </Heading>
+                    </h2>
                     <p className="text-gray-600 dark:text-gray-400">{subtitle}</p>
                 </div>
                 
@@ -61,7 +60,7 @@ export const TopRestaurants = ({ limit = 6, title = 'Популярные рес
             
             {isLoading ? (
                 <div className="flex justify-center py-12">
-                    <LoadingSpinner size="large" />
+                    <Spinner size="large" />
                 </div>
             ) : error ? (
                 <Card className="p-6 text-center">

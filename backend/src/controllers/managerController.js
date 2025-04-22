@@ -108,15 +108,15 @@ const getReviews = async (req, res) => {
                 r.user_id, 
                 r.restaurant_id, 
                 r.rating, 
-                r.review_text as text, 
-                r.created_at as createdAt, 
-                r.updated_at as updatedAt,
+                r.comment as text, 
+                r.date as createdAt, 
+                r.date as updatedAt,
                 CASE WHEN mr.id IS NOT NULL THEN true ELSE false END as responded,
                 mr.response_text as response,
                 mr.created_at as responseDate,
                 u.name as userName,
                 u.email as userEmail,
-                rest.name as restaurantName
+                COALESCE(rest.name, r.restaurant_name) as restaurantName
             FROM 
                 reviews r
             LEFT JOIN 
@@ -126,7 +126,7 @@ const getReviews = async (req, res) => {
             LEFT JOIN 
                 restaurants rest ON r.restaurant_id = rest.id
             ORDER BY 
-                r.created_at DESC
+                r.date DESC
         `);
 
         // Transform the data for the frontend
@@ -134,22 +134,25 @@ const getReviews = async (req, res) => {
             id: row.id,
             user: {
                 id: row.user_id,
-                name: row.userName,
-                email: row.userEmail
+                name: row.userName || 'Пользователь',
+                email: row.userEmail || ''
             },
             restaurant: {
                 id: row.restaurant_id,
-                name: row.restaurantName
+                name: row.restaurantName || 'Ресторан'
             },
-            rating: row.rating,
-            text: row.text,
+            rating: row.rating || 0,
+            text: row.text || '',
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
-            responded: row.responded,
-            response: row.response,
+            responded: Boolean(row.responded),
+            response: row.response || '',
             responseDate: row.responseDate
         }));
 
+        // Log the number of reviews found
+        console.log(`Found ${reviews.length} reviews for manager dashboard`);
+        
         res.json(reviews);
     } catch (error) {
         console.error('Error fetching reviews:', error);
@@ -164,18 +167,27 @@ const getReviews = async (req, res) => {
  */
 const respondToReview = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { text } = req.body;
-        const managerId = req.user.id;
+        // Handle both formats: /reviews/:id/response and /reviews/respond
+        const reviewId = req.params.id || req.body.reviewId;
+        const responseText = req.body.text || req.body.responseText;
+        const managerId = req.user?.id || 1; // Use a default manager ID if not available
+        
+        console.log('Responding to review:', { reviewId, responseText });
 
-        if (!text) {
+        if (!reviewId) {
+            return res.status(400).json({
+                message: 'Review ID is required'
+            });
+        }
+
+        if (!responseText) {
             return res.status(400).json({
                 message: 'Response text is required'
             });
         }
 
         // Check if review exists
-        const [reviewCheck] = await pool.query('SELECT id FROM reviews WHERE id = ?', [id]);
+        const [reviewCheck] = await pool.query('SELECT id FROM reviews WHERE id = ?', [reviewId]);
         if (reviewCheck.length === 0) {
             return res.status(404).json({
                 message: 'Review not found'
@@ -183,23 +195,26 @@ const respondToReview = async (req, res) => {
         }
 
         // Check if response already exists
-        const [responseCheck] = await pool.query('SELECT id FROM manager_responses WHERE review_id = ?', [id]);
+        const [responseCheck] = await pool.query('SELECT id FROM manager_responses WHERE review_id = ?', [reviewId]);
         
         if (responseCheck.length > 0) {
             // Update existing response
             await pool.query(
                 'UPDATE manager_responses SET response_text = ?, updated_at = NOW() WHERE review_id = ?',
-                [text, id]
+                [responseText, reviewId]
             );
+            console.log(`Updated existing response for review ${reviewId}`);
         } else {
             // Create new response
             await pool.query(
                 'INSERT INTO manager_responses (review_id, manager_id, response_text, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
-                [id, managerId, text]
+                [reviewId, managerId, responseText]
             );
+            console.log(`Created new response for review ${reviewId}`);
         }
 
         res.json({
+            success: true,
             message: 'Response submitted successfully'
         });
     } catch (error) {
@@ -227,15 +242,20 @@ const getStats = async (req, res) => {
         // Get total number of restaurants
         const [totalRestaurants] = await pool.query('SELECT COUNT(*) as count FROM restaurants');
 
+        // Make sure to handle null or undefined values
         const stats = {
-            totalReviews: totalReviews[0].count,
-            respondedReviews: respondedReviews[0].count,
-            pendingReviews: totalReviews[0].count - respondedReviews[0].count,
-            averageRating: avgRating[0].avg || 0,
-            totalRestaurants: totalRestaurants[0].count
+            totalReviews: totalReviews[0]?.count || 0,
+            respondedReviews: respondedReviews[0]?.count || 0,
+            pendingReviews: (totalReviews[0]?.count || 0) - (respondedReviews[0]?.count || 0),
+            averageRating: avgRating[0]?.avg || 0,
+            totalRestaurants: totalRestaurants[0]?.count || 0
         };
 
-        res.json(stats);
+        // Ensure the response format is consistent
+        res.json({
+            status: 'success',
+            data: stats
+        });
     } catch (error) {
         console.error('Error fetching stats:', error);
         return errorHandler(res, 'Failed to fetch statistics', 500, error);
@@ -274,133 +294,193 @@ const getChartData = async (req, res) => {
         // Format startDate for SQL query
         const formattedStartDate = startDate.toISOString().split('T')[0];
         
-        // Get ratings by day
-        const [ratingsByDay] = await pool.query(`
-            SELECT 
-                DAYOFWEEK(created_at) as day_of_week,
-                AVG(rating) as avg_rating,
-                COUNT(*) as count
-            FROM 
-                reviews
-            WHERE 
-                created_at >= ?
-            GROUP BY 
-                DAYOFWEEK(created_at)
-            ORDER BY 
-                day_of_week
-        `, [formattedStartDate]);
-        
-        // Get restaurant distribution
-        const [restaurantDistribution] = await pool.query(`
-            SELECT 
-                r.name as restaurant_name,
-                COUNT(rv.id) as review_count
-            FROM 
-                reviews rv
-            JOIN 
-                restaurants r ON rv.restaurant_id = r.id
-            WHERE 
-                rv.created_at >= ?
-            GROUP BY 
-                r.id
-            ORDER BY 
-                review_count DESC
-        `, [formattedStartDate]);
-        
-        // Map SQL results to chart data format
-        // Initialize arrays for 7 days of the week (Sunday = 1, Saturday = 7 in MySQL)
-        const dayLabels = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-        // Reorder to start with Monday (front-end expectation)
-        const sortedLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-        
-        const ratingData = Array(7).fill(0);
-        const countData = Array(7).fill(0);
-        
-        // Fill in the data from database results
-        ratingsByDay.forEach(row => {
-            // MySQL DAYOFWEEK returns 1 for Sunday, 2 for Monday, etc.
-            // Adjust index to 0-based array (0 = Sunday, 1 = Monday, etc.)
-            const dayIndex = row.day_of_week - 1;
-            ratingData[dayIndex] = parseFloat(row.avg_rating).toFixed(1);
-            countData[dayIndex] = parseInt(row.count);
-        });
-        
-        // Reorder arrays to start with Monday
-        const sortedRatings = [
-            ratingData[1], // Monday
-            ratingData[2], // Tuesday
-            ratingData[3], // Wednesday
-            ratingData[4], // Thursday
-            ratingData[5], // Friday
-            ratingData[6], // Saturday
-            ratingData[0]  // Sunday
-        ];
-        
-        const sortedCounts = [
-            countData[1], // Monday
-            countData[2], // Tuesday
-            countData[3], // Wednesday
-            countData[4], // Thursday
-            countData[5], // Friday
-            countData[6], // Saturday
-            countData[0]  // Sunday
-        ];
-        
-        // Prepare restaurant distribution data
-        const restaurantLabels = restaurantDistribution.map(r => r.restaurant_name);
-        const restaurantCounts = restaurantDistribution.map(r => r.review_count);
-        
-        // Generate colors for restaurants
-        const restaurantColors = [
-            'rgba(255, 99, 132, 0.6)',
-            'rgba(54, 162, 235, 0.6)',
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(153, 102, 255, 0.6)',
-            'rgba(255, 159, 64, 0.6)',
-            'rgba(199, 199, 199, 0.6)',
-            'rgba(83, 102, 255, 0.6)',
-            'rgba(255, 99, 255, 0.6)',
-            'rgba(99, 255, 132, 0.6)'
-        ];
-        
-        // Ensure we have enough colors
-        while (restaurantColors.length < restaurantLabels.length) {
-            restaurantColors.push(...restaurantColors);
-        }
-        
-        // Create the final chart data object
-        const chartData = {
-            ratings: {
-                labels: sortedLabels,
-                datasets: [{
-                    label: 'Средний рейтинг',
-                    data: sortedRatings,
-                    borderColor: 'rgb(59, 130, 246)',
-                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                }]
-            },
-            volumeByDay: {
-                labels: sortedLabels,
-                datasets: [{
-                    label: 'Количество отзывов',
-                    data: sortedCounts,
-                    backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                }]
-            },
-            categoryDistribution: {
-                labels: restaurantLabels,
-                datasets: [{
-                    label: 'Количество отзывов',
-                    data: restaurantCounts,
-                    backgroundColor: restaurantColors.slice(0, restaurantLabels.length),
-                }]
+        try {
+            // Get ratings by day
+            const [ratingsByDay] = await pool.query(`
+                SELECT 
+                    DAYOFWEEK(date) as day_of_week,
+                    AVG(rating) as avg_rating,
+                    COUNT(*) as count
+                FROM 
+                    reviews
+                WHERE 
+                    date >= ?
+                GROUP BY 
+                    day_of_week
+                ORDER BY 
+                    day_of_week
+            `, [formattedStartDate]);
+            
+            // Get review count by day
+            const [countByDay] = await pool.query(`
+                SELECT 
+                    DAYOFWEEK(date) as day_of_week,
+                    COUNT(*) as count
+                FROM 
+                    reviews
+                WHERE 
+                    date >= ?
+                GROUP BY 
+                    day_of_week
+                ORDER BY 
+                    day_of_week
+            `, [formattedStartDate]);
+            
+            // Get restaurant distribution
+            const [restaurantDistribution] = await pool.query(`
+                SELECT 
+                    r.name as restaurant_name,
+                    COUNT(rv.id) as review_count
+                FROM 
+                    restaurants r
+                    LEFT JOIN reviews rv ON r.id = rv.restaurant_id
+                WHERE 
+                    rv.date >= ?
+                GROUP BY 
+                    r.id
+                ORDER BY 
+                    review_count DESC
+                LIMIT 10
+            `, [formattedStartDate]);
+            
+            // Prepare data for charts
+            // Convert SQL results to chart-friendly format
+            
+            // Initialize data for all days of the week
+            const ratingData = Array(7).fill(0);
+            const countData = Array(7).fill(0);
+            
+            // Fill in actual data from database
+            ratingsByDay.forEach(row => {
+                // MySQL DAYOFWEEK: 1 = Sunday, 2 = Monday, ..., 7 = Saturday
+                // We adjust the index: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+                const index = row.day_of_week - 1;
+                ratingData[index] = parseFloat(row.avg_rating) || 0;
+            });
+            
+            countByDay.forEach(row => {
+                const index = row.day_of_week - 1;
+                countData[index] = parseInt(row.count) || 0;
+            });
+            
+            // Reorder to start from Monday: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+            const sortedRatings = [
+                ratingData[1], // Monday
+                ratingData[2], // Tuesday
+                ratingData[3], // Wednesday
+                ratingData[4], // Thursday
+                ratingData[5], // Friday
+                ratingData[6], // Saturday
+                ratingData[0]  // Sunday
+            ];
+            
+            const sortedCounts = [
+                countData[1], // Monday
+                countData[2], // Tuesday
+                countData[3], // Wednesday
+                countData[4], // Thursday
+                countData[5], // Friday
+                countData[6], // Saturday
+                countData[0]  // Sunday
+            ];
+            
+            // Prepare restaurant distribution data
+            const restaurantLabels = restaurantDistribution.map(r => r.restaurant_name || 'Неизвестный ресторан');
+            const restaurantCounts = restaurantDistribution.map(r => parseInt(r.review_count) || 0);
+            
+            // Generate colors for restaurants
+            const restaurantColors = [
+                'rgba(255, 99, 132, 0.6)',
+                'rgba(54, 162, 235, 0.6)',
+                'rgba(255, 206, 86, 0.6)',
+                'rgba(75, 192, 192, 0.6)',
+                'rgba(153, 102, 255, 0.6)',
+                'rgba(255, 159, 64, 0.6)',
+                'rgba(199, 199, 199, 0.6)',
+                'rgba(83, 102, 255, 0.6)',
+                'rgba(255, 99, 255, 0.6)',
+                'rgba(99, 255, 132, 0.6)'
+            ];
+            
+            // Ensure we have enough colors
+            while (restaurantColors.length < restaurantLabels.length) {
+                restaurantColors.push(...restaurantColors);
             }
-        };
-        
-        res.json(chartData);
+            
+            // Format chart data for frontend
+            const chartData = {
+                ratings: {
+                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                    datasets: [{
+                        label: 'Средний рейтинг',
+                        data: sortedRatings,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    }]
+                },
+                volumeByDay: {
+                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                    datasets: [{
+                        label: 'Количество отзывов',
+                        data: sortedCounts,
+                        backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                    }]
+                },
+                categoryDistribution: {
+                    labels: restaurantLabels,
+                    datasets: [{
+                        label: 'Количество отзывов',
+                        data: restaurantCounts,
+                        backgroundColor: restaurantColors.slice(0, restaurantLabels.length),
+                    }]
+                }
+            };
+            
+            // Send formatted data to frontend
+            res.json({
+                status: 'success',
+                data: chartData
+            });
+        } catch (dbError) {
+            console.error('Database error while fetching chart data:', dbError);
+            
+            // Return default chart data to prevent frontend breaking
+            const defaultData = {
+                ratings: {
+                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                    datasets: [{
+                        label: 'Средний рейтинг',
+                        data: [0, 0, 0, 0, 0, 0, 0],
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    }]
+                },
+                volumeByDay: {
+                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                    datasets: [{
+                        label: 'Количество отзывов',
+                        data: [0, 0, 0, 0, 0, 0, 0],
+                        backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                    }]
+                },
+                categoryDistribution: {
+                    labels: ['Нет данных'],
+                    datasets: [{
+                        label: 'Количество отзывов',
+                        data: [0],
+                        backgroundColor: ['rgba(200, 200, 200, 0.6)'],
+                    }]
+                }
+            };
+            
+            res.json({
+                status: 'error',
+                message: 'Ошибка при получении данных из базы данных',
+                data: defaultData
+            });
+        }
     } catch (error) {
-        console.error('Error fetching chart data:', error);
+        console.error('Error in getChartData:', error);
         return errorHandler(res, 'Failed to fetch chart data', 500, error);
     }
 };
@@ -417,10 +497,9 @@ const getRestaurants = async (req, res) => {
                 r.id,
                 r.name,
                 r.address,
-                r.type,
-                r.status,
-                r.price_range,
                 r.category,
+                r.is_active as status,
+                r.price_range,
                 COALESCE(AVG(rv.rating), 0) as rating,
                 COUNT(rv.id) as reviews
             FROM 

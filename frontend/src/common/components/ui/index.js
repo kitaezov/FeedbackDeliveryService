@@ -17,4 +17,6 @@ export { Spinner } from './Spinner';
 export { Tabs } from './Tabs';
 export { Dropdown } from './Dropdown';
 export { Tooltip } from './Tooltip';
-export { Avatar } from './Avatar'; 
+export { Avatar } from './Avatar';
+export { RangeSlider } from './RangeSlider';
+export { CheckboxGroup } from './CheckboxGroup'; 

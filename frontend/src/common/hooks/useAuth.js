@@ -71,7 +71,7 @@ export const useAuth = () => {
             }
             
             // В любом случае запрашиваем актуальные данные с сервера
-            const { data } = await api.get('/auth/me');
+            const { data } = await api.get('auth/me');
             
             // Сохраняем данные в localStorage и устанавливаем в состояние
             localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
@@ -104,7 +104,7 @@ export const useAuth = () => {
         setIsLoading(true);
         
         try {
-            const response = await api.post('/auth/register', registerData);
+            const response = await api.post('auth/register', registerData);
             const { user, accessToken, refreshToken } = response.data;
             
             // Сохраняем данные в localStorage
@@ -146,7 +146,7 @@ export const useAuth = () => {
         setIsLoading(true);
         
         try {
-            const response = await api.post('/auth/login', loginData);
+            const response = await api.post('auth/login', loginData);
             const { user, accessToken, refreshToken } = response.data;
             
             // Сохраняем данные в localStorage
@@ -214,7 +214,7 @@ export const useAuth = () => {
         setIsLoading(true);
         
         try {
-            const response = await api.put('/user/profile', profileData);
+            const response = await api.put('user/profile', profileData);
             const updatedUser = response.data;
             
             // Обновляем данные в localStorage

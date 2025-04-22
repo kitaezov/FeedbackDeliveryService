@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Search, Filter, ArrowLeft, Award, ChevronDown, Clock, ThumbsUp } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import BackgroundParticles from '../../../components/BackgroundParticles';
 import LoadingSpinner from '../../../components/LoadingSpinner';
@@ -25,14 +25,24 @@ const RestaurantRatingsPage = () => {
                 setLoading(true);
                 // Replace with your actual API endpoint
                 const response = await api.get('/restaurants');
-                setRestaurants(response.data);
-                setFilteredRestaurants(response.data);
+                const restaurantsWithValidRatings = response.data.map(restaurant => ({
+                    ...restaurant,
+                    avgRating: typeof restaurant.avgRating === 'number' ? restaurant.avgRating : 0,
+                    reviewCount: typeof restaurant.reviewCount === 'number' ? restaurant.reviewCount : 0
+                }));
+                setRestaurants(restaurantsWithValidRatings);
+                setFilteredRestaurants(restaurantsWithValidRatings);
             } catch (err) {
                 console.error('Failed to fetch restaurants:', err);
                 setError('Не удалось загрузить рестораны. Пожалуйста, попробуйте позже.');
                 // For demo purposes, use mock data if API fails
-                setRestaurants(mockRestaurants);
-                setFilteredRestaurants(mockRestaurants);
+                const mocksWithValidRatings = mockRestaurants.map(restaurant => ({
+                    ...restaurant,
+                    avgRating: typeof restaurant.avgRating === 'number' ? restaurant.avgRating : 0,
+                    reviewCount: typeof restaurant.reviewCount === 'number' ? restaurant.reviewCount : 0
+                }));
+                setRestaurants(mocksWithValidRatings);
+                setFilteredRestaurants(mocksWithValidRatings);
             } finally {
                 setLoading(false);
             }
@@ -110,6 +120,7 @@ const RestaurantRatingsPage = () => {
 
     // Get rating color based on score
     const getRatingColor = (rating) => {
+        if (!rating || rating === 0) return isDarkMode ? 'text-gray-400' : 'text-gray-500';
         if (rating >= 4.5) return isDarkMode ? 'text-emerald-400' : 'text-emerald-600';
         if (rating >= 4.0) return isDarkMode ? 'text-green-400' : 'text-green-600';
         if (rating >= 3.5) return isDarkMode ? 'text-yellow-400' : 'text-yellow-500';
@@ -123,7 +134,7 @@ const RestaurantRatingsPage = () => {
                 <span
                     key={star}
                     className={`text-lg ${
-                        star <= Math.round(rating)
+                        star <= Math.round(rating || 0)
                             ? getRatingColor(rating)
                             : isDarkMode ? 'text-gray-700' : 'text-gray-300'
                     }`}
@@ -139,6 +150,12 @@ const RestaurantRatingsPage = () => {
         if (!image) return null;
         if (image.startsWith('http')) return image;
         return `${process.env.REACT_APP_API_URL || ''}${image}`;
+    };
+
+    // Format rating display
+    const formatRating = (rating) => {
+        if (rating === undefined || rating === null || isNaN(rating)) return '0.0';
+        return rating.toFixed(1);
     };
 
     return (
@@ -249,50 +266,48 @@ const RestaurantRatingsPage = () => {
                                         }}
                                         className={`rounded-lg overflow-hidden shadow-md border ${themeClasses.card}`}
                                     >
-                                        <Link to={`/restaurants/${restaurant.id}`}>
-                                            <div className="h-48 bg-gray-300 overflow-hidden">
-                                                {restaurant.imageUrl ? (
-                                                    <img 
-                                                        src={getImageUrl(restaurant.imageUrl)} 
-                                                        alt={restaurant.name} 
-                                                        className="w-full h-full object-cover transition-transform hover:scale-105 duration-300" 
-                                                    />
-                                                ) : (
-                                                    <div className={`w-full h-full flex items-center justify-center ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                                                        <Award size={48} className="text-gray-400" />
-                                                    </div>
-                                                )}
+                                        <div className="h-48 bg-gray-300 overflow-hidden">
+                                            {restaurant.imageUrl ? (
+                                                <img 
+                                                    src={getImageUrl(restaurant.imageUrl)} 
+                                                    alt={restaurant.name} 
+                                                    className="w-full h-full object-cover" 
+                                                />
+                                            ) : (
+                                                <div className={`w-full h-full flex items-center justify-center ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                                    <Award size={48} className="text-gray-400" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="p-4">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h2 className="text-lg font-semibold">{restaurant.name}</h2>
+                                                <div className="flex items-center">
+                                                    <span className={`text-lg font-bold mr-1 ${getRatingColor(restaurant.avgRating)}`}>
+                                                        {formatRating(restaurant.avgRating)}
+                                                    </span>
+                                                    <Star className={`w-5 h-5 ${getRatingColor(restaurant.avgRating)}`} />
+                                                </div>
                                             </div>
                                             
-                                            <div className="p-4">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h2 className="text-lg font-semibold">{restaurant.name}</h2>
-                                                    <div className="flex items-center">
-                                                        <span className={`text-lg font-bold mr-1 ${getRatingColor(restaurant.avgRating)}`}>
-                                                            {restaurant.avgRating.toFixed(1)}
-                                                        </span>
-                                                        <Star className={`w-5 h-5 ${getRatingColor(restaurant.avgRating)}`} />
-                                                    </div>
+                                            <p className="text-sm text-gray-500 mb-3 truncate">{restaurant.cuisine}</p>
+                                            
+                                            <div className="flex justify-between text-sm">
+                                                <div className="flex items-center">
+                                                    <ThumbsUp size={16} className="mr-1 text-gray-400" />
+                                                    <span>{restaurant.likesCount || 0}</span>
                                                 </div>
-                                                
-                                                <p className="text-sm text-gray-500 mb-3 truncate">{restaurant.cuisine}</p>
-                                                
-                                                <div className="flex justify-between text-sm">
-                                                    <div className="flex items-center">
-                                                        <ThumbsUp size={16} className="mr-1 text-gray-400" />
-                                                        <span>{restaurant.likesCount}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <Clock size={16} className="mr-1 text-gray-400" />
-                                                        <span>{restaurant.reviewCount} отзывов</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                                                    {renderStars(restaurant.avgRating)}
+                                                <div className="flex items-center">
+                                                    <Clock size={16} className="mr-1 text-gray-400" />
+                                                    <span>{restaurant.reviewCount || 0} отзывов</span>
                                                 </div>
                                             </div>
-                                        </Link>
+                                            
+                                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                                {renderStars(restaurant.avgRating)}
+                                            </div>
+                                        </div>
                                     </motion.div>
                                 ))}
                             </div>

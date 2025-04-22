@@ -39,7 +39,58 @@ const ManagerPanel = () => {
                 const response = await api.get('/api/manager/statistics');
                 setStats(response.data.stats);
                 setChartData(response.data.charts);
-                setRestaurants(response.data.restaurants);
+                
+                // Получаем базовые данные ресторанов
+                const restaurantsData = response.data.restaurants;
+                
+                // Получаем данные отзывов для расчета рейтингов
+                const reviewsResponse = await api.get('/api/manager/reviews');
+                const reviewsData = reviewsResponse.data;
+                console.log(`Получено ${reviewsData.length} отзывов для обработки рейтингов ресторанов`);
+                
+                // Обрабатываем данные ресторанов с учетом отзывов
+                const processedRestaurants = restaurantsData.map(restaurant => {
+                    try {
+                        // Находим все отзывы для текущего ресторана
+                        const restaurantReviews = reviewsData.filter(review => {
+                            try {
+                                // Проверяем все возможные поля для связи ресторана с отзывом
+                                return (review.restaurantId === restaurant.id) || 
+                                       (review.restaurant_id === restaurant.id) ||
+                                       (review.restaurantName === restaurant.name) || 
+                                       (review.restaurant_name === restaurant.name);
+                            } catch (error) {
+                                console.warn(`Ошибка при фильтрации отзыва для ресторана ${restaurant.name}:`, error);
+                                return false;
+                            }
+                        });
+                        
+                        console.log(`Ресторан "${restaurant.name}": найдено ${restaurantReviews.length} отзывов`);
+                        
+                        // Рассчитываем средний рейтинг на основе отзывов
+                        let avgRating = 0;
+                        if (restaurantReviews.length > 0) {
+                            const ratingsSum = restaurantReviews.reduce((sum, review) => 
+                                sum + (Number(review.rating) || 0), 0);
+                            avgRating = ratingsSum / restaurantReviews.length;
+                            console.log(`Ресторан "${restaurant.name}": средний рейтинг ${avgRating.toFixed(1)}`);
+                        }
+                        
+                        // Обновляем данные ресторана
+                        return {
+                            ...restaurant,
+                            rating: avgRating || restaurant.rating || 0,
+                            reviews: restaurantReviews.length,
+                            reviewCount: restaurantReviews.length
+                        };
+                    } catch (error) {
+                        console.error(`Ошибка при обработке ресторана ${restaurant.name}:`, error);
+                        return restaurant;
+                    }
+                });
+                
+                // Обновляем состояние с обработанными данными
+                setRestaurants(processedRestaurants);
             } catch (error) {
                 console.error('Error fetching manager data:', error);
             } finally {
@@ -184,26 +235,28 @@ const ManagerPanel = () => {
                             <tbody>
                                 {restaurants.map(restaurant => (
                                     <tr key={restaurant.id} className="border-b border-gray-200 dark:border-gray-700">
-                                        <td className="py-4 text-gray-900 dark:text-white">{restaurant.name}</td>
+                                        <td className="py-4 text-gray-900 dark:text-white">{restaurant.name || 'Без названия'}</td>
                                         <td className="py-4">
                                             <div className="flex items-center">
                                                 <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                                                <span className="text-gray-900 dark:text-white">{restaurant.rating.toFixed(1)}</span>
+                                                <span className="text-gray-900 dark:text-white">
+                                                    {typeof restaurant.rating === 'number' ? restaurant.rating.toFixed(1) : '0.0'}
+                                                </span>
                                             </div>
                                         </td>
-                                        <td className="py-4 text-gray-900 dark:text-white">{restaurant.reviews}</td>
+                                        <td className="py-4 text-gray-900 dark:text-white">{restaurant.reviews || restaurant.reviewCount || '0'}</td>
                                         <td className="py-4">
                                             <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                {restaurant.type}
+                                                {restaurant.type || restaurant.category || restaurant.cuisine || 'Общий'}
                                             </span>
                                         </td>
                                         <td className="py-4">
                                             <span className={`px-2 py-1 rounded-full text-xs ${
-                                                restaurant.status === 'active'
+                                                restaurant.status === 'active' || restaurant.status === 'открыт' || restaurant.status === 1
                                                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                     : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                                             }`}>
-                                                {restaurant.status}
+                                                {restaurant.status === 1 ? 'активен' : restaurant.status || 'неактивен'}
                                             </span>
                                         </td>
                                     </tr>

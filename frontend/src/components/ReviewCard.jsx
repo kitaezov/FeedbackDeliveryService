@@ -69,15 +69,38 @@ const formatDate = (dateString) => {
 };
 
 const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDarkMode = false }) => {
+    // Add console log to debug the review object
+    console.log('ReviewCard received review:', review);
+    
     const [showDetails, setShowDetails] = useState(false);
     const [localLikes, setLocalLikes] = useState(review.likes || 0);
     const [isLiked, setIsLiked] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLiking, setIsLiking] = useState(false);
 
+    // Normalize review fields to handle different formats
+    const reviewData = {
+        id: review.id,
+        userId: review.userId || review.user_id,
+        userName: review.user_name || review.userName || 'Пользователь',
+        restaurantName: review.restaurant_name || review.restaurantName || 'Ресторан',
+        rating: review.rating || 0,
+        comment: review.comment || '',
+        date: review.date || new Date().toISOString(),
+        avatar: review.avatar,
+        likes: review.likes || 0,
+        ratings: review.ratings || {
+            food: review.foodRating || review.food_rating || 0,
+            service: review.serviceRating || review.service_rating || 0,
+            atmosphere: review.atmosphereRating || review.atmosphere_rating || 0,
+            price: review.priceRating || review.price_rating || 0,
+            cleanliness: review.cleanlinessRating || review.cleanliness_rating || 0
+        }
+    };
+
     // Check if this is the current user's review
-    const isCurrentUserReview = user && review.userId === user.id;
-    const restaurantSlug = review.restaurantSlug || (review.restaurantName ? review.restaurantName.toLowerCase().replace(/\s+/g, '-') : '');
+    const isCurrentUserReview = user && (reviewData.userId === user.id);
+    const restaurantSlug = reviewData.restaurantName ? reviewData.restaurantName.toLowerCase().replace(/\s+/g, '-') : '';
 
     const getCategoryName = (categoryId) => {
         const categories = {
@@ -85,7 +108,9 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
             service: 'Уровень сервиса',
             atmosphere: 'Атмосфера заведения',
             price: 'Соотношение цена/качество',
-            cleanliness: 'Чистота помещения'
+            cleanliness: 'Чистота помещения',
+            deliverySpeed: 'Скорость доставки',
+            deliveryQuality: 'Качество доставки'
         };
         return categories[categoryId] || categoryId;
     };
@@ -110,7 +135,7 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
             setIsLiked(true);
             
             // Then call the API
-            await onLike(review.id);
+            await onLike(reviewData.id);
         } catch (error) {
             // If there was an error, revert the UI change
             console.error('Error liking review:', error);
@@ -125,7 +150,7 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
         if (window.confirm('Вы уверены, что хотите удалить этот отзыв?')) {
             setIsDeleting(true);
             try {
-                await onDelete(review.id);
+                await onDelete(reviewData.id);
             } finally {
                 setIsDeleting(false);
             }
@@ -150,10 +175,10 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                     {/* Профиль и базовая информация */}
                     <div className="flex flex-wrap md:flex-nowrap items-center mb-6 gap-4">
                         <div className="relative">
-                            {review.avatar ? (
+                            {reviewData.avatar ? (
                                 <img
-                                    src={review.avatar}
-                                    alt={review.user_name || review.userName || 'Пользователь'}
+                                    src={reviewData.avatar}
+                                    alt={reviewData.userName}
                                     className="w-14 h-14 rounded-full object-cover
                                             ring-2 ring-offset-2 ring-blue-50
                                             transition-transform group-hover:scale-105"
@@ -171,10 +196,10 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                             <h3 className={`font-semibold text-lg
                                            transition-colors group-hover:text-blue-600
                                            ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                                {review.user_name || review.userName || 'Пользователь'}
+                                {reviewData.userName}
                             </h3>
                             <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {formatDate(review.date)}
+                                {formatDate(reviewData.date)}
                                 <span className="ml-1">
                                     
                                 </span>
@@ -187,7 +212,7 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                                 <span
                                     key={star}
                                     className={`text-xl transition-colors ${
-                                        star <= Math.round(review.rating)
+                                        star <= Math.round(reviewData.rating)
                                             ? "text-yellow-400"
                                             : isDarkMode ? "text-gray-600" : "text-gray-200"
                                     }`}
@@ -196,7 +221,7 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                                 </span>
                             ))}
                             <span className={`ml-2 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                {review.rating}
+                                {reviewData.rating}
                             </span>
                         </div>
                     </div>
@@ -206,8 +231,14 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                                   border-l-4 border-gray-200 pl-4
                                   italic font-light
                                   ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        "{review.comment}"
+                        "{reviewData.comment}"
                     </p>
+
+                    {/* Ресторан */}
+                    <div className={`mb-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <span>Ресторан: </span>
+                        <span className="font-medium">{reviewData.restaurantName}</span>
+                    </div>
 
                     {/* Кнопки управления */}
                     <div className="flex justify-between items-center">
@@ -270,7 +301,8 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                                 </>
                             ) : (
                                 <>
-                    
+                                    <span>Показать детали</span>
+                                    <ChevronDown className="w-4 h-4 ml-1" />
                                 </>
                             )}
                         </motion.button>
@@ -284,7 +316,7 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                             className={`mt-6 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}
                         >
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {Object.entries(review.ratings || {}).filter(([_, rating]) => rating > 0).map(([category, rating]) => (
+                                {Object.entries(reviewData.ratings).filter(([_, rating]) => rating > 0).map(([category, rating]) => (
                                     <motion.div
                                         key={category}
                                         whileHover={{ y: -2 }}

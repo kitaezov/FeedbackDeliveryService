@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, Link as LinkIcon, Image } from 'lucide-react';
 import api from '../../utils/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { RestaurantImageUploader } from '../restaurants/components';
 
 const RestaurantEditor = ({ user }) => {
     const { id } = useParams();
@@ -61,31 +62,14 @@ const RestaurantEditor = ({ user }) => {
     // Load restaurant data if editing
     useEffect(() => {
         if (isNew) return;
-
+        
         const fetchRestaurant = async () => {
             setLoading(true);
             try {
                 const response = await api.get(`/restaurants/${id}`);
+                const restaurantData = response.data.restaurant;
+                const isActive = restaurantData.is_active === 1 || restaurantData.is_active === true;
                 
-                // Check if response has the expected structure
-                if (!response.data) {
-                    throw new Error('Invalid API response: Missing data');
-                }
-                
-                // Check different possible response structures
-                const restaurantData = response.data.restaurant || response.data;
-                
-                // Check if restaurantData exists and has the expected properties
-                if (!restaurantData || typeof restaurantData !== 'object') {
-                    throw new Error('Restaurant data not found or invalid');
-                }
-                
-                // Convert isActive from 0/1 to boolean if needed
-                const isActive = restaurantData.is_active !== undefined 
-                    ? Boolean(restaurantData.is_active) 
-                    : true; // Default to true if not provided
-                
-                // Set form state with safe fallbacks for all properties
                 setRestaurant({
                     name: restaurantData.name || '',
                     address: restaurantData.address || '',
@@ -131,59 +115,42 @@ const RestaurantEditor = ({ user }) => {
         }));
     };
 
+    // Handle image upload success
+    const handleImageUploaded = (imageUrl) => {
+        setRestaurant(prev => ({
+            ...prev,
+            imageUrl: imageUrl
+        }));
+    };
+
     // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
         setError(null);
-
+        
         try {
-            // Validate required fields
-            if (!restaurant.name.trim()) {
-                setError('Название ресторана обязательно');
-                setSaving(false);
-                return;
-            }
-
-            // Generate slug from name if autoGenerateLink is true
-            let slug = restaurant.slug;
-            if (restaurant.autoGenerateLink || !slug || slug.trim() === '') {
-                slug = restaurant.name
-                    .toLowerCase()
-                    .replace(/[^\w\s-]/g, '') // Remove non-word chars
-                    .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-                    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-            }
-
-            // Ensure slug is not empty
-            if (!slug || slug.trim() === '') {
-                setError('Не удалось создать URL для страницы ресторана');
-                setSaving(false);
-                return;
-            }
-            
-            // Process image URL
-            const processedImageUrl = processImageUrl(restaurant.imageUrl);
-
+            // Format the data to match the expected API format
             const formData = {
-                name: restaurant.name.trim(),
-                address: restaurant.address.trim(),
-                description: restaurant.description.trim(),
-                image_url: processedImageUrl,
-                website: restaurant.website.trim(),
-                contact_phone: restaurant.contactPhone.trim(),
-                is_active: restaurant.isActive,
-                slug: slug,
-                category: restaurant.category.trim(),
+                name: restaurant.name,
+                address: restaurant.address,
+                description: restaurant.description,
+                imageUrl: restaurant.imageUrl,
+                website: restaurant.website,
+                contactPhone: restaurant.contactPhone,
+                isActive: restaurant.isActive,
+                slug: restaurant.autoGenerateLink ? undefined : restaurant.slug,
+                autoGenerateLink: restaurant.autoGenerateLink,
+                category: restaurant.category,
                 price_range: restaurant.priceRange,
                 min_price: restaurant.minPrice,
-                delivery_time: restaurant.deliveryTime,
-                autoGenerateLink: restaurant.autoGenerateLink
+                delivery_time: restaurant.deliveryTime
             };
-
-            console.log('Sending restaurant data:', formData);
-
+            
+            console.log("Отправляемые данные:", formData);
+            
             let response;
+            
             if (isNew) {
                 response = await api.post('/restaurants', formData);
             } else {
@@ -222,7 +189,7 @@ const RestaurantEditor = ({ user }) => {
                 <div className="h-24 w-48 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden relative">
                     <img 
                         src={processedUrl} 
-                        alt="Preview" 
+               
                         className="h-full w-full object-cover"
                         onError={(e) => {
                             e.target.onerror = null;
@@ -235,45 +202,43 @@ const RestaurantEditor = ({ user }) => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-4 sm:py-8">
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-                <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
-                    <div>
-                        <h1 className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white">
-                            {isNew ? 'Добавить новый ресторан' : 'Редактировать ресторан'}
-                        </h1>
-                        <p className="text-gray-600 dark:text-gray-300">
-                            {isNew ? 'Заполните форму для создания нового ресторана' : 'Измените данные существующего ресторана'}
-                        </p>
-                    </div>
-                    <button
-                        onClick={() => navigate('/admin')}
-                        className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded flex items-center text-sm"
-                    >
-                        <ArrowLeft size={16} className="mr-1" /> Назад
-                    </button>
+        <div className="container mx-auto px-4 py-4 sm:py-6">
+            <div className="mb-4 sm:mb-6 flex items-center">
+                <button 
+                    onClick={() => navigate('/admin')} 
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center"
+                >
+                    <ArrowLeft size={16} className="mr-1" />
+                    <span className="text-sm sm:text-base">Назад</span>
+                </button>
+                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white ml-4 sm:ml-6">
+                    {isNew ? 'Добавление нового ресторана' : 'Редактирование ресторана'}
+                </h1>
+            </div>
+            
+            {error && (
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-md text-sm">
+                    {error}
                 </div>
-
-                {error && (
-                    <div className="p-3 sm:p-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded mx-3 sm:mx-6 mt-3 sm:mt-6 text-sm sm:text-base">
-                        {error}
+            )}
+            
+            <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+                <div className="space-y-4 sm:space-y-6">
+                    <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Название ресторана
+                        </label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={restaurant.name}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                        />
                     </div>
-                )}
 
-                <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3 sm:space-y-4 dark:text-gray-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Название ресторана
-                            </label>
-                            <input
-                                type="text"
-                                name="name"
-                                value={restaurant.name}
-                                onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
-                            />
-                        </div>
                         <div>
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Адрес
@@ -303,20 +268,21 @@ const RestaurantEditor = ({ user }) => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center">
-                                <Image size={14} className="mr-1" /> URL изображения
-                            </label>
-                            <input
-                                type="text"
-                                name="imageUrl"
-                                value={restaurant.imageUrl}
-                                onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
-                            />
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Укажите полный URL изображения (http://example.com/image.jpg)
-                            </p>
-                            {getImagePreview()}
+                            
+                            
+                            <div className="mt-2">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Или укажите URL изображения:</p>
+                                <input
+                                    type="text"
+                                    name="imageUrl"
+                                    value={restaurant.imageUrl}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                                    placeholder="https://example.com/image.jpg"
+                                />
+                            </div>
+                            
+                            {restaurant.imageUrl && getImagePreview()}
                         </div>
                         <div>
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -504,8 +470,8 @@ const RestaurantEditor = ({ user }) => {
                             </button>
                         </div>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     );
 };

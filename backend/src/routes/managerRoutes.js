@@ -13,6 +13,7 @@ router.use(checkRole(['manager', 'admin', 'head_admin']));
 
 // Reviews management
 router.get('/reviews', managerController.getReviews);
+router.post('/reviews/respond', managerController.respondToReview);
 router.post('/reviews/:id/response', managerController.respondToReview);
 
 // Restaurant data

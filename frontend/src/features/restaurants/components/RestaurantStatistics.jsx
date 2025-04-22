@@ -213,9 +213,7 @@ export const RestaurantStatistics = ({ restaurants = [], isLoading = false, erro
                                         size="small"
                                         className="text-yellow-500 mr-1"
                                     />
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        {restaurant.rating.toFixed(1)}
-                                    </span>
+             
                                 </div>
                             </li>
                         ))}

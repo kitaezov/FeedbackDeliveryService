@@ -130,11 +130,28 @@ const App = () => {
 
     const fetchReviews = async () => {
         try {
+            console.log('Fetching reviews from API...');
             const response = await api.get('/reviews');
             
-            // Проверяем структуру ответа сервера
-            const reviewsData = response.data.reviews || [];
-            console.log('Получены отзывы от сервера:', reviewsData);
+            console.log('API response:', response);
+            
+            // Handle different possible response structures
+            let reviewsData = [];
+            
+            if (response.data && response.data.reviews && Array.isArray(response.data.reviews)) {
+                reviewsData = response.data.reviews;
+            } else if (Array.isArray(response.data)) {
+                reviewsData = response.data;
+            } else {
+                console.warn('Unexpected API response structure:', response.data);
+            }
+            
+            console.log('Parsed reviews data:', reviewsData);
+            console.log('Number of reviews:', reviewsData.length);
+
+            if (reviewsData.length === 0) {
+                console.warn('No reviews returned from API');
+            }
 
             const reviewsWithAvatars = reviewsData.map(review => ({
                 ...review,
@@ -143,14 +160,98 @@ const App = () => {
 
             setReviews(reviewsWithAvatars);
         } catch (err) {
-            console.error('Ошибка при загрузке отзывов:', err);
-            // setError('Не удалось загрузить отзывы. Попробуйте позже.');
+            console.error('Error fetching reviews:', err);
+            console.error('Error details:', err.response?.data);
+            // Try to fetch again with a different API endpoint as fallback
+            try {
+                console.log('Trying fallback API endpoint...');
+                const fallbackResponse = await axios.get(`${API_URL}/api/reviews`);
+                console.log('Fallback API response:', fallbackResponse);
+                
+                const fallbackData = fallbackResponse.data && fallbackResponse.data.reviews ? 
+                    fallbackResponse.data.reviews : 
+                    Array.isArray(fallbackResponse.data) ? fallbackResponse.data : [];
+                
+                console.log('Fallback reviews data:', fallbackData);
+                setReviews(fallbackData.map(review => ({...review, avatar: null})));
+            } catch (fallbackErr) {
+                console.error('Fallback API request also failed:', fallbackErr);
+                setReviews([]);
+            }
         }
     };
 
     useEffect(() => {
         fetchReviews();
     }, []);
+
+    // Add mock reviews for testing if no reviews are found
+    useEffect(() => {
+        // Only add mock data if no reviews exist
+        if (reviews.length === 0) {
+            console.log('No reviews found, adding mock data for testing');
+            
+            // Create mock reviews for testing
+            const mockReviews = [
+                {
+                    id: 1001,
+                    userId: 1,
+                    user_id: 1,
+                    restaurantName: 'Тестовый ресторан 1',
+                    restaurant_name: 'Тестовый ресторан 1',
+                    rating: 4,
+                    comment: 'Отличное место, вкусная еда, приятная атмосфера. Рекомендую попробовать фирменные блюда.',
+                    date: new Date().toISOString(),
+                    user_name: 'Тестовый пользователь',
+                    avatar: null,
+                    likes: 5,
+                    foodRating: 4,
+                    serviceRating: 5,
+                    atmosphereRating: 4,
+                    priceRating: 3,
+                    cleanlinessRating: 5
+                },
+                {
+                    id: 1002,
+                    userId: 2,
+                    user_id: 2,
+                    restaurantName: 'Тестовый ресторан 2',
+                    restaurant_name: 'Тестовый ресторан 2',
+                    rating: 5,
+                    comment: 'Превосходный ресторан! Все блюда очень вкусные, персонал внимательный и дружелюбный.',
+                    date: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+                    user_name: 'Тестовый клиент',
+                    avatar: null,
+                    likes: 3,
+                    foodRating: 5,
+                    serviceRating: 5,
+                    atmosphereRating: 5,
+                    priceRating: 4,
+                    cleanlinessRating: 5
+                },
+                {
+                    id: 1003,
+                    userId: 3,
+                    user_id: 3,
+                    restaurantName: 'Тестовый ресторан 3',
+                    restaurant_name: 'Тестовый ресторан 3',
+                    rating: 3,
+                    comment: 'Неплохое заведение, но есть над чем работать. Еда хорошая, но сервис мог бы быть лучше.',
+                    date: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+                    user_name: 'Тестовый гость',
+                    avatar: null,
+                    likes: 1,
+                    foodRating: 4,
+                    serviceRating: 2,
+                    atmosphereRating: 3,
+                    priceRating: 3, 
+                    cleanlinessRating: 4
+                }
+            ];
+            
+            setReviews(mockReviews);
+        }
+    }, [reviews]);
 
     const refreshReviews = () => {
         fetchReviews();

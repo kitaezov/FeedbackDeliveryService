@@ -414,22 +414,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                             </Link>
                         </motion.div>
 
-                        {/* Кнопка панели менеджера */}
-                        {user?.role === 'manager' && (
-                            <motion.div
-                                variants={buttonVariants}
-                                whileHover="hover"
-                                whileTap="tap"
-                            >
-                                <Link 
-                                    to="/manager" 
-                                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-full flex items-center"
-                                    aria-label="Панель менеджера"
-                                >
-                                    <LayoutDashboard size={20} className="text-blue-500" />
-                                </Link>
-                            </motion.div>
-                        )}
+                    
                         
                         {/* Уведомления */}
                         {user && (

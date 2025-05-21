@@ -402,9 +402,9 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
         if (categoryId === 'all') {
             setFilteredRestaurants(restaurants);
         } else {
-            // В реальном приложении здесь должна быть фильтрация по категории
-            // Для примера просто ограничиваем список
-            const filtered = restaurants.filter((_, index) => index % 3 === 0);
+            const filtered = restaurants.filter(restaurant => 
+                restaurant.category === categoryId
+            );
             setFilteredRestaurants(filtered);
         }
     };

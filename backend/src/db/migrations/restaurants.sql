@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS restaurants (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
     criteria JSON,
-    slug VARCHAR(100)
+    slug VARCHAR(100) NOT NULL
 ) COMMENT='Рестораны в системе';
 
 -- Индекс для поиска ресторанов по названию
@@ -40,7 +40,7 @@ ALTER TABLE restaurants MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMES
 ALTER TABLE restaurants MODIFY COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Дата и время последнего обновления записи';
 ALTER TABLE restaurants MODIFY COLUMN is_active BOOLEAN DEFAULT TRUE COMMENT 'Активен ли ресторан';
 ALTER TABLE restaurants MODIFY COLUMN criteria JSON COMMENT 'JSON с критериями оценки ресторана';
-ALTER TABLE restaurants MODIFY COLUMN slug VARCHAR(100) COMMENT 'URL-дружественный идентификатор для страницы ресторана';
+ALTER TABLE restaurants MODIFY COLUMN slug VARCHAR(100) NOT NULL COMMENT 'URL-дружественный идентификатор для страницы ресторана';
 
 -- Добавление уникального ограничения на имя ресторана
 SET @exist_name_unq := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_name = 'restaurants' AND constraint_name = 'restaurants_name_unique' AND table_schema = DATABASE());

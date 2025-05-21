@@ -113,7 +113,7 @@ const deleteRestaurant = async (req, res) => {
 };
 
 /**
- * Update restaurant criteria
+ * Обновление критериев ресторана
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -122,7 +122,7 @@ const updateRestaurantCriteria = async (req, res) => {
         const { id } = req.params;
         const { criteria } = req.body;
         
-        // Check if restaurant exists
+        // Проверяем, существует ли ресторан
         const restaurant = await restaurantModel.getById(id);
         if (!restaurant) {
             return res.status(404).json({
@@ -131,7 +131,7 @@ const updateRestaurantCriteria = async (req, res) => {
             });
         }
         
-        // Update criteria
+        // Обновляем критерии
         const success = await restaurantModel.updateCriteria(id, criteria);
         
         res.json({
@@ -148,7 +148,7 @@ const updateRestaurantCriteria = async (req, res) => {
 };
 
 /**
- * Search restaurants by name
+ * Поиск ресторанов по имени
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -163,7 +163,7 @@ const searchRestaurants = async (req, res) => {
             });
         }
         
-        // Search restaurants in the model
+        // Поиск ресторанов в модели
         const restaurants = await restaurantModel.search(query);
         
         res.json({
@@ -180,7 +180,7 @@ const searchRestaurants = async (req, res) => {
 };
 
 /**
- * Update restaurant slug
+ * Обновление slug ресторана
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -189,7 +189,7 @@ const updateRestaurantSlug = async (req, res) => {
         const { id } = req.params;
         const { slug } = req.body;
         
-        // Check if restaurant exists
+        // Проверяем, существует ли ресторан
         const restaurant = await restaurantModel.getById(id);
         if (!restaurant) {
             return res.status(404).json({
@@ -198,7 +198,7 @@ const updateRestaurantSlug = async (req, res) => {
             });
         }
         
-        // Check if slug is already in use
+        // Проверяем, существует ли slug
         const existingRestaurant = await restaurantModel.getBySlug(slug);
         if (existingRestaurant) {
             return res.status(400).json({
@@ -207,7 +207,7 @@ const updateRestaurantSlug = async (req, res) => {
             });
         }
         
-        // Update slug
+        // Обновляем slug
         const success = await restaurantModel.updateSlug(id, slug);
         
         res.json({
@@ -224,7 +224,7 @@ const updateRestaurantSlug = async (req, res) => {
 };
 
 /**
- * Upload restaurant image
+ * Загрузка изображения ресторана
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -233,7 +233,7 @@ const uploadRestaurantImage = async (req, res) => {
         console.log('Запрос на загрузку изображения ресторана получен');
         console.log('Файл:', req.file ? `Имя: ${req.file.filename}, размер: ${req.file.size}` : 'Файл отсутствует');
         
-        // Check if file was uploaded
+        // Проверяем, был ли загружен файл
         if (!req.file) {
             console.log('Ошибка: Файл не был загружен');
             return res.status(400).json({
@@ -244,7 +244,7 @@ const uploadRestaurantImage = async (req, res) => {
 
         const { id } = req.params;
         
-        // Check if restaurant exists
+        // Проверяем, существует ли ресторан
         const restaurant = await restaurantModel.getById(id);
         if (!restaurant) {
             return res.status(404).json({
@@ -256,7 +256,7 @@ const uploadRestaurantImage = async (req, res) => {
         const imagePath = `/uploads/restaurants/${req.file.filename}`;
         console.log(`Путь к изображению: ${imagePath}`);
 
-        // If restaurant already has an image, delete the old one
+        // Если ресторан уже имеет изображение, удаляем старое
         if (restaurant.image_url) {
             const oldImagePath = path.join(__dirname, '../../public', restaurant.image_url);
             if (fs.existsSync(oldImagePath)) {
@@ -265,7 +265,7 @@ const uploadRestaurantImage = async (req, res) => {
             }
         }
 
-        // Update restaurant image in the database
+        // Обновляем изображение ресторана в базе данных
         const updatedData = { image_url: imagePath };
         const updatedRestaurant = await restaurantModel.update(id, updatedData);
         
@@ -289,7 +289,7 @@ const uploadRestaurantImage = async (req, res) => {
     }
 };
 
-// Export all the controller functions
+// Экспортируем все функции контроллера
 module.exports = {
     createRestaurant,
     getAllRestaurants,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
-import { Heart, ChevronDown, ChevronUp, Trash2, User } from 'lucide-react';
+import { Heart, ChevronDown, ChevronUp, Trash2, User, Receipt, ImageIcon, MessageCircle } from 'lucide-react';
 import { Card, CardContent } from './Card';
 import { motion } from 'framer-motion';
 import { restaurantData } from '../features/restaurants/restaurantData';
@@ -22,6 +22,66 @@ const buttonVariants = {
         transition: { 
             duration: 0.1 
         }
+    }
+};
+
+// Utility function to format image URL
+const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    try {
+        // If it's a string that might be JSON, try to parse it
+        if (typeof image === 'string' && (image.startsWith('{') || image.startsWith('['))) {
+            try {
+                const parsed = JSON.parse(image);
+                if (parsed && typeof parsed === 'object') {
+                    if (parsed.url) {
+                        return getImageUrl(parsed.url);
+                    }
+                }
+            } catch (e) {
+                // Not valid JSON, continue with string processing
+            }
+        }
+        
+        // If it's already an object with url property, use that
+        if (typeof image === 'object' && image.url) {
+            return getImageUrl(image.url);
+        }
+        
+        // If it's a full URL, use it directly, but ensure protocol is correct
+        if (typeof image === 'string') {
+            // Fix common URL issues
+            let url = image;
+            
+            // Fix missing colon in http://
+            if (url.match(/^http\/\//)) {
+                url = url.replace('http//', 'http://');
+            }
+            
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+            }
+            
+            // If it starts with a slash, prepend the API base URL
+            if (url.startsWith('/')) {
+                return `${process.env.REACT_APP_API_URL || ''}${url}`;
+            }
+            
+            // If it has a domain but no protocol, add https://
+            if (url.includes('.') && !url.includes(' ') && !url.match(/^[a-zA-Z]+:\/\//)) {
+                return 'https://' + url;
+            }
+            
+            // Otherwise, prepend the API base URL
+            return `${process.env.REACT_APP_API_URL || ''}${url}`;
+        }
+        
+        // If we get here and it's not a string, return null
+        return null;
+    } catch (err) {
+        console.error("Error formatting image URL:", err);
+        return null;
     }
 };
 
@@ -74,9 +134,15 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
     
     const [showDetails, setShowDetails] = useState(false);
     const [localLikes, setLocalLikes] = useState(review.likes || 0);
-    const [isLiked, setIsLiked] = useState(false);
+    const [isLiked, setIsLiked] = useState(review.isLikedByUser || false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLiking, setIsLiking] = useState(false);
+
+    // Update isLiked state when review changes
+    useEffect(() => {
+        setIsLiked(review.isLikedByUser || false);
+        setLocalLikes(review.likes || 0);
+    }, [review]);
 
     // Normalize review fields to handle different formats
     const reviewData = {
@@ -87,16 +153,42 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
         rating: review.rating || 0,
         comment: review.comment || '',
         date: review.date || new Date().toISOString(),
-        avatar: review.avatar,
+        avatar: review.avatar ? getImageUrl(review.avatar) : null,
         likes: review.likes || 0,
+        photos: processPhotosArray(review.photos || []),
+        receiptPhoto: review.receiptPhoto ? getImageUrl(review.receiptPhoto) : null,
+        hasReceipt: review.hasReceipt || Boolean(review.receiptPhoto) || (review.photos && review.photos.some(p => p.isReceipt)) || false,
         ratings: review.ratings || {
             food: review.foodRating || review.food_rating || 0,
             service: review.serviceRating || review.service_rating || 0,
             atmosphere: review.atmosphereRating || review.atmosphere_rating || 0,
             price: review.priceRating || review.price_rating || 0,
             cleanliness: review.cleanlinessRating || review.cleanliness_rating || 0
-        }
+        },
+        // Add manager response data
+        responded: review.responded || Boolean(review.response) || false,
+        response: review.response || '',
+        responseDate: review.responseDate || null
     };
+
+    // Function to process photos array to ensure proper format
+    function processPhotosArray(photos) {
+        if (!Array.isArray(photos)) {
+            return [];
+        }
+        
+        return photos.map(photo => {
+            // If it's a string that might be JSON, try to parse it
+            if (typeof photo === 'string' && (photo.startsWith('{') || photo.startsWith('['))) {
+                try {
+                    return JSON.parse(photo);
+                } catch (e) {
+                    return photo;
+                }
+            }
+            return photo;
+        });
+    }
 
     // Check if this is the current user's review
     const isCurrentUserReview = user && (reviewData.userId === user.id);
@@ -234,6 +326,78 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                         "{reviewData.comment}"
                     </p>
 
+                    {/* Manager Response */}
+                    {reviewData.responded && reviewData.response && (
+                        <div className={`mb-6 mt-6 pt-4 pb-4 px-4 rounded-lg
+                                      ${isDarkMode ? 'bg-gray-700 border-l-4 border-blue-600' : 'bg-blue-50 border-l-4 border-blue-500'}`}>
+                            <div className="flex items-center mb-2">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center mr-2">
+                                    <MessageCircle size={16} className="text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <h4 className={`font-semibold text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                                        Ответ от ресторана "{reviewData.restaurantName}"
+                                    </h4>
+                                    {reviewData.responseDate && (
+                                        <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            {formatDate(reviewData.responseDate)}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <p className={`text-sm ml-10 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                {reviewData.response}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Receipt photo indicator if exists */}
+                    {reviewData.hasReceipt && (
+                        <div className={`mb-4 flex items-center text-xs ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                            <Receipt className="w-3 h-3 mr-1" />
+                            <span>Прикреплен чек</span>
+                        </div>
+                    )}
+                    
+                    {/* Photos section (including receipt) */}
+                    {(reviewData.photos && reviewData.photos.length > 0) && (
+                        <div className="mb-4">
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                {reviewData.photos.map((photo, index) => (
+                                    <div 
+                                        key={index}
+                                        className="flex-shrink-0 w-14 h-14 rounded-md overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
+                                        onClick={() => {
+                                            try {
+                                                const formattedUrl = getImageUrl(photo);
+                                                if (formattedUrl) {
+                                                    window.open(formattedUrl, '_blank');
+                                                }
+                                            } catch (error) {
+                                                console.error("Error opening image:", error);
+                                            }
+                                        }}
+                                    >
+                                        <img 
+                                            src={getImageUrl(photo)}
+                                            alt={photo.isReceipt ? "Фото чека" : `Фото ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                e.target.onerror = null;
+                                                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+                                            }}
+                                        />
+                                        {photo.isReceipt && (
+                                            <div className="absolute bottom-0 right-0 bg-blue-500 p-0.5 rounded-tl">
+                                                <Receipt className="w-2.5 h-2.5 text-white" />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Ресторан */}
                     <div className={`mb-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         <span>Ресторан: </span>
@@ -309,10 +473,10 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                     </div>
                     {showDetails && (
                         <motion.div 
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
                             className={`mt-6 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}
                         >
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -34,4 +34,11 @@ router.post('/validate-token', authController.validateToken);
  */
 router.get('/profile', authController.getProfile);
 
+/**
+ * @route POST /api/auth/reset-password
+ * @desc Reset user password (development only)
+ * @access Public
+ */
+router.post('/reset-password', authController.resetPassword);
+
 module.exports = router; 

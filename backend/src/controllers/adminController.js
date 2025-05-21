@@ -1,6 +1,6 @@
 /**
- * Admin Controller
- * Handles administrative operations
+ * Контроллер администратора
+ * Обрабатывает административные операции
  */
 
 const userModel = require('../models/userModel');
@@ -8,26 +8,26 @@ const reviewModel = require('../models/reviewModel');
 const restaurantModel = require('../models/restaurantModel');
 
 /**
- * Get all users
+ * Получить всех пользователей
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const getUsers = async (req, res) => {
     try {
-        console.log('Admin Controller: Запрос списка пользователей');
+        console.log('Контроллер администратора: Запрос списка пользователей');
         
         const { role } = req.query;
-        let { limit, offset } = req.query;
+        let { limit, offset  } = req.query;
         
         console.log('Параметры запроса:', { role, limit, offset });
         
-        // Ensure limit and offset are properly parsed as integers with fallbacks
+        // Убедитесь, что limit и offset корректно преобразуются в целые числа с fallback
         limit = limit ? parseInt(limit, 10) : 50;
         offset = offset ? parseInt(offset, 10) : 0;
         
         console.log('Извлечение пользователей из базы данных...');
         
-        // Get all users with optional role filter
+        // Получить всех пользователей с необязательным фильтром роли
         const users = await userModel.getAll({
             role,
             limit,
@@ -36,7 +36,7 @@ const getUsers = async (req, res) => {
         
         console.log(`Найдено ${users.length} пользователей`);
         
-        // Map database role values back to frontend values
+        // Отобразить значения ролей базы данных обратно на значения переднего плана
         const roleMapping = {
             'user': 'user',
             'mgr': 'manager',
@@ -49,7 +49,7 @@ const getUsers = async (req, res) => {
             role: roleMapping[user.role] || user.role
         }));
         
-        // Dump the first few users for debug
+        // Вывести первые несколько пользователей для отладки
         if (mappedUsers.length > 0) {
             console.log('Пример данных пользователя:', JSON.stringify(mappedUsers[0], null, 2));
         }
@@ -68,13 +68,13 @@ const getUsers = async (req, res) => {
 };
 
 /**
- * Update user role
+ * Обновление роли пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const updateUserRole = async (req, res) => {
     try {
-        console.log('Received request to update user role:', { 
+        console.log('Получен запрос на обновление роли пользователя:', { 
             params: req.params,
             body: req.body,
             userId: req.params.id,
@@ -92,7 +92,7 @@ const updateUserRole = async (req, res) => {
             });
         }
         
-        // Check if user exists
+        // Проверьте, существует ли пользователь
         const user = await userModel.findById(id);
         if (!user) {
             return res.status(404).json({
@@ -101,9 +101,9 @@ const updateUserRole = async (req, res) => {
             });
         }
         
-        console.log('Found user:', user);
+        console.log('Найден пользователь:', user);
         
-        // Define role hierarchy
+        // Определить иерархию ролей
         const roleHierarchy = {
             'head_admin': 100,
             'admin': 80,
@@ -124,7 +124,7 @@ const updateUserRole = async (req, res) => {
             newRoleLevel: newRoleLevel
         });
         
-        // Prevent modifying users with higher or equal role level
+        // Предотвратить изменение ролей пользователей с более высоким или равным уровнем роли
         if (targetUserRoleLevel >= currentUserRoleLevel) {
             return res.status(403).json({
                 message: 'Доступ запрещен',
@@ -132,7 +132,7 @@ const updateUserRole = async (req, res) => {
             });
         }
         
-        // Prevent assigning a role higher than your own role
+        // Предотвратить назначение роли выше вашей собственной
         if (newRoleLevel >= currentUserRoleLevel) {
             return res.status(403).json({
                 message: 'Доступ запрещен',
@@ -140,7 +140,7 @@ const updateUserRole = async (req, res) => {
             });
         }
         
-        // Role-specific restrictions
+        // Ограничения для конкретных ролей
         if (req.user.role === 'admin' && role === 'admin') {
             return res.status(403).json({
                 message: 'Доступ запрещен',
@@ -155,7 +155,7 @@ const updateUserRole = async (req, res) => {
             });
         }
         
-        // Protect admin@yandex.ru from role changes by anyone but themselves
+        // Защита admin@yandex.ru от изменений ролей кем-либо, кроме себя
         if (user.email === 'admin@yandex.ru' && req.user.email !== 'admin@yandex.ru') {
             return res.status(403).json({
                 message: 'Доступ запрещен',
@@ -163,11 +163,11 @@ const updateUserRole = async (req, res) => {
             });
         }
         
-        // Update user role
-        console.log(`Updating user ${id} role to ${role}`);
+        // Обновление роли пользователя
+        console.log(`Обновление роли пользователя ${id} до ${role}`);
         await userModel.updateRole(id, role);
         
-        console.log('Role updated successfully');
+        console.log('Роль пользователя успешно обновлена');
         
         res.json({
             message: 'Роль пользователя обновлена',
@@ -189,7 +189,7 @@ const updateUserRole = async (req, res) => {
 };
 
 /**
- * Delete a review/comment
+ * Удалить отзыв/комментарий
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -198,7 +198,7 @@ const deleteReview = async (req, res) => {
         const { id } = req.params;
         const { reason } = req.body;
         
-        // Validate reason
+        // Проверьте причину
         if (!reason) {
             return res.status(400).json({
                 message: 'Причина не указана',
@@ -206,7 +206,7 @@ const deleteReview = async (req, res) => {
             });
         }
         
-        // Find the review
+        // Найти отзыв
         const review = await reviewModel.getById(id);
         if (!review) {
             return res.status(404).json({
@@ -215,14 +215,14 @@ const deleteReview = async (req, res) => {
             });
         }
         
-        // Save review to deleted_reviews table before deleting
+        // Сохранить отзыв в таблицу deleted_reviews перед удалением
         await reviewModel.saveDeletedReview(review, {
             deletedBy: req.user.id,
             reason,
             adminName: req.user.name
         });
         
-        // Delete the review
+        // Удалить отзыв
         await reviewModel.delete(id);
         
         res.json({
@@ -242,7 +242,7 @@ const deleteReview = async (req, res) => {
 };
 
 /**
- * Initialize head admin account
+ * Инициализировать главный администратор
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -264,7 +264,7 @@ const initializeHeadAdmin = async (req, res) => {
 };
 
 /**
- * Get all deleted reviews with deletion reasons
+ * Получить все удаленные отзывы с причинами удаления
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -272,7 +272,7 @@ const getDeletedReviews = async (req, res) => {
     try {
         const { page, limit } = req.query;
         
-        // Get deleted reviews with pagination
+        // Получить удаленные отзывы с пагинацией
         const deletedReviews = await reviewModel.getDeletedReviews({
             page: parseInt(page) || 1,
             limit: parseInt(limit) || 10
@@ -292,7 +292,7 @@ const getDeletedReviews = async (req, res) => {
 };
 
 /**
- * Block user account
+ * Блокировка аккаунта пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -309,7 +309,7 @@ const blockUser = async (req, res) => {
         const { id } = req.params;
         const { reason } = req.body;
         
-        // Validate reason
+          // Проверьте причину
         if (!reason || reason.trim() === '') {
             console.log('Ошибка: Причина не указана');
             return res.status(400).json({
@@ -329,7 +329,7 @@ const blockUser = async (req, res) => {
         }
         
         console.log('Поиск пользователя по ID:', userId);
-        // Check if user exists
+        // Проверьте, существует ли пользователь
         const user = await userModel.findById(userId);
         console.log('Результат поиска пользователя:', user);
         
@@ -341,7 +341,7 @@ const blockUser = async (req, res) => {
             });
         }
         
-        // Define role hierarchy
+        // Определить иерархию ролей
         const roleHierarchy = {
             'head_admin': 100,
             'admin': 80,
@@ -359,7 +359,7 @@ const blockUser = async (req, res) => {
             targetUserLevel: targetUserRoleLevel
         });
         
-        // Prevent modifying users with higher or equal role level
+        // Предотвратить изменение ролей пользователей с более высоким или равным уровнем роли
         if (targetUserRoleLevel >= currentUserRoleLevel) {
             console.log('Ошибка: Недостаточно прав для блокировки');
             return res.status(403).json({
@@ -368,7 +368,7 @@ const blockUser = async (req, res) => {
             });
         }
         
-        // Protect head admin from being blocked
+        // Защита главного администратора от блокировки
         if (user.email === 'admin@yandex.ru') {
             console.log('Ошибка: Попытка заблокировать главного администратора');
             return res.status(403).json({
@@ -378,7 +378,7 @@ const blockUser = async (req, res) => {
         }
         
         console.log('Блокировка пользователя:', { userId, reason });
-        // Block user
+        // Блокировка пользователя
         await userModel.blockUser(userId, reason);
         console.log('Пользователь успешно заблокирован');
         
@@ -404,7 +404,7 @@ const blockUser = async (req, res) => {
 };
 
 /**
- * Unblock user account
+ * Разблокировка аккаунта пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -429,7 +429,7 @@ const unblockUser = async (req, res) => {
         }
         
         console.log('Поиск пользователя по ID:', userId);
-        // Check if user exists
+        // Проверьте, существует ли пользователь
         const user = await userModel.findById(userId);
         console.log('Результат поиска пользователя:', user);
         
@@ -467,15 +467,15 @@ const unblockUser = async (req, res) => {
 };
 
 /**
- * Get all restaurants
+ * Получить все рестораны
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const getRestaurants = async (req, res) => {
     try {
-        console.log('Fetching restaurants from database...');
+        console.log('Извлечение ресторанов из базы данных...');
         const restaurants = await restaurantModel.getAll();
-        console.log('Restaurants fetched:', restaurants);
+        console.log('Рестораны извлечены:', restaurants);
         res.json({
             message: 'Список ресторанов получен',
             restaurants
@@ -487,7 +487,7 @@ const getRestaurants = async (req, res) => {
 };
 
 /**
- * Create a new restaurant
+ * Создать новый ресторан
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -506,7 +506,7 @@ const createRestaurant = async (req, res) => {
 };
 
 /**
- * Update a restaurant
+ * Обновить ресторан
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -526,7 +526,7 @@ const updateRestaurant = async (req, res) => {
 };
 
 /**
- * Delete a restaurant
+ * Удалить ресторан
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */

@@ -6,6 +6,7 @@ import { API_URL } from '../config';
 import api from '../utils/api';
 import notificationService from '../services/notificationService';
 import { useNotification } from './NotificationContext';
+import { useAuth } from '../common/hooks/useAuth';
 
 /**
  * Получает полный URL аватара пользователя
@@ -139,6 +140,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
     
     const navigate = useNavigate();
     const notifyContext = useNotification();
+    const { isLoading: isAuthLoading } = useAuth();
 
     // Ссылки на DOM-элементы для обработки кликов вне компонентов
     const notificationsRef = useRef(null);
@@ -366,6 +368,21 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
             document.removeEventListener('avatar-updated', handleAvatarUpdate);
         };
     }, [user, onProfileUpdate]);
+
+    const handleAdminPanelClick = (e) => {
+        e.preventDefault();
+        if (!isAuthLoading) {
+            console.log("Нажата кнопка Админ-панели. Навигация на /admin");
+            // Проверяем, что пользователь авторизован и имеет нужную роль
+            if (user && ['admin', 'super_admin', 'moderator', 'глав_админ', 'head_admin'].includes(user.role)) {
+                navigate('/admin', { replace: true });
+                setShowProfileMenu(false);
+                setMobileMenuOpen(false);
+            } else {
+                console.log('Пользователь не авторизован или не имеет прав доступа к админ-панели');
+            }
+        }
+    };
 
     return (
         <motion.nav 
@@ -638,22 +655,22 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                                 )}
                                                 
                                                 {(user.role === 'admin' || user.role === 'super_admin' || user.role === 'moderator' || 
-                                                user.role === 'глав_админ' || user.role === 'head_admin' || 
-                                                user.role === 'manager' || user.role === 'менеджер') && (
+                                                user.role === 'глав_админ' || user.role === 'head_admin') && (
                                                     <motion.div
                                                         variants={menuItemVariants}
                                                         whileHover="hover"
                                                         whileTap="tap"
                                                     >
                                                         <button 
-                                                            onClick={() => {
-                                                                navigate('/admin');
-                                                                setShowProfileMenu(false);
-                                                            }}
-                                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                                                            onClick={handleAdminPanelClick}
+                                                            disabled={isAuthLoading}
+                                                            className={`w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center block ${
+                                                                isAuthLoading ? 'opacity-50 cursor-not-allowed' : ''
+                                                            }`}
                                                         >
                                                             <ShieldCheck size={16} className="mr-2 text-gray-700 dark:text-gray-400" />
                                                             Админ панель
+                                                            {isAuthLoading && <span className="ml-2 animate-spin">⌛</span>}
                                                         </button>
                                                     </motion.div>
                                                 )}
@@ -836,8 +853,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                 )}
                                 
                                 {user && (user.role === 'admin' || user.role === 'super_admin' || user.role === 'moderator' || 
-                                user.role === 'глав_админ' || user.role === 'head_admin' || 
-                                user.role === 'manager' || user.role === 'менеджер') && (
+                                user.role === 'глав_админ' || user.role === 'head_admin') && (
                                     <motion.div
                                         className="w-full"
                                         initial={{ x: -20, opacity: 0 }}
@@ -851,14 +867,15 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                         whileTap="tap"
                                     >
                                         <button 
-                                            onClick={() => {
-                                                navigate('/admin');
-                                                setMobileMenuOpen(false);
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                                            onClick={handleAdminPanelClick}
+                                            disabled={isAuthLoading}
+                                            className={`w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center block ${
+                                                isAuthLoading ? 'opacity-50 cursor-not-allowed' : ''
+                                            }`}
                                         >
                                             <ShieldCheck size={18} className="mr-2 text-gray-700 dark:text-gray-400" />
                                             Админ панель
+                                            {isAuthLoading && <span className="ml-2 animate-spin">⌛</span>}
                                         </button>
                                     </motion.div>
                                 )}

@@ -5,37 +5,37 @@ const pool = require('../config/database');
 const { errorHandler } = require('../utils/errorHandler');
 
 /**
- * Get manager dashboard statistics
+ * Получение статистики для панели управления менеджером
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const getManagerStatistics = async (req, res) => {
     try {
-        // Get all reviews
+        // Получение всех отзывов
         const reviews = await reviewModel.getAll();
         
-        // Get all restaurants
+        // Получение всех ресторанов
         const restaurants = await restaurantModel.getAll();
         
-        // Calculate basic statistics
+        // Расчет основных статистических данных
         const totalReviews = reviews.length;
         const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / totalReviews;
         const totalRestaurants = restaurants.length;
         
-        // Calculate reviews by type
+        // Расчет отзывов по типу
         const reviewsByType = reviews.reduce((acc, review) => {
             acc[review.reviewType] = (acc[review.reviewType] || 0) + 1;
             return acc;
         }, { inRestaurant: 0, delivery: 0 });
         
-        // Get active users count
+        // Получение количества активных пользователей
         const activeUsers = await userModel.count({ isActive: true });
         
-        // Calculate response rate
+        // Расчет коэффициента ответов
         const respondedReviews = reviews.filter(review => review.hasResponse).length;
         const responseRate = totalReviews > 0 ? (respondedReviews / totalReviews) * 100 : 0;
         
-        // Prepare chart data
+        // Подготовка данных для графика
         const ratings = [1, 2, 3, 4, 5].map(rating => ({
             rating,
             count: reviews.filter(r => r.rating === rating).length
@@ -46,7 +46,7 @@ const getManagerStatistics = async (req, res) => {
             { name: 'Доставка', value: reviewsByType.delivery }
         ];
         
-        // Get responses data for the last 7 days
+        // Получение данных для ответов за последние 7 дней
         const today = new Date();
         const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
         const responses = [];
@@ -90,13 +90,13 @@ const getManagerStatistics = async (req, res) => {
             }))
         });
     } catch (error) {
-        console.error('Error fetching manager statistics:', error);
-        res.status(500).json({ message: 'Error fetching manager statistics' });
+        console.error('Ошибка получения статистики менеджера:', error);
+        res.status(500).json({ message: 'Ошибка получения статистики менеджера' });
     }
 };
 
 /**
- * Get reviews for manager dashboard
+ * Получение отзывов для панели управления менеджером
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -129,7 +129,7 @@ const getReviews = async (req, res) => {
                 r.date DESC
         `);
 
-        // Transform the data for the frontend
+        // Преобразование данных для фронтенда
         const reviews = rows.map(row => ({
             id: row.id,
             user: {
@@ -150,99 +150,99 @@ const getReviews = async (req, res) => {
             responseDate: row.responseDate
         }));
 
-        // Log the number of reviews found
-        console.log(`Found ${reviews.length} reviews for manager dashboard`);
+        // Записываем в лог количество найденных отзывов в базе данных
+        console.log(`Найдено ${reviews.length} отзывов для панели управления менеджером`);
         
         res.json(reviews);
     } catch (error) {
-        console.error('Error fetching reviews:', error);
-        return errorHandler(res, 'Failed to fetch reviews', 500, error);
+        console.error('Ошибка получения отзывов:', error);
+        return errorHandler(res, 'Не удалось получить отзывы', 500, error);
     }
 };
 
 /**
- * Respond to a review
+ * Ответить на отзыв
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const respondToReview = async (req, res) => {
     try {
-        // Handle both formats: /reviews/:id/response and /reviews/respond
+        // Обрабатываем оба формата: /reviews/:id/response и /reviews/respond
         const reviewId = req.params.id || req.body.reviewId;
         const responseText = req.body.text || req.body.responseText;
-        const managerId = req.user?.id || 1; // Use a default manager ID if not available
+        const managerId = req.user?.id || 1; // Используем ID менеджера по умолчанию, если он недоступен
         
-        console.log('Responding to review:', { reviewId, responseText });
+        console.log('Ответ на отзыв:', { reviewId, responseText });
 
         if (!reviewId) {
             return res.status(400).json({
-                message: 'Review ID is required'
+                message: 'ID отзыва является обязательным'
             });
         }
 
         if (!responseText) {
             return res.status(400).json({
-                message: 'Response text is required'
+                message: 'Текст ответа является обязательным'
             });
         }
 
-        // Check if review exists
+        // Проверяем, существует ли отзыв
         const [reviewCheck] = await pool.query('SELECT id FROM reviews WHERE id = ?', [reviewId]);
         if (reviewCheck.length === 0) {
             return res.status(404).json({
-                message: 'Review not found'
+                message: 'Отзыв не найден'
             });
         }
 
-        // Check if response already exists
+        // Проверяем, существует ли уже ответ
         const [responseCheck] = await pool.query('SELECT id FROM manager_responses WHERE review_id = ?', [reviewId]);
         
         if (responseCheck.length > 0) {
-            // Update existing response
+            // Обновляем существующий ответ
             await pool.query(
                 'UPDATE manager_responses SET response_text = ?, updated_at = NOW() WHERE review_id = ?',
                 [responseText, reviewId]
             );
-            console.log(`Updated existing response for review ${reviewId}`);
+            console.log(`Обновлен существующий ответ для отзыва ${reviewId}`);
         } else {
-            // Create new response
+            // Создаем новый ответ
             await pool.query(
                 'INSERT INTO manager_responses (review_id, manager_id, response_text, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
                 [reviewId, managerId, responseText]
             );
-            console.log(`Created new response for review ${reviewId}`);
+            console.log(`Создан новый ответ для отзыва ${reviewId}`);
         }
 
         res.json({
             success: true,
-            message: 'Response submitted successfully'
+            message: 'Ответ успешно отправлен'
         });
     } catch (error) {
-        console.error('Error responding to review:', error);
-        return errorHandler(res, 'Failed to respond to review', 500, error);
+        console.error('Ошибка при ответе на отзыв:', error);
+        return errorHandler(res, 'Не удалось ответить на отзыв', 500, error);
     }
 };
 
 /**
- * Get statistics for manager dashboard
+ * Получение статистики для панели управления менеджером
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const getStats = async (req, res) => {
     try {
-        // Get total number of reviews
+        // Получение общего количества отзывов
         const [totalReviews] = await pool.query('SELECT COUNT(*) as count FROM reviews');
         
-        // Get number of responded reviews
+        // Получение количества отвеченных отзывов
         const [respondedReviews] = await pool.query('SELECT COUNT(*) as count FROM manager_responses');
         
-        // Get average rating
+        // Получение среднего рейтинга
         const [avgRating] = await pool.query('SELECT AVG(rating) as avg FROM reviews');
         
-        // Get total number of restaurants
+        // Получение общего количества ресторанов
         const [totalRestaurants] = await pool.query('SELECT COUNT(*) as count FROM restaurants');
 
-        // Make sure to handle null or undefined values
+        // Убедимся, что обрабатываем значения null или undefined
         const stats = {
             totalReviews: totalReviews[0]?.count || 0,
             respondedReviews: respondedReviews[0]?.count || 0,
@@ -251,7 +251,7 @@ const getStats = async (req, res) => {
             totalRestaurants: totalRestaurants[0]?.count || 0
         };
 
-        // Ensure the response format is consistent
+        // Убедимся, что формат ответа согласован
         res.json({
             status: 'success',
             data: stats
@@ -263,7 +263,7 @@ const getStats = async (req, res) => {
 };
 
 /**
- * Get chart data for manager dashboard
+ * Получение данных для графика для панели управления менеджером
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -271,7 +271,7 @@ const getChartData = async (req, res) => {
     try {
         const period = req.query.period || 'week';
         
-        // Define date range based on period
+        // Определяем диапазон дат на основе периода
         const now = new Date();
         let startDate;
         
@@ -291,11 +291,11 @@ const getChartData = async (req, res) => {
                 break;
         }
         
-        // Format startDate for SQL query
+        // Форматируем startDate для SQL запроса
         const formattedStartDate = startDate.toISOString().split('T')[0];
         
         try {
-            // Get ratings by day
+            // Получение рейтингов по дням
             const [ratingsByDay] = await pool.query(`
                 SELECT 
                     DAYOFWEEK(date) as day_of_week,
@@ -311,7 +311,7 @@ const getChartData = async (req, res) => {
                     day_of_week
             `, [formattedStartDate]);
             
-            // Get review count by day
+            // Получение количества отзывов по дням
             const [countByDay] = await pool.query(`
                 SELECT 
                     DAYOFWEEK(date) as day_of_week,
@@ -326,7 +326,7 @@ const getChartData = async (req, res) => {
                     day_of_week
             `, [formattedStartDate]);
             
-            // Get restaurant distribution
+            // Получение распределения ресторанов
             const [restaurantDistribution] = await pool.query(`
                 SELECT 
                     r.name as restaurant_name,
@@ -343,17 +343,17 @@ const getChartData = async (req, res) => {
                 LIMIT 10
             `, [formattedStartDate]);
             
-            // Prepare data for charts
-            // Convert SQL results to chart-friendly format
+            // Подготовка данных для графиков
+            // Преобразование SQL результатов в формат для графиков
             
-            // Initialize data for all days of the week
+            // Инициализация данных для всех дней недели
             const ratingData = Array(7).fill(0);
             const countData = Array(7).fill(0);
             
-            // Fill in actual data from database
+            // Заполнение фактическими данными из базы данных
             ratingsByDay.forEach(row => {
                 // MySQL DAYOFWEEK: 1 = Sunday, 2 = Monday, ..., 7 = Saturday
-                // We adjust the index: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+                // Мы корректируем индекс: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
                 const index = row.day_of_week - 1;
                 ratingData[index] = parseFloat(row.avg_rating) || 0;
             });
@@ -363,32 +363,32 @@ const getChartData = async (req, res) => {
                 countData[index] = parseInt(row.count) || 0;
             });
             
-            // Reorder to start from Monday: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+            // Переупорядочиваем, чтобы начать с понедельника: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
             const sortedRatings = [
-                ratingData[1], // Monday
-                ratingData[2], // Tuesday
-                ratingData[3], // Wednesday
-                ratingData[4], // Thursday
-                ratingData[5], // Friday
-                ratingData[6], // Saturday
-                ratingData[0]  // Sunday
+                ratingData[1], // Понедельник
+                ratingData[2], // Вторник
+                ratingData[3], // Среда
+                ratingData[4], // Четверг
+                ratingData[5], // Пятница
+                ratingData[6], // Суббота
+                ratingData[0]  // Воскресенье
             ];
             
             const sortedCounts = [
-                countData[1], // Monday
-                countData[2], // Tuesday
-                countData[3], // Wednesday
-                countData[4], // Thursday
-                countData[5], // Friday
-                countData[6], // Saturday
-                countData[0]  // Sunday
+                countData[1], // Понедельник
+                countData[2], // Вторник
+                countData[3], // Среда
+                countData[4], // Четверг
+                countData[5], // Пятница
+                countData[6], // Суббота
+                countData[0]  // Воскресенье
             ];
             
-            // Prepare restaurant distribution data
+            // Подготовка данных для распределения ресторанов
             const restaurantLabels = restaurantDistribution.map(r => r.restaurant_name || 'Неизвестный ресторан');
             const restaurantCounts = restaurantDistribution.map(r => parseInt(r.review_count) || 0);
             
-            // Generate colors for restaurants
+            // Генерация цветов для ресторанов
             const restaurantColors = [
                 'rgba(255, 99, 132, 0.6)',
                 'rgba(54, 162, 235, 0.6)',
@@ -402,12 +402,12 @@ const getChartData = async (req, res) => {
                 'rgba(99, 255, 132, 0.6)'
             ];
             
-            // Ensure we have enough colors
+            // Убедимся, что у нас достаточно цветов
             while (restaurantColors.length < restaurantLabels.length) {
                 restaurantColors.push(...restaurantColors);
             }
             
-            // Format chart data for frontend
+            // Форматирование данных для фронтенда
             const chartData = {
                 ratings: {
                     labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
@@ -436,7 +436,7 @@ const getChartData = async (req, res) => {
                 }
             };
             
-            // Send formatted data to frontend
+            // Отправляем отформатированные данные на фронт
             res.json({
                 status: 'success',
                 data: chartData
@@ -444,7 +444,7 @@ const getChartData = async (req, res) => {
         } catch (dbError) {
             console.error('Database error while fetching chart data:', dbError);
             
-            // Return default chart data to prevent frontend breaking
+            // Возвращаем данные по умолчанию, чтобы предотвратить разрыв фронтенда
             const defaultData = {
                 ratings: {
                     labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
@@ -480,13 +480,13 @@ const getChartData = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Error in getChartData:', error);
-        return errorHandler(res, 'Failed to fetch chart data', 500, error);
+        console.error('Ошибка в getChartData:', error);
+        return errorHandler(res, 'Не удалось получить данные для графика', 500, error);
     }
 };
 
 /**
- * Get restaurants for manager dashboard
+ * Получение ресторанов для панели управления менеджером
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -514,8 +514,8 @@ const getRestaurants = async (req, res) => {
 
         res.json(rows);
     } catch (error) {
-        console.error('Error fetching restaurants:', error);
-        return errorHandler(res, 'Failed to fetch restaurants', 500, error);
+        console.error('Ошибка при получении ресторанов:', error);
+        return errorHandler(res, 'Не удалось получить рестораны', 500, error);
     }
 };
 

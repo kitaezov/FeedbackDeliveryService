@@ -3,12 +3,12 @@ const pool = require('./src/config/database');
 
 async function standardizeRoles() {
   try {
-    console.log('Starting role standardization process...');
+    console.log('Начало процесса стандартизации ролей...');
     
-    // Define standard roles
+    // Определяем стандартные роли
     const standardRoles = ['user', 'manager', 'admin', 'head_admin'];
     
-    // Get current role column definition
+    // Получаем текущее определение столбца роли
     const [columns] = await pool.query(`
       SELECT COLUMN_TYPE 
       FROM INFORMATION_SCHEMA.COLUMNS 
@@ -16,9 +16,9 @@ async function standardizeRoles() {
     `, [process.env.DB_NAME || 'feedback']);
     
     if (columns.length > 0) {
-      console.log('Current role column definition:', columns[0].COLUMN_TYPE);
+      console.log('Текущее определение столбца роли:', columns[0].COLUMN_TYPE);
       
-      // Get list of users with non-standard roles
+      // Получаем список пользователей с нестандартными ролями
       const [users] = await pool.query(`
         SELECT id, name, email, role 
         FROM users 
@@ -26,10 +26,10 @@ async function standardizeRoles() {
       `, standardRoles);
       
       if (users.length > 0) {
-        console.log('Found users with non-standard roles:');
+        console.log('Найдены пользователи с нестандартными ролями:');
         console.table(users);
         
-        // Map non-standard roles to standard ones
+        // Сопоставляем нестандартные роли с стандартными
         const roleMapping = {
           'moderator': 'manager',
           'super_admin': 'admin',
@@ -38,28 +38,28 @@ async function standardizeRoles() {
           'модератор': 'manager'
         };
         
-        // Update each user with a standard role
+        // Обновляем каждого пользователя до стандартной роли
         for (const user of users) {
           const standardRole = roleMapping[user.role] || 'user';
-          console.log(`Updating user ${user.id} (${user.email}) from '${user.role}' to '${standardRole}'`);
+          console.log(`Обновление пользователя ${user.id} (${user.email}) с '${user.role}' на '${standardRole}'`);
           
           await pool.query('UPDATE users SET role = ? WHERE id = ?', [standardRole, user.id]);
         }
         
-        console.log('All user roles have been standardized.');
+        console.log('Все роли пользователей стандартизированы.');
       } else {
-        console.log('No users with non-standard roles found.');
+        console.log('Не найдены пользователи с нестандартными ролями.');
       }
       
-      // Now update the role column to only allow standard roles
+      // Теперь обновляем столбец роли, чтобы разрешить только стандартные роли
       await pool.query(`
         ALTER TABLE users 
         MODIFY COLUMN role ENUM('user', 'manager', 'admin', 'head_admin') NOT NULL DEFAULT 'user'
       `);
       
-      console.log('Role column has been updated to only allow standard roles.');
+      console.log('Столбец роли обновлен для разрешения только стандартных ролей.');
       
-      // Verify the changes
+      // Проверяем изменения
       const [updatedColumns] = await pool.query(`
         SELECT COLUMN_TYPE 
         FROM INFORMATION_SCHEMA.COLUMNS 
@@ -68,24 +68,24 @@ async function standardizeRoles() {
       
       console.log('New role column definition:', updatedColumns[0].COLUMN_TYPE);
       
-      // Check if there are any users left with non-standard roles
+      // Проверяем, остались ли какие-либо пользователи с нестандартными ролями
       const [remainingNonStandard] = await pool.query(`
         SELECT COUNT(*) as count 
         FROM users 
         WHERE role NOT IN (?, ?, ?, ?)
       `, standardRoles);
       
-      console.log(`Users with non-standard roles after update: ${remainingNonStandard[0].count}`);
+      console.log(`Пользователи с нестандартными ролями после обновления: ${remainingNonStandard[0].count}`);
     } else {
-      console.error('Role column not found!');
+      console.error('Столбец роли не найден!');
     }
     
-    console.log('Role standardization completed.');
+    console.log('Стандартизация ролей завершена.');
   } catch (error) {
-    console.error('Error during role standardization:', error);
+    console.error('Ошибка при стандартизации ролей:', error);
   } finally {
     await pool.end();
-    console.log('Database connection closed.');
+    console.log('Соединение с базой данных закрыто.');
   }
 }
 

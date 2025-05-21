@@ -65,7 +65,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
             const response = await api.get('/admin/users');
             
             if (response.data && response.data.users) {
-                console.log('Received users:', response.data.users.length);
+                console.log('Получено пользователей:', response.data.users.length);
                 
                 // Add default values for missing fields to ensure compatibility
                 const processedUsers = response.data.users.map(user => ({
@@ -80,14 +80,14 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                 
                 setUsers(processedUsers);
             } else {
-                console.error('Invalid response format:', response.data);
+                console.error('Недопустимый формат ответа:', response.data);
                 setUsers([]);
             }
         } catch (error) {
-            console.error('Error fetching users:', error);
+            console.error('Ошибка при получении списка пользователей:', error);
             if (error.response) {
-                console.error('Error response:', error.response.data);
-                console.error('Status code:', error.response.status);
+                console.error('Ошибка ответа:', error.response.data);
+                console.error('Код состояния:', error.response.status);
             }
             setUsers([]);
         } finally {

@@ -55,7 +55,7 @@ const restaurantSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Create slug from name before saving
+// Создание slug из имени перед сохранением
 restaurantSchema.pre('save', function(next) {
     if (this.isModified('name')) {
         this.slug = this.name

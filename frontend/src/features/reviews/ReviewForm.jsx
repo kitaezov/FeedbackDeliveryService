@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { User, MapPin, DollarSign, Award, Smile, Star, Clock, Phone, Globe, ChevronLeft, X, Heart, ThumbsUp, Check, FileText, Camera, ThumbsDown, ImagePlus, Trash2, Utensils } from 'lucide-react';
+import { User, MapPin, DollarSign, Award, Smile, Star, Clock, Phone, Globe, ChevronLeft, X, Heart, ThumbsUp, Check, FileText, Camera, ThumbsDown, ImagePlus, Trash2, Utensils, Receipt } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import api from '../../utils/api';
 import { API_BASE, API_URL } from '../../config';
 import { restaurantService } from '../../features/restaurants/services/restaurantService';
 import { restaurantPlaceholder, largeRestaurantPlaceholder } from '../../utils/placeholders';
+import { useNotification } from '../../components/NotificationContext';
 
 const RestaurantButton = ({ restaurant, isSelected, onSelect }) => (
     <button
@@ -66,7 +67,7 @@ const StarRating = ({ value, onClick, size = "normal" }) => {
     );
 };
 
-// Animation variants for feature blocks (similar to NavigationBar animations)
+// Анимации для блоков функциональных блоков (похожие на анимации NavigationBar) 
 const featureBlockVariants = {
     initial: { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0 },
@@ -86,7 +87,7 @@ const featureBlockVariants = {
     }
 };
 
-// Animation variants for icons
+// Анимации для иконок
 const iconVariants = {
     initial: { opacity: 0, scale: 0.8 },
     animate: { opacity: 1, scale: 1 },
@@ -101,7 +102,7 @@ const iconVariants = {
     }
 };
 
-// Animation variants for buttons
+// Анимации для кнопок
 const buttonVariants = {
     initial: { opacity: 0, y: 5 },
     animate: { opacity: 1, y: 0 },
@@ -121,7 +122,7 @@ const buttonVariants = {
     }
 };
 
-// Modified RestaurantDetailModal component to include the review form directly
+// Измененный компонент RestaurantDetailModal для включения формы отзыва непосредственно
 const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user }) => {
     const [showReviewForm, setShowReviewForm] = useState(false);
     const [ratings, setRatings] = useState({});
@@ -131,9 +132,36 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
     const [restaurantReviews, setRestaurantReviews] = useState([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [photos, setPhotos] = useState([]);
+    const [receiptPhoto, setReceiptPhoto] = useState(null);
     const [reviewType, setReviewType] = useState('inRestaurant'); // 'inRestaurant' or 'delivery'
     const fileInputRef = useRef(null);
+    const receiptInputRef = useRef(null);
     const modalRef = useRef(null);
+
+    // Функция для проверки, открыт ли ресторан
+    const checkIfOpen = (workingHours) => {
+        if (!workingHours) return false;
+
+        // Получаем текущее время в МСК
+        const now = new Date();
+        const mskTime = new Date(now.getTime() + (now.getTimezoneOffset() + 180) * 60000); // +180 минут для МСК
+        const currentHour = mskTime.getHours();
+        const currentMinutes = mskTime.getMinutes();
+        const currentTime = currentHour * 60 + currentMinutes; // Текущее время в минутах
+
+        // Парсим часы работы
+        const timeRangeMatch = workingHours.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+        if (!timeRangeMatch) return false;
+
+        const [_, openHour, openMinute, closeHour, closeMinute] = timeRangeMatch;
+        const openTime = parseInt(openHour) * 60 + parseInt(openMinute);
+        const closeTime = parseInt(closeHour) * 60 + parseInt(closeMinute);
+
+        return currentTime >= openTime && currentTime <= closeTime;
+    };
+
+    // Получаем статус открытия
+    const isOpen = checkIfOpen(restaurant.hours || restaurant.workingHours);
 
     // Функция для закрытия формы
     const handleClose = () => {
@@ -142,6 +170,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         setRatings({});
         setFeedback('');
         setPhotos([]);
+        setReceiptPhoto(null);
         // Закрываем модальное окно
         if (onClose) {
             onClose();
@@ -168,7 +197,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         return () => document.removeEventListener('keydown', handleEscape);
     }, []);
 
-    // Fetch reviews for the restaurant when it's selected
+    // Поиск отзывов для ресторана при его выборе
     useEffect(() => {
         const fetchRestaurantReviews = async () => {
             if (!restaurant) return;
@@ -214,12 +243,12 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         
         const selectedFiles = Array.from(e.target.files);
         const maxPhotos = 5;
-        const maxSizeInMB = 5; // Maximum file size in MB
-        const maxSizeInBytes = maxSizeInMB * 1024 * 1024; // Convert to bytes
+        const maxSizeInMB = 5; // Максимальный размер файла в MB
+        const maxSizeInBytes = maxSizeInMB * 1024 * 1024; // Преобразовать в байты
         
-        // Validate and filter files
+        // Проверка и фильтрация файлов
         const validFiles = selectedFiles.filter(file => {
-            // Check file type
+            // Проверка типа файла
             const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             if (!validTypes.includes(file.type)) {
                 const event = new CustomEvent('notification', {
@@ -232,7 +261,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                 return false;
             }
             
-            // Check file size
+            // Проверка размера файла
             if (file.size > maxSizeInBytes) {
                 const event = new CustomEvent('notification', {
                     detail: {
@@ -249,7 +278,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         
         if (validFiles.length === 0) return;
         
-        // Check if adding these would exceed the maximum
+        // Проверка, превысит ли добавление этих файлов максимальное количество
         if (photos.length + validFiles.length > maxPhotos) {
             const event = new CustomEvent('notification', {
                 detail: {
@@ -259,14 +288,14 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             });
             document.dispatchEvent(event);
             
-            // Only add photos up to the maximum
+            // Добавьте фотографии до максимума
             const remainingSlots = maxPhotos - photos.length;
             if (remainingSlots <= 0) return;
             
             validFiles.splice(remainingSlots);
         }
         
-        // Generate previews for selected files
+        // Генерировать превью для выбранных файлов
         const newPhotos = validFiles.map(file => ({
             file,
             id: Math.random().toString(36).substring(2),
@@ -281,7 +310,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         
         setPhotos(prevPhotos => [...prevPhotos, ...newPhotos]);
         
-        // Reset the file input to allow selecting the same files again
+        // Сбросить входной файл, чтобы разрешить выбор одних и тех же файлов снова
         e.target.value = '';
     };
     
@@ -289,7 +318,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         setPhotos(prevPhotos => {
             const updatedPhotos = prevPhotos.filter(photo => photo.id !== photoId);
             
-            // Revoke the object URL to avoid memory leaks
+            // Отменить URL-объект, чтобы избежать утечек памяти
             const photoToRemove = prevPhotos.find(photo => photo.id === photoId);
             if (photoToRemove && photoToRemove.preview) {
                 URL.revokeObjectURL(photoToRemove.preview);
@@ -299,10 +328,142 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         });
     };
 
-    const handleSubmit = (e) => {
+    // Обработчик выбора фото чека
+    const handleReceiptSelect = (e) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        
+        const file = e.target.files[0];
+        const maxSizeInMB = 5; // Максимальный размер файла в MB
+        const maxSizeInBytes = maxSizeInMB * 1024 * 1024; // Преобразовать в байты
+        
+        // Проверка файла
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            const event = new CustomEvent('notification', {
+                detail: {
+                    type: 'error',
+                    message: `Неподдерживаемый тип файла. Разрешены только JPEG, PNG, GIF, и WebP.`
+                }
+            });
+            document.dispatchEvent(event);
+            return;
+        }
+        
+        // Проверка размера файла
+        if (file.size > maxSizeInBytes) {
+            const event = new CustomEvent('notification', {
+                detail: {
+                    type: 'error',
+                    message: `Файл слишком большой. Максимальный размер: ${maxSizeInMB}МБ.`
+                }
+            });
+            document.dispatchEvent(event);
+            return;
+        }
+        
+        // Генерировать превью
+        const newReceipt = {
+            file,
+            id: Math.random().toString(36).substring(2),
+            preview: URL.createObjectURL(file),
+            isReceipt: true
+        };
+        
+        console.log('Добавление фото чека:', {
+            name: file.name, 
+            type: file.type,
+            size: `${(file.size / 1024).toFixed(1)} KB`
+        });
+        
+        setReceiptPhoto(newReceipt);
+        
+        // Сбросить входной файл, чтобы разрешить выбор одних и тех же файлов снова
+        e.target.value = '';
+    };
+    
+    const handleRemoveReceiptPhoto = () => {
+        if (receiptPhoto && receiptPhoto.preview) {
+            URL.revokeObjectURL(receiptPhoto.preview);
+        }
+        setReceiptPhoto(null);
+    };
+
+    // Обработчик успешного ответа
+    const handleSuccessResponse = (response) => {
+        setSubmitting(false);
+        console.log('Успешный ответ от сервера:', response.data);
+        
+        // Добавить отзыв в список
+        if (response.data && response.data.review) {
+            setRestaurantReviews(prevReviews => [response.data.review, ...prevReviews]);
+        }
+        
+        // Вызовите обратный вызов с данными отзыва
+        if (onReviewSubmitted) {
+            onReviewSubmitted(response.data.review || {
+                userId: user?.id || 0,
+                restaurantId: restaurant.id,
+                restaurantName: restaurant.name,
+                rating: response.data.review?.rating || 5,
+                comment: feedback,
+                photos: photos.length,
+                hasReceipt: !!receiptPhoto
+            });
+        }
+
+        // Сбросить форму
+        setRatings({});
+        setFeedback('');
+        setShowValidation(false);
+        setPhotos([]);
+        setReceiptPhoto(null);
+        setShowReviewForm(false);
+
+        // Показать уведомление об успешной отправке через компонент уведомлений
+        const event = new CustomEvent('notification', {
+            detail: {
+                type: 'success',
+                message: 'Ваш отзыв успешно отправлен!'
+            }
+        });
+        document.dispatchEvent(event);
+    };
+    
+    // Обработчик ошибки
+    const handleErrorResponse = (error) => {
+        setSubmitting(false);
+        console.error('Ошибка при отправке отзыва:', error);
+        
+        // Получить подробное сообщение об ошибке
+        let errorMessage = 'Ошибка при отправке отзыва';
+        
+        if (error.response) {
+            console.error('Ответ сервера с ошибкой:', error.response.data);
+            errorMessage = error.response.data.message || 
+                          error.response.data.error || 
+                          `Ошибка сервера: ${error.response.status}`;
+        } else if (error.request) {
+            console.error('Нет ответа от сервера:', error.request);
+            errorMessage = 'Сервер не отвечает. Проверьте подключение к интернету.';
+        } else {
+            console.error('Ошибка запроса:', error.message);
+            errorMessage = `Ошибка запроса: ${error.message}`;
+        }
+        
+        // Показать уведомление об ошибке с более подробной информацией
+        const event = new CustomEvent('notification', {
+            detail: {
+                type: 'error',
+                message: errorMessage
+            }
+        });
+        document.dispatchEvent(event);
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Check if the user is logged in
+        // Проверка, авторизован ли пользователь
         if (!user) {
             const event = new CustomEvent('notification', {
                 detail: {
@@ -314,6 +475,12 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             return;
         }
 
+        // Проверка минимальной длины отзыва
+        if (feedback.length < 10) {
+            setShowValidation(true);
+            return;
+        }
+
         if (Object.keys(ratings).length < ratingCategories.length) {
             setShowValidation(true);
             return;
@@ -321,7 +488,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
         const averageRating = Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length;
 
-        // Create a JSON object for the ratings to properly structure the data
+        // Создать JSON-объект для оценок, чтобы правильно структурировать данные
         const ratingsData = {
             food: parseInt(Math.round(ratings.food || 0), 10),
             price: parseInt(Math.round(ratings.price || 0), 10),
@@ -335,7 +502,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             })
         };
         
-        // Create a structured review object that matches backend expectations
+        // Создать структурированный объект отзыва, который соответствует ожиданиям бэкенда
         const reviewData = {
             userId: user?.id || 0,
             restaurantId: restaurant.id,
@@ -343,45 +510,62 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             rating: parseInt(Math.round(averageRating), 10),
             comment: feedback,
             ratings: ratingsData,
-            reviewType: reviewType
+            reviewType: reviewType,
+            hasReceipt: !!receiptPhoto
         };
         
-        // Convert to JSON for debugging
-        console.log('Structured review data:', JSON.stringify(reviewData));
+        // Преобразовать в JSON для отладки
+        console.log('Структурированные данные отзыва:', JSON.stringify(reviewData));
         
         // Отправка на сервер
         setSubmitting(true);
         
-        // Use direct axios call instead of api instance to avoid interceptor issues with FormData
+        // Используйте прямой вызов axios вместо api экземпляра, чтобы избежать проблем с перехватчиками при использовании FormData
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         
-        // Check if we have photos to upload
-        if (photos.length > 0) {
-            // If we have photos, use FormData to send both JSON and files
+        // Проверьте, имеем ли мы фото или чек для отправки
+        if (photos.length > 0 || receiptPhoto) {
+            // Если у нас есть фото или чек, используйте FormData для отправки как JSON, так и файлов
             const formData = new FormData();
             
-            // Add the JSON data as a string
+            // Добавьте данные JSON как строку
             formData.append('reviewData', JSON.stringify(reviewData));
             
-            // Add photos
-            photos.forEach((photo, index) => {
-                if (photo.file) {
-                    formData.append('photos', photo.file);
+            try {
+                // Добавьте обычные фото - убедитесь, что имя поля точно 'photos'
+                if (photos.length > 0) {
+                    photos.forEach((photo) => {
+                        if (photo.file) {
+                            formData.append('photos', photo.file);
+                        }
+                    });
                 }
-            });
-            
-            // Use FormData content type
-            axios.post(`${API_URL}/api/reviews/with-photos`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Accept': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                
+                // Добавьте фото чека - убедитесь, что имя поля точно 'receiptPhoto'
+                if (receiptPhoto && receiptPhoto.file) {
+                    formData.append('receiptPhoto', receiptPhoto.file);
                 }
-            })
-            .then(response => handleSuccessResponse(response))
-            .catch(error => handleErrorResponse(error));
+                
+                console.log('FormData prepared with:', { 
+                    hasPhotos: photos.length > 0, 
+                    hasReceipt: !!receiptPhoto,
+                    fieldNames: [...formData.keys()] // Логирование всех имен полей
+                });
+                
+                // Используйте тип содержимого FormData - пусть браузер установит его автоматически
+                const response = await axios.post(`${API_URL}/api/reviews/with-photos`, formData, {
+                    headers: {
+                        // Не устанавливайте Content-Type - браузер установит его с границей
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    }
+                });
+                
+                handleSuccessResponse(response);
+            } catch (error) {
+                handleErrorResponse(error);
+            }
         } else {
-            // If no photos, use simple JSON request
+            // Если нет фото, используйте простой JSON-запрос - не изменяйте эту часть
             axios.post(`${API_URL}/api/reviews`, reviewData, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -392,76 +576,6 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             .then(response => handleSuccessResponse(response))
             .catch(error => handleErrorResponse(error));
         }
-        
-        // Success handler function
-        const handleSuccessResponse = (response) => {
-            setSubmitting(false);
-            console.log('Успешный ответ от сервера:', response.data);
-            
-            // Add the review to the list
-            if (response.data && response.data.review) {
-                setRestaurantReviews(prevReviews => [response.data.review, ...prevReviews]);
-            }
-            
-            // Call the callback with the review data
-            if (onReviewSubmitted) {
-                onReviewSubmitted(response.data.review || {
-                    userId: user?.id || 0,
-                    restaurantId: restaurant.id,
-                    restaurantName: restaurant.name,
-                    rating: parseInt(Math.round(averageRating), 10),
-                    comment: feedback,
-                    photos: photos.length
-                });
-            }
-
-            // Сбросить форму
-            setRatings({});
-            setFeedback('');
-            setShowValidation(false);
-            setPhotos([]);
-            setShowReviewForm(false);
-
-            // Показать уведомление об успешной отправке через компонент уведомлений
-            const event = new CustomEvent('notification', {
-                detail: {
-                    type: 'success',
-                    message: 'Ваш отзыв успешно отправлен!'
-                }
-            });
-            document.dispatchEvent(event);
-        };
-        
-        // Error handler function
-        const handleErrorResponse = (error) => {
-            setSubmitting(false);
-            console.error('Ошибка при отправке отзыва:', error);
-            
-            // Get detailed error message
-            let errorMessage = 'Ошибка при отправке отзыва';
-            
-            if (error.response) {
-                console.error('Ответ сервера с ошибкой:', error.response.data);
-                errorMessage = error.response.data.message || 
-                              error.response.data.error || 
-                              `Ошибка сервера: ${error.response.status}`;
-            } else if (error.request) {
-                console.error('Нет ответа от сервера:', error.request);
-                errorMessage = 'Сервер не отвечает. Проверьте подключение к интернету.';
-            } else {
-                console.error('Ошибка запроса:', error.message);
-                errorMessage = `Ошибка запроса: ${error.message}`;
-            }
-            
-            // Показать уведомление об ошибке с более подробной информацией
-            const event = new CustomEvent('notification', {
-                detail: {
-                    type: 'error',
-                    message: errorMessage
-                }
-            });
-            document.dispatchEvent(event);
-        };
     };
 
     return (
@@ -543,11 +657,11 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 <Clock className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                             </div>
                             <div>
-                                <div className="text-sm font-medium text-green-600 dark:text-green-400">
-                                    {restaurant.isOpen ? 'Открыто' : 'Закрыто'} · {restaurant.hours}
+                                <div className={`text-sm font-medium ${isOpen ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                    {isOpen ? 'Открыто' : 'Закрыто'} · {restaurant.hours || restaurant.workingHours || 'Время работы не указано'}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    Время работы ресторана
+                                    Время работы ресторана (МСК)
                                 </div>
                             </div>
                         </div>
@@ -742,7 +856,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                         type="button"
                                         onClick={() => {
                                             setReviewType('inRestaurant');
-                                            setRatings({}); // Reset ratings when changing type
+                                            setRatings({}); // Сбросить оценки при изменении типа
                                         }}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                             reviewType === 'inRestaurant'
@@ -756,7 +870,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                         type="button"
                                         onClick={() => {
                                             setReviewType('delivery');
-                                            setRatings({}); // Reset ratings when changing type
+                                            setRatings({}); // Сбросить оценки при изменении типа
                                         }}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                             reviewType === 'delivery'
@@ -808,6 +922,66 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 )}
                             </div>
 
+                            {/* Add receipt photo section */}
+                            <div
+                                className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700 border border-dashed border-gray-200 dark:border-gray-600 mb-4"
+                            >
+                                <div className="flex items-center">
+                                    <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-600 mr-3">
+                                        <Receipt className="w-4 h-4 text-gray-500 dark:text-gray-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Добавить фото чека</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Необязательно, но поможет другим пользователям</p>
+                                    </div>
+                                    {!receiptPhoto ? (
+                                        <button
+                                            className="ml-auto bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-white text-xs px-3 py-1.5 rounded-md flex items-center transition-colors"
+                                            onClick={() => receiptInputRef.current?.click()}
+                                            type="button"
+                                        >
+                                            <Receipt className="w-3 h-3 mr-1.5" />
+                                            Загрузить
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="ml-auto bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 text-red-600 dark:text-red-300 text-xs px-3 py-1.5 rounded-md flex items-center transition-colors"
+                                            onClick={handleRemoveReceiptPhoto}
+                                            type="button"
+                                        >
+                                            <Trash2 className="w-3 h-3 mr-1.5" />
+                                            Удалить
+                                        </button>
+                                    )}
+                                    <input 
+                                        type="file" 
+                                        ref={receiptInputRef}
+                                        className="hidden"
+                                        accept="image/jpeg,image/png,image/gif,image/webp"
+                                        onChange={handleReceiptSelect}
+                                        aria-label="Загрузить фото чека"
+                                        data-testid="receipt-upload"
+                                    />
+                                </div>
+                                
+                                {/* Receipt photo preview */}
+                                {receiptPhoto && (
+                                    <div className="mt-3">
+                                        <div className="relative inline-block rounded-lg overflow-hidden">
+                                            <img 
+                                                src={receiptPhoto.preview} 
+                                                alt="Фото чека" 
+                                                className="h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                                            />
+                                            <div className="absolute bottom-1 right-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded flex items-center">
+                                                <Receipt className="w-3 h-3 mr-1" />
+                                                <span>Чек</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Add photo section */}
                             <div
                                 className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700 border border-dashed border-gray-200 dark:border-gray-600"
@@ -817,7 +991,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                         <Camera className="w-4 h-4 text-gray-500 dark:text-gray-300" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Добавьте фото блюд</p>
+                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Добавить фото</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">Необязательно, но поможет другим пользователям</p>
                                     </div>
                                     <button
@@ -890,16 +1064,17 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 </label>
                                 <div className="relative w-full">
                                 <textarea
-                                    className="
+                                    className={`
                                         w-full p-3 border rounded-lg
-                                        bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600
+                                        bg-gray-50 dark:bg-gray-700 
+                                        ${feedback.length < 10 && showValidation ? 'border-red-500 dark:border-red-500' : 'border-gray-200 dark:border-gray-600'}
                                         min-h-[120px] resize-none
                                         text-sm text-gray-700 dark:text-gray-200
                                         focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-500 
                                         focus:border-gray-300 dark:focus:border-gray-500
                                         transition-all
                                         pr-10
-                                    "
+                                    `}
                                     placeholder="Что понравилось или не понравилось? Какие блюда особенно вкусные? Как обслуживание?"
                                     value={feedback}
                                     onChange={e => setFeedback(e.target.value.slice(0, 250))}
@@ -910,12 +1085,19 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                         className={`absolute bottom-2 right-3 text-xs ${
                                             feedback.length > 200 
                                                 ? "text-red-500 dark:text-red-400" 
+                                                : feedback.length < 10 && showValidation
+                                                ? "text-red-500 dark:text-red-400"
                                                 : "text-gray-500 dark:text-gray-400"
                                         }`}
                                     >
                                         {feedback.length}/250
                                     </span>
                                 </div>
+                                {feedback.length < 10 && showValidation && (
+                                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                                        Минимальная длина отзыва - 10 символов
+                                    </p>
+                                )}
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     Подробные отзывы помогают другим пользователям сделать правильный выбор
                                 </p>
@@ -985,23 +1167,36 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
                                         <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{review.text || review.comment}</p>
 
+                                        {/* Receipt photo indicator */}
+                                        {review.hasReceipt && (
+                                            <div className="mt-2 mb-2 flex items-center text-xs text-blue-600 dark:text-blue-400">
+                                                <Receipt className="w-3 h-3 mr-1" />
+                                                <span>Прикреплен чек</span>
+                                            </div>
+                                        )}
+
                                         {/* Review photos */}
                                         {review.photos && review.photos.length > 0 && (
                                             <div className="mt-3 flex gap-2 overflow-x-auto pb-2 snap-x">
                                                 {review.photos.map((photo, index) => (
                                                     <div 
                                                         key={index}
-                                                        className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden snap-start cursor-pointer hover:opacity-90 transition-opacity"
+                                                        className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden snap-start cursor-pointer hover:opacity-90 transition-opacity relative"
                                                         onClick={() => {
-                                                            // Open full-sized image in new tab
+                                                            // Открыть полноразмерное изображение в новой вкладке
                                                             window.open(photo.url || photo, '_blank');
                                                         }}
                                                     >
                                                         <img 
                                                             src={photo.url || photo} 
-                                                            alt={`Фото блюда ${index + 1}`}
+                                                            alt={photo.isReceipt ? "Фото чека" : `Фото ${index + 1}`}
                                                             className="w-full h-full object-cover"
                                                         />
+                                                        {photo.isReceipt && (
+                                                            <div className="absolute bottom-0 right-0 bg-blue-500 p-0.5 rounded-tl">
+                                                                <Receipt className="w-2.5 h-2.5 text-white" />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -1080,35 +1275,35 @@ const ReviewForm = ({ user, onReviewSubmitted }) => {
                 setLoading(true);
                 const data = await restaurantService.getRestaurants();
                 
-                console.log('API Response for restaurants:', data);
+                console.log('Ответ API для ресторанов:', data);
                 
-                // Check if data exists and has the expected structure
+                // Проверьте, существует ли данные и имеет ли ожидаемую структуру
                 if (!data) {
-                    console.error('Empty response from API');
-                    setError('No data received from server');
+                    console.error('Пустой ответ от API');
+                    setError('Не получено данных от сервера');
                     setRestaurants([]);
                     return;
                 }
                 
-                // Handle different API response structures
+                // Обработайте разные структуры ответов API
                 let restaurantsArray = [];
                 if (data.restaurants && Array.isArray(data.restaurants)) {
                     restaurantsArray = data.restaurants;
                 } else if (Array.isArray(data)) {
                     restaurantsArray = data;
                 } else {
-                    console.error('Unexpected data structure:', data);
-                    setError('Invalid data format received');
+                    console.error('Неожиданная структура данных:', data);
+                    setError('Неверный формат данных');
                     setRestaurants([]);
                     return;
                 }
                 
                 console.log('Restaurants array:', restaurantsArray);
                 
-                // Ensure all restaurants have consistent field names for display
+                // Убедитесь, что все рестораны имеют согласованные имена полей для отображения
                 const processedRestaurants = restaurantsArray.map(restaurant => ({
                     ...restaurant,
-                    // Ensure we have both snake_case and camelCase for compatibility
+                    // Убедитесь, что у нас есть оба snake_case и camelCase для совместимости
                     id: restaurant.id || Math.random().toString(36).substr(2, 9),
                     name: restaurant.name || 'Unnamed Restaurant',
                     image: restaurant.image_url || restaurant.imageUrl || restaurantPlaceholder(),
@@ -1120,14 +1315,17 @@ const ReviewForm = ({ user, onReviewSubmitted }) => {
                     minPrice: restaurant.min_price || restaurant.minPrice || '',
                     delivery_time: restaurant.delivery_time || restaurant.deliveryTime || '',
                     deliveryTime: restaurant.delivery_time || restaurant.deliveryTime || '',
-                    avgRating: restaurant.avg_rating || restaurant.avgRating || 0
+                    avgRating: restaurant.avg_rating || restaurant.avgRating || 0,
+                    // Добавляем обработку времени работы
+                    hours: restaurant.hours || restaurant.workingHours || '10:00-22:00',
+                    workingHours: restaurant.hours || restaurant.workingHours || '10:00-22:00'
                 }));
                 
-                console.log('Processed restaurants:', processedRestaurants);
+                console.log('Обработанные рестораны:', processedRestaurants);
                 setRestaurants(processedRestaurants);
             } catch (err) {
-                console.error('Error fetching restaurants:', err);
-                setError('Failed to load restaurants');
+                console.error('Ошибка при получении ресторанов:', err);
+                setError('Не удалось загрузить рестораны');
             } finally {
                 setLoading(false);
             }
@@ -1198,7 +1396,7 @@ const ReviewForm = ({ user, onReviewSubmitted }) => {
                         <Utensils className="w-16 h-16 mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Нет доступных ресторанов</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            В данный момент список ресторанов пуст. Пожалуйста, проверьте позже.
+                            В данный момент список ресторанов пуст.
                         </p>
                     </div>
                 )}

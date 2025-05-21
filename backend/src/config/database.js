@@ -1,20 +1,20 @@
 /**
- * Database Configuration
- * Handles MySQL database connection pool setup
+ * База данных конфигурация
+ * Обрабатывает настройку пула подключений к MySQL
  */
 
     const mysql = require('mysql2/promise');
     require('dotenv').config();
 
-    // Debug database connection info
+    // Отладочная информация о подключении к базе данных
     if (process.env.DEBUG === 'true') {
-        console.log('Database connection info:');
-        console.log('Host:', process.env.DB_HOST || 'localhost');
-        console.log('User:', process.env.DB_USER || 'root');
-        console.log('Database:', process.env.DB_NAME || 'feedback');
+        console.log('Информация о подключении к базе данных:');
+        console.log('Хост:', process.env.DB_HOST || 'localhost');
+        console.log('Пользователь:', process.env.DB_USER || 'root');
+        console.log('База данных:', process.env.DB_NAME || 'feedback');
     }
 
-    // Create a connection pool
+    // Создаем пул подключений
     const pool = mysql.createPool({
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
@@ -25,17 +25,17 @@
         queueLimit: 0
     });
 
-    // Test database connection
+    // Тестирование подключения к базе данных
     (async () => {
         try {
             if (process.env.DEBUG === 'true') {
-                console.log('Testing database connection...');
+                console.log('Тестирование подключения к базе данных...');
                 const connection = await pool.getConnection();
-                console.log('Database connection successful!');
+                console.log('Подключение к базе данных успешно!');
                 connection.release();
             }
         } catch (error) {
-            console.error('Database connection error:', error);
+            console.error('Ошибка подключения к базе данных:', error);
         }
     })();
 

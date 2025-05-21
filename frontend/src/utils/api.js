@@ -1,41 +1,40 @@
 import axios from 'axios';
 
-// Create API instance with base URL from environment or fallback
+// Создать экземпляр API с базовым URL-адресом из окружения или резервного варианта
 const api = axios.create({
     baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
-    timeout: 15000, // 15 seconds timeout
+    timeout: 15000, // 15 секунд timeout
     headers: {
         'Content-Type': 'application/json'
     }
 });
 
-// Function to fix URLs that might be missing the /api prefix
+// Функция для исправления URL-адресов, которые могут отсутствовать префикс /api
 export const fixApiUrl = (url) => {
-    // If it's already a full URL, return it
+    // Если это уже полный URL-адрес, верните его
     if (url.startsWith('http://') || url.startsWith('https://')) {
         return url;
     }
     
-    // Remove leading slash from all paths since baseURL already includes the trailing slash
-    // This prevents baseURL/api + /api/route from becoming baseURL/api/api/route
+    // Удалить ведущий слэш из всех путей, так как baseURL уже включает в себя слэш в конце
     return url.startsWith('/') ? url.substring(1) : url;
 };
 
-// Request interceptor
+// Интерцептор запросов
 api.interceptors.request.use(
     (config) => {
-        // Get token from localStorage
+        // Получить токен из localStorage
         const token = localStorage.getItem('token');
         
-        // If token exists, add it to the headers
+        // Если токен существует, добавьте его в заголовки
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         
-        // Fix the URL to ensure it has the correct /api prefix
+        // Исправить URL-адрес, чтобы он имел правильный префикс /api
         config.url = fixApiUrl(config.url);
         
-        // Don't set Content-Type for FormData (multipart/form-data)
+        // Не устанавливайте Content-Type для FormData (multipart/form-data)
         if (config.data instanceof FormData) {
             delete config.headers['Content-Type'];
         }
@@ -55,85 +54,46 @@ api.interceptors.request.use(
     }
 );
 
-// Response interceptor
+// Интерцептор ответов
 api.interceptors.response.use(
     (response) => {
-        console.log('Ответ с сервера:', {
-            status: response.status,
-            url: response.config.url,
-            data: response.data
-        });
-        
-        // Standardize response format
-        if (response.data && typeof response.data === 'object') {
-            // If the response data has a data property, use that as the response
-            if (response.data.data !== undefined) {
-                return { 
-                    ...response, 
-                    originalData: response.data,
-                    data: response.data.data 
-                };
-            }
-            
-            // If the response data has a results property, use that as the response
-            if (response.data.results !== undefined) {
-                return { 
-                    ...response, 
-                    originalData: response.data,
-                    data: response.data.results 
-                };
-            }
-            
-            // If the response data has an items property, use that as the response
-            if (response.data.items !== undefined) {
-                return { 
-                    ...response, 
-                    originalData: response.data,
-                    data: response.data.items 
-                };
-            }
-        }
-        
+        console.log('Ответ с сервера:', response);
         return response;
     },
-    (error) => {
-        // Handle errors
+    async (error) => {
+        // Обработать ошибки
         if (error.response) {
-            // Server responded with an error status
             console.error('API Error Response:', error.response.data);
             
-            // Handle 401 Unauthorized errors
+            // Обработать ошибки 401 Unauthorized
             if (error.response.status === 401) {
-                // Clear stored credentials and redirect to login
+                // Очистить сохраненные учетные данные
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 
-                // Emit an event that can be listened to for auth state changes
+                // Выпустить событие, которое можно прослушивать для изменений состояния аутентификации
                 const event = new CustomEvent('auth-error', { 
-                    detail: { message: 'Session expired. Please log in again.' } 
+                    detail: { message: 'Сессия истекла. Пожалуйста, войдите снова.' } 
                 });
                 document.dispatchEvent(event);
+                
+                // Если это не запрос на вход или регистрацию, перенаправить на страницу входа
+                if (!error.config.url.includes('auth/login') && !error.config.url.includes('auth/register')) {
+                    window.location.href = '/auth/login';
+                }
             }
             
-            // Add more structured error information
+            // Добавить более структурированную информацию об ошибке
             error.friendlyMessage = error.response.data?.message || 
                                    error.response.data?.error || 
                                    'Произошла ошибка при взаимодействии с сервером';
-        } else if (error.request) {
-            // Request was made but no response received
-            console.error('API Error Request:', error.request);
-            error.friendlyMessage = 'Не удалось получить ответ от сервера. Проверьте подключение к интернету.';
-        } else {
-            // Error in setting up the request
-            console.error('API Error Setup:', error.message);
-            error.friendlyMessage = 'Ошибка при настройке запроса. Попробуйте позже.';
         }
         
         return Promise.reject(error);
     }
 );
 
-// Custom methods for common requests
+// Пользовательские методы для общих запросов
 api.customGet = async (url, params = {}, options = {}) => {
     try {
         const response = await api.get(url, { params, ...options });

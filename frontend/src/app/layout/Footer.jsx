@@ -5,7 +5,7 @@
  * Отображается только на главной странице
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 
@@ -18,12 +18,63 @@ import { Link } from 'react-router-dom';
  */
 export const Footer = ({ isDarkMode = false }) => {
     const currentYear = new Date().getFullYear();
+    const [scale, setScale] = useState(1);
+    
+    useEffect(() => {
+        const handleScroll = () => {
+            // Вычисляем, насколько пользователь прокрутил за нижний край страницы
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = document.documentElement.clientHeight;
+            const scrollTop = window.scrollY;
+            
+            // Если прокрутка вышла за пределы страницы (отрицательная прокрутка)
+            if (scrollTop + clientHeight >= scrollHeight) {
+                const overscroll = scrollTop + clientHeight - scrollHeight;
+                // Уменьшаем масштаб футера, максимально до 0.8
+                const newScale = Math.max(0.8, 1 - overscroll / 500);
+                setScale(newScale);
+            } else {
+                // Возвращаем обычный размер
+                setScale(1);
+            }
+        };
+        
+        window.addEventListener('scroll', handleScroll);
+        
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
+
+    // Добавляем отступ внизу body для компенсации высоты зафиксированного футера
+    useEffect(() => {
+        // Получаем высоту футера
+        const footerHeight = document.querySelector('footer')?.offsetHeight || 0;
+        // Добавляем отступ
+        document.body.style.paddingBottom = `${footerHeight}px`;
+        
+        return () => {
+            document.body.style.paddingBottom = '0';
+        };
+    }, []);
     
     return (
-        <footer className={`
-            w-full border-t mt-auto
-            ${isDarkMode ? 'bg-gray-900 text-gray-300 border-gray-800' : 'bg-gray-100 text-gray-700 border-gray-200'}
-        `}>
+        <footer 
+            className={`
+                w-full border-t
+                ${isDarkMode ? 'bg-gray-900 text-gray-300 border-gray-800' : 'bg-gray-100 text-gray-700 border-gray-200'}
+            `}
+            style={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 10,
+                transform: `scale(${scale})`,
+                transformOrigin: 'center bottom',
+                transition: 'transform 0.2s ease-out'
+            }}
+        >
             <div className="container max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <div className="flex flex-col md:flex-row md:justify-between gap-8">
                     <div className="md:w-1/3 md:pr-8">

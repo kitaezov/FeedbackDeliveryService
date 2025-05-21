@@ -1,6 +1,6 @@
 /**
- * Authentication Controller
- * Handles user registration, login, and token validation
+ * Контроллер аутентификации
+ * Обрабатывает регистрацию, вход и проверку токена
  */
 
 const bcrypt = require('bcryptjs');
@@ -11,31 +11,31 @@ const config = require('../config');
 const fs = require('fs');
 const path = require('path');
 
-// Safely import notification controller
+// Безопасно импортировать контроллер уведомлений
 let notificationController;
 try {
     notificationController = require('./notificationController');
 } catch (error) {
-    console.error('Failed to load notification controller:', error);
-    // Create a dummy notification controller if the real one can't be loaded
+    console.error('Ошибка при загрузке контроллера уведомлений:', error);
+    // Создать фиктивный контроллер уведомлений, если реальный не может быть загружен
     notificationController = {
         createProfileUpdateNotification: async () => false
     };
 }
 
 /**
- * Register a new user
+ * Регистрация нового пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const register = async (req, res) => {
-    try {
-        console.log('Register attempt with data:', req.body);
+    try {   
+        console.log('Попытка регистрации с данными:', req.body);
         const { name, email, password } = req.body;
         
-        // Validate input
+        // Проверка входных данных
         if (!validateName(name)) {
-            console.log('Name validation failed:', name);
+            console.log('Ошибка при проверке имени:', name);
             return res.status(400).json({
                 message: 'Некорректное имя',
                 details: 'Имя должно содержать от 1 до 15 символов'
@@ -43,7 +43,7 @@ const register = async (req, res) => {
         }
         
         if (!validateEmail(email)) {
-            console.log('Email validation failed:', email);
+            console.log('Ошибка при проверке email:', email);
             return res.status(400).json({
                 message: 'Некорректный email',
                 details: 'Пожалуйста, введите корректный email-адрес'
@@ -51,29 +51,29 @@ const register = async (req, res) => {
         }
         
         if (!validatePassword(password)) {
-            console.log('Password validation failed');
+            console.log('Ошибка при проверке пароля:', password);
             return res.status(400).json({
                 message: 'Некорректный пароль',
                 details: 'Пароль должен содержать не менее 6 символов'
             });
         }
         
-        // Check if user already exists
+        // Проверка, существует ли пользователь
         const existingUser = await userModel.findByEmail(email);
         if (existingUser) {
-            console.log('User already exists:', email);
+            console.log('Пользователь уже существует:', email);
             return res.status(409).json({
                 message: 'Пользователь уже существует',
                 details: 'Email уже используется другим пользователем'
             });
         }
         
-        console.log('Creating user in database...');
-        // Create user
+        console.log('Создание пользователя в базе данных...');
+        // Создать пользователя
         const user = await userModel.create({ name, email, password });
-        console.log('User created:', user);
+        console.log('Пользователь создан:', user);
         
-        // Generate JWT token
+        // Генерация JWT-токена
         const token = jwt.sign(
             { userId: user.id, role: user.role },
             process.env.JWT_SECRET,
@@ -101,7 +101,7 @@ const register = async (req, res) => {
 };
 
 /**
- * Login user
+ * Вход пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -109,34 +109,46 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         
-        // Validate input
+        console.log(`Login attempt with email: ${email}`);
+        
+        // Проверка входных данных
         if (!email || !password) {
+            console.log('Вход не выполнен: Отсутствует email или пароль');
             return res.status(400).json({
                 message: 'Недостаточно данных',
                 details: 'Пожалуйста, введите email и пароль'
             });
         }
         
-        // Find user
+        // Поиск пользователя
         const user = await userModel.findByEmail(email);
+        console.log(`Пользователь найден: ${user ? 'Да' : 'Нет'}`);
+        
         if (!user) {
+            console.log(`Вход не выполнен: Пользователь с email ${email} не найден`);
             return res.status(401).json({
                 message: 'Неверные учетные данные',
                 details: 'Пользователь с таким email не найден'
             });
         }
         
-        // Verify password
+        console.log(`Найден пользователь: ${user.name}, Роль: ${user.role}, ID: ${user.id}`);
+        
+        // Проверка пароля
         const isPasswordValid = await bcrypt.compare(password, user.password);
+        console.log(`Пароль действителен: ${isPasswordValid ? 'Да' : 'Нет'}`);
+        
         if (!isPasswordValid) {
+            console.log(`Вход не выполнен: Неверный пароль для пользователя ${email}`);
             return res.status(401).json({
                 message: 'Неверные учетные данные',
                 details: 'Неверный пароль'
             });
         }
         
-        // Check if the account is blocked
+        // Проверка, заблокирован ли аккаунт
         if (user.is_blocked === 1) {
+            console.log(`Вход не выполнен: Пользователь ${email} заблокирован`);
             return res.status(403).json({
                 message: 'Аккаунт заблокирован',
                 details: 'Ваш аккаунт был заблокирован администратором',
@@ -145,12 +157,14 @@ const login = async (req, res) => {
             });
         }
         
-        // Generate JWT token
+        // Генерация JWT-токена
         const token = jwt.sign(
             { userId: user.id, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
+        
+        console.log(`Вход выполнен успешно для пользователя ${email}`);
         
         res.json({
             message: 'Успешная аутентификация',
@@ -173,7 +187,7 @@ const login = async (req, res) => {
 };
 
 /**
- * Validate token
+ * Проверка токена
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -188,7 +202,7 @@ const validateToken = (req, res) => {
             });
         }
         
-        // Verify token
+        // Проверка токена
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         res.json({ valid: true });
     } catch (error) {
@@ -201,7 +215,7 @@ const validateToken = (req, res) => {
 };
 
 /**
- * Get user profile data
+ * Получить данные профиля пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -282,14 +296,14 @@ const getProfile = async (req, res) => {
 };
 
 /**
- * Upload user avatar
+ * Загрузить аватар пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const uploadAvatar = async (req, res) => {
     try {
         console.log('Запрос на загрузку аватара получен');
-        console.log('User в запросе:', req.user);
+        console.log('Пользователь в запросе:', req.user);
         console.log('Файл:', req.file ? `Имя: ${req.file.filename}, размер: ${req.file.size}` : 'Файл отсутствует');
         
         // Проверяем, был ли загружен файл
@@ -335,7 +349,7 @@ const uploadAvatar = async (req, res) => {
 };
 
 /**
- * Delete user avatar
+ * Удалить аватар пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -388,24 +402,24 @@ const deleteAvatar = async (req, res) => {
 };
 
 /**
- * Update user profile information
+    * Обновление информации о профиле пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const updateProfile = async (req, res) => {
     try {
-        // Extract user ID from token
+        // Извлечение ID пользователя из токена
         const userId = req.user.userId;
         console.log('Обновление профиля для пользователя:', userId);
         console.log('Данные запроса:', JSON.stringify(req.body, null, 2));
         
-        // Get update data from request body
+        // Получение данных для обновления из тела запроса
         const { name, email, phoneNumber, birthDate, currentPassword, newPassword } = req.body;
         console.log('Извлеченные поля:');
         console.log('- phoneNumber:', phoneNumber);
         console.log('- birthDate:', birthDate);
         
-        // Get user from database
+        // Получение пользователя из базы данных
         const user = await userModel.findById(userId);
         if (!user) {
             return res.status(404).json({
@@ -414,10 +428,10 @@ const updateProfile = async (req, res) => {
             });
         }
         
-        // Prepare update data
+        // Подготовка данных для обновления
         const updateData = {};
         
-        // Validate and add name if provided
+        // Проверка и добавление имени, если оно предоставлено
         if (name !== undefined) {
             if (!validateName(name)) {
                 return res.status(400).json({
@@ -429,7 +443,7 @@ const updateProfile = async (req, res) => {
             updateData.name = name;
         }
         
-        // Validate and add email if provided
+        // Проверка и добавление email, если он предоставлен
         if (email !== undefined && email !== user.email) {
             if (!validateEmail(email)) {
                 return res.status(400).json({
@@ -439,7 +453,7 @@ const updateProfile = async (req, res) => {
                 });
             }
             
-            // Check if email is already in use
+            // Проверка, используется ли email другим пользователем
             const existingUser = await userModel.findByEmail(email);
             if (existingUser && existingUser.id !== userId) {
                 return res.status(409).json({
@@ -452,21 +466,21 @@ const updateProfile = async (req, res) => {
             updateData.email = email;
         }
         
-        // Add phoneNumber if provided
+        // Добавление phoneNumber, если он предоставлен
         if (phoneNumber !== undefined) {
             updateData.phoneNumber = phoneNumber;
             console.log('phoneNumber добавлен в updateData:', phoneNumber);
         }
         
-        // Add birthDate if provided
+        // Добавление birthDate, если он предоставлен
         if (birthDate !== undefined) {
             updateData.birthDate = birthDate;
             console.log('birthDate добавлен в updateData:', birthDate);
         }
         
-        // Handle password change if provided
+        // Обработка изменения пароля, если он предоставлен
         if (newPassword) {
-            // Verify current password
+            // Проверка текущего пароля
             if (!currentPassword) {
                 return res.status(400).json({
                     message: 'Необходим текущий пароль',
@@ -475,7 +489,7 @@ const updateProfile = async (req, res) => {
                 });
             }
             
-            // Check if current password is correct
+            // Проверка, является ли текущий пароль корректным
             const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
             if (!isPasswordValid) {
                 return res.status(401).json({
@@ -485,7 +499,7 @@ const updateProfile = async (req, res) => {
                 });
             }
             
-            // Validate new password
+            // Проверка нового пароля
             if (!validatePassword(newPassword)) {
                 return res.status(400).json({
                     message: 'Некорректный новый пароль',
@@ -494,13 +508,13 @@ const updateProfile = async (req, res) => {
                 });
             }
             
-            // Hash new password
+            // Хеширование нового пароля
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(newPassword, salt);
             updateData.password = hashedPassword;
         }
         
-        // If no data to update
+        // Если нет данных для обновления
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({
                 message: 'Нет данных для обновления',
@@ -510,7 +524,7 @@ const updateProfile = async (req, res) => {
         
         console.log('Данные для обновления:', JSON.stringify(updateData, null, 2));
         
-        // Update user in database
+        // Обновление пользователя в базе данных
         const updatedUser = await userModel.update(userId, updateData);
         
         console.log('Результат обновления:', updatedUser ? 'Успешно' : 'Ошибка');
@@ -534,7 +548,7 @@ const updateProfile = async (req, res) => {
             // Продолжаем выполнение, не прерывая основной процесс
         }
         
-        // Return updated user data
+        // Возвращаем обновленные данные пользователя
         res.json({
             message: 'Профиль успешно обновлен',
             user: {
@@ -557,6 +571,52 @@ const updateProfile = async (req, res) => {
     }
 };
 
+/**
+ * Утилита для сброса пароля пользователя (только для разработки)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const resetPassword = async (req, res) => {
+    try {
+        // Этот эндпоинт должен быть доступен только в режиме разработки
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(403).json({
+                message: 'Доступ запрещен',
+                details: 'Этот эндпоинт доступен только в режиме разработки'
+            });
+        }
+        
+        const { email, password } = req.body;
+        
+        if (!email || !password) {
+            return res.status(400).json({
+                message: 'Некорректные данные',
+                details: 'Email и пароль обязательны'
+            });
+        }
+        
+        const success = await userModel.resetPasswordByEmail(email, password);
+        
+        if (success) {
+            res.json({
+                message: 'Пароль успешно сброшен',
+                details: `Пароль для ${email} был сброшен`
+            });
+        } else {
+            res.status(404).json({
+                message: 'Ошибка сброса пароля',
+                details: 'Пользователь не найден или произошла ошибка при сбросе пароля'
+            });
+        }
+    } catch (error) {
+        console.error('Ошибка сброса пароля:', error);
+        res.status(500).json({
+            message: 'Ошибка сброса пароля',
+            details: 'Произошла внутренняя ошибка сервера'
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
@@ -564,5 +624,6 @@ module.exports = {
     getProfile,
     uploadAvatar,
     deleteAvatar,
-    updateProfile
+    updateProfile,
+    resetPassword
 }; 

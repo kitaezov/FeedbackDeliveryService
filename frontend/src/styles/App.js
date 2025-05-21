@@ -109,10 +109,10 @@ const App = () => {
             setWsConnected(true);
         });
         
-        // Re-add other event listeners...
+        // Добавьте другие слушатели событий...
     };
     
-    // Page visibility change handler for reconnecting
+    // Обработчик изменения видимости страницы для переподключения
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
@@ -130,12 +130,12 @@ const App = () => {
 
     const fetchReviews = async () => {
         try {
-            console.log('Fetching reviews from API...');
+            console.log('Загрузка отзывов из API...');
             const response = await api.get('/reviews');
             
-            console.log('API response:', response);
+            console.log('Ответ API:', response);
             
-            // Handle different possible response structures
+            // Обработка разных возможных структур ответов
             let reviewsData = [];
             
             if (response.data && response.data.reviews && Array.isArray(response.data.reviews)) {
@@ -143,14 +143,14 @@ const App = () => {
             } else if (Array.isArray(response.data)) {
                 reviewsData = response.data;
             } else {
-                console.warn('Unexpected API response structure:', response.data);
+                console.warn('Непредвиденная структура ответа от АПИ:', response.data);
             }
             
-            console.log('Parsed reviews data:', reviewsData);
-            console.log('Number of reviews:', reviewsData.length);
+            console.log('Разобранные данные отзывов:', reviewsData);
+            console.log('Количество отзывов:', reviewsData.length);
 
             if (reviewsData.length === 0) {
-                console.warn('No reviews returned from API');
+                console.warn('Нет отзывов, возвращенных от АПИ');
             }
 
             const reviewsWithAvatars = reviewsData.map(review => ({
@@ -160,22 +160,22 @@ const App = () => {
 
             setReviews(reviewsWithAvatars);
         } catch (err) {
-            console.error('Error fetching reviews:', err);
-            console.error('Error details:', err.response?.data);
-            // Try to fetch again with a different API endpoint as fallback
+            console.error('Ошибка при поиске отзывов:', err);
+            console.error('Детали ошибки:', err.response?.data);
+            // Попробуйте снова с другой конечной точкой API в качестве резерва
             try {
-                console.log('Trying fallback API endpoint...');
+                console.log('Пробуем запасной API эндпоинт...');
                 const fallbackResponse = await axios.get(`${API_URL}/api/reviews`);
-                console.log('Fallback API response:', fallbackResponse);
+                console.log('Ответ от запасного API:', fallbackResponse);
                 
                 const fallbackData = fallbackResponse.data && fallbackResponse.data.reviews ? 
                     fallbackResponse.data.reviews : 
                     Array.isArray(fallbackResponse.data) ? fallbackResponse.data : [];
                 
-                console.log('Fallback reviews data:', fallbackData);
+                console.log('Данные от запасного API:', fallbackData);
                 setReviews(fallbackData.map(review => ({...review, avatar: null})));
             } catch (fallbackErr) {
-                console.error('Fallback API request also failed:', fallbackErr);
+                console.error('Ошибка при запросе резервного API:', fallbackErr);
                 setReviews([]);
             }
         }
@@ -185,72 +185,9 @@ const App = () => {
         fetchReviews();
     }, []);
 
-    // Add mock reviews for testing if no reviews are found
+    // Добавьте mock отзывы для тестирования, если нет отзывов
     useEffect(() => {
-        // Only add mock data if no reviews exist
-        if (reviews.length === 0) {
-            console.log('No reviews found, adding mock data for testing');
-            
-            // Create mock reviews for testing
-            const mockReviews = [
-                {
-                    id: 1001,
-                    userId: 1,
-                    user_id: 1,
-                    restaurantName: 'Тестовый ресторан 1',
-                    restaurant_name: 'Тестовый ресторан 1',
-                    rating: 4,
-                    comment: 'Отличное место, вкусная еда, приятная атмосфера. Рекомендую попробовать фирменные блюда.',
-                    date: new Date().toISOString(),
-                    user_name: 'Тестовый пользователь',
-                    avatar: null,
-                    likes: 5,
-                    foodRating: 4,
-                    serviceRating: 5,
-                    atmosphereRating: 4,
-                    priceRating: 3,
-                    cleanlinessRating: 5
-                },
-                {
-                    id: 1002,
-                    userId: 2,
-                    user_id: 2,
-                    restaurantName: 'Тестовый ресторан 2',
-                    restaurant_name: 'Тестовый ресторан 2',
-                    rating: 5,
-                    comment: 'Превосходный ресторан! Все блюда очень вкусные, персонал внимательный и дружелюбный.',
-                    date: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-                    user_name: 'Тестовый клиент',
-                    avatar: null,
-                    likes: 3,
-                    foodRating: 5,
-                    serviceRating: 5,
-                    atmosphereRating: 5,
-                    priceRating: 4,
-                    cleanlinessRating: 5
-                },
-                {
-                    id: 1003,
-                    userId: 3,
-                    user_id: 3,
-                    restaurantName: 'Тестовый ресторан 3',
-                    restaurant_name: 'Тестовый ресторан 3',
-                    rating: 3,
-                    comment: 'Неплохое заведение, но есть над чем работать. Еда хорошая, но сервис мог бы быть лучше.',
-                    date: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-                    user_name: 'Тестовый гость',
-                    avatar: null,
-                    likes: 1,
-                    foodRating: 4,
-                    serviceRating: 2,
-                    atmosphereRating: 3,
-                    priceRating: 3, 
-                    cleanlinessRating: 4
-                }
-            ];
-            
-            setReviews(mockReviews);
-        }
+   
     }, [reviews]);
 
     const refreshReviews = () => {
@@ -259,7 +196,7 @@ const App = () => {
 
     const handleThemeToggle = (darkMode) => {
         setIsDarkMode(darkMode);
-        // Additional theme-switching logic
+        // Дополнительная логика переключения темы
         document.documentElement.classList.toggle('dark', darkMode);
     };
 
@@ -382,23 +319,11 @@ const App = () => {
         setIsLoginModalOpen(false);
         fetchReviews();
 
-        // Автоматически перенаправляем на панель администратора, если пользователь имеет права администратора
+        // Логируем роль пользователя, но не делаем автоматический редирект
         if (userData && (userData.role === 'admin' || userData.role === 'super_admin' || userData.role === 'moderator' || 
             userData.role === 'глав_админ' || userData.role === 'head_admin' || 
             userData.role === 'manager' || userData.role === 'менеджер')) {
-            // Ждем обновления состояния аутентификации
-            const checkAuthAndNavigate = () => {
-                if (isAuthenticated && user) {
-                    // Используем window.location для принудительного перехода
-                    window.location.href = '/admin';
-                } else {
-                    // Если состояние еще не обновилось, ждем еще немного
-                    setTimeout(checkAuthAndNavigate, 100);
-                }
-            };
-            
-            // Начинаем проверку через небольшую задержку
-            setTimeout(checkAuthAndNavigate, 100);
+            console.log('Пользователь имеет административную роль:', userData.role);
         }
     };
 
@@ -564,7 +489,7 @@ const App = () => {
                     } />
 
                     <Route path="/admin" element={
-                        isAuthenticated && (['admin', 'head_admin', 'manager', 'moderator', 'super_admin', 'глав_админ', 'менеджер', 'модератор'].includes(user?.role)) ? (
+                        isAuthenticated && (['admin', 'head_admin', 'moderator', 'super_admin', 'глав_админ', 'модератор'].includes(user?.role)) ? (
                             <AdminPanel user={user} />
                         ) : (
                             <div className="text-center p-8">
@@ -580,7 +505,7 @@ const App = () => {
                     } />
 
                     <Route path="/admin/restaurant/:id" element={
-                        isAuthenticated && (['admin', 'head_admin', 'manager', 'moderator', 'super_admin', 'глав_админ', 'менеджер', 'модератор'].includes(user?.role)) ? (
+                        isAuthenticated && (['admin', 'head_admin', 'moderator', 'super_admin', 'глав_админ', 'модератор'].includes(user?.role)) ? (
                             <RestaurantEditor user={user} />
                         ) : (
                             <div className="text-center p-8">
@@ -613,7 +538,7 @@ const App = () => {
                             <React.Suspense fallback={<div className="flex justify-center items-center h-64">
                                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-white"></div>
                             </div>}>
-                                {console.log('User role for manager route:', user?.role)}
+                                {console.log('Роль пользователя для маршрута менеджера:', user?.role)}
                                 <ManagerDashboard />
                             </React.Suspense>
                         ) : (

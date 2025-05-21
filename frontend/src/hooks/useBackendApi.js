@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import api from '../utils/api';
 
 /**
- * Custom hook for handling backend API requests with loading states and error handling
- * @returns {Object} - Methods and state for working with backend API
+ * Пользовательский хук для обработки запросов к бэкенду с состояниями загрузки и обработкой ошибок
+ * @returns {Object} - Методы и состояние для работы с бэкендом
  */
 export const useBackendApi = () => {
   const [loading, setLoading] = useState(false);
@@ -20,11 +20,17 @@ export const useBackendApi = () => {
     setError(null);
     
     try {
-      // Remove leading slash if present to avoid path issues
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-      console.log(`Sending API request to: ${cleanEndpoint}`, params);
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      const url = buildUrl(cleanEndpoint);
       
-      const response = await api.get(cleanEndpoint, { params });
+      // Логируем запрос на русском
+      console.log(`Отправка GET запроса к API: ${cleanEndpoint}`, params);
+      
+      const response = await api.get(url, {
+        params,
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
       return response.data;
     } catch (err) {
       console.error(`API Error from ${endpoint}:`, err);
@@ -52,11 +58,16 @@ export const useBackendApi = () => {
     setError(null);
     
     try {
-      // Remove leading slash if present to avoid path issues
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-      console.log(`Sending API POST request to: ${cleanEndpoint}`, data);
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      const url = buildUrl(cleanEndpoint);
       
-      const response = await api.post(cleanEndpoint, data);
+      // Логируем запрос на русском
+      console.log(`Отправка POST запроса к API: ${cleanEndpoint}`, data);
+      
+      const response = await api.post(url, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
       return response.data;
     } catch (err) {
       console.error(`API Error from ${endpoint}:`, err);
@@ -84,11 +95,16 @@ export const useBackendApi = () => {
     setError(null);
     
     try {
-      // Remove leading slash if present to avoid path issues
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-      console.log(`Sending API PUT request to: ${cleanEndpoint}`, data);
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      const url = buildUrl(cleanEndpoint);
       
-      const response = await api.put(cleanEndpoint, data);
+      // Логируем запрос на русском
+      console.log(`Отправка PUT запроса к API: ${cleanEndpoint}`, data);
+      
+      const response = await api.put(url, data, {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
       return response.data;
     } catch (err) {
       console.error(`API Error from ${endpoint}:`, err);
@@ -115,11 +131,16 @@ export const useBackendApi = () => {
     setError(null);
     
     try {
-      // Remove leading slash if present to avoid path issues
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-      console.log(`Sending API DELETE request to: ${cleanEndpoint}`);
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      const url = buildUrl(cleanEndpoint);
       
-      const response = await api.delete(cleanEndpoint);
+      // Логируем запрос на русском
+      console.log(`Отправка DELETE запроса к API: ${cleanEndpoint}`);
+      
+      const response = await api.delete(url, {
+        headers: getAuthHeaders(),
+        withCredentials: true
+      });
       return response.data;
     } catch (err) {
       console.error(`API Error from ${endpoint}:`, err);

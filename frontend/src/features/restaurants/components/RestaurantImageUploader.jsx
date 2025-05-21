@@ -4,12 +4,12 @@ import { restaurantService } from '../services/restaurantService';
 import { motion } from 'framer-motion';
 
 /**
- * Component for uploading restaurant images
+ * Компонент для загрузки изображений ресторана
  * 
  * @param {Object} props
- * @param {number|string} props.restaurantId - ID of the restaurant
- * @param {Function} props.onImageUploaded - Callback function called after successful upload
- * @param {string} props.currentImage - Current image URL (optional)
+ * @param {number|string} props.restaurantId - ID ресторана
+ * @param {Function} props.onImageUploaded - Callback функция, вызываемая после успешной загрузки
+ * @param {string} props.currentImage - Текущий URL изображения (опционально)
  */
 const RestaurantImageUploader = ({ restaurantId, onImageUploaded, currentImage }) => {
     const [isDragging, setIsDragging] = useState(false);
@@ -17,57 +17,57 @@ const RestaurantImageUploader = ({ restaurantId, onImageUploaded, currentImage }
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
     
-    // Process the file upload
+    // Обработка загрузки файла
     const handleFileUpload = async (file) => {
         if (!file) return;
         
-        // Reset states
+        // Сброс состояний
         setError(null);
         setSuccess(false);
         setIsUploading(true);
         
         try {
-            // Check file type
+            // Проверка типа файла
             const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             if (!validTypes.includes(file.type)) {
                 throw new Error('Неподдерживаемый формат файла. Разрешены только JPEG, PNG, GIF и WEBP');
             }
             
-            // Check file size (5MB max)
+            // Проверка размера файла (5MB максимум)
             if (file.size > 5 * 1024 * 1024) {
                 throw new Error('Файл слишком большой. Максимальный размер 5MB');
             }
             
-            // Upload the image
+            // Загрузка изображения
             const response = await restaurantService.uploadRestaurantImage(restaurantId, file);
             
-            // Handle success
+            // Обработка успеха
             setSuccess(true);
             
-            // Call the callback with the new image URL
+            // Вызов callback с новым URL изображения
             if (onImageUploaded && response.imageUrl) {
                 onImageUploaded(response.imageUrl);
             }
             
-            // Reset success message after 3 seconds
+            // Сброс сообщения об успехе через 3 секунды
             setTimeout(() => {
                 setSuccess(false);
             }, 3000);
         } catch (error) {
-            console.error('Error uploading image:', error);
+            console.error('Ошибка при загрузке изображения:', error);
             setError(error.message || 'Произошла ошибка при загрузке изображения');
         } finally {
             setIsUploading(false);
         }
     };
     
-    // Handle file input change
+    // Обработка изменения файла ввода
     const handleInputChange = (e) => {
         const file = e.target.files[0];
         handleFileUpload(file);
     };
     
-    // Handle drag and drop events
+    // Обработка событий перетаскивания и сброса
     const handleDragOver = (e) => {
         e.preventDefault();
         setIsDragging(true);

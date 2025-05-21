@@ -25,9 +25,25 @@ const RestaurantEditor = ({ user }) => {
         category: '',
         priceRange: '₽₽',
         minPrice: '',
-        deliveryTime: ''
+        deliveryTime: '',
+        workingHours: {
+            openTime: '10:00',
+            closeTime: '22:00'
+        }
     });
     
+    // Предопределенные категории ресторанов
+    const categories = [
+        { id: 'italian', name: 'Итальянская кухня' },
+        { id: 'asian', name: 'Азиатская кухня' },
+        { id: 'russian', name: 'Русская кухня' },
+        { id: 'seafood', name: 'Морепродукты' },
+        { id: 'french', name: 'Французская кухня' },
+        { id: 'georgian', name: 'Грузинская кухня' },
+        { id: 'mexican', name: 'Мексиканская кухня' },
+        { id: 'american', name: 'Американская кухня' }
+    ];
+
     // Function to validate and process image URL
     const processImageUrl = (url) => {
         if (!url) return '';
@@ -83,7 +99,11 @@ const RestaurantEditor = ({ user }) => {
                     category: restaurantData.category || '',
                     priceRange: restaurantData.price_range || '₽₽',
                     minPrice: restaurantData.min_price || '',
-                    deliveryTime: restaurantData.delivery_time || ''
+                    deliveryTime: restaurantData.delivery_time || '',
+                    workingHours: {
+                        openTime: restaurantData.hours ? restaurantData.hours.split('-')[0].trim() : '10:00',
+                        closeTime: restaurantData.hours ? restaurantData.hours.split('-')[1].trim() : '22:00'
+                    }
                 });
             } catch (error) {
                 console.error('Error loading restaurant:', error);
@@ -108,6 +128,18 @@ const RestaurantEditor = ({ user }) => {
             }));
             return;
         }
+
+        // Special handling for deliveryTime field
+        if (name === 'deliveryTime') {
+            // Разрешаем вводить только цифры и дефис
+            if (value === '' || /^[\d-]*$/.test(value)) {
+                setRestaurant(prev => ({
+                    ...prev,
+                    [name]: value
+                }));
+            }
+            return;
+        }
         
         setRestaurant(prev => ({
             ...prev,
@@ -128,26 +160,80 @@ const RestaurantEditor = ({ user }) => {
         e.preventDefault();
         setSaving(true);
         setError(null);
-        
+
+        // Validate restaurant name
+        if (!restaurant.name.trim()) {
+            setError('Название ресторана обязательно для заполнения');
+            setSaving(false);
+            return;
+        }
+
+        // Validate restaurant name format
+        const nameRegex = /^[А-Яа-яA-Za-z0-9\s\-&№]+$/;
+        if (!nameRegex.test(restaurant.name)) {
+            setError('Название ресторана может содержать только русские и английские буквы, цифры, пробелы и дефисы');
+            setSaving(false);
+            return;
+        }
+
+        // Generate slug from restaurant name
+        let slug = restaurant.autoGenerateLink 
+            ? restaurant.name
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-zA-Zа-яА-Я0-9\s-]/g, '')
+                .replace(/[\s]+/g, '-')
+            : restaurant.slug;
+
+        // Ensure slug is not empty and valid
+        if (!slug || slug.trim() === '') {
+            slug = `restaurant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        // Validate delivery time format if provided
+        if (restaurant.deliveryTime) {
+            const timeFormat = /^\d+-\d+$/;
+            if (!timeFormat.test(restaurant.deliveryTime)) {
+                setError('Неверный формат времени доставки. Используйте формат "число-число" (например: 30-55)');
+                setSaving(false);
+                return;
+            }
+
+            const [min, max] = restaurant.deliveryTime.split('-').map(Number);
+            if (min >= max) {
+                setError('Минимальное время доставки должно быть меньше максимального');
+                setSaving(false);
+                return;
+            }
+        }
+
+        // Validate working hours
+        if (!restaurant.workingHours.openTime || !restaurant.workingHours.closeTime) {
+            setError('Пожалуйста, укажите время открытия и закрытия ресторана');
+            setSaving(false);
+            return;
+        }
+
         try {
             // Format the data to match the expected API format
             const formData = {
-                name: restaurant.name,
+                name: restaurant.name.trim(),
                 address: restaurant.address,
                 description: restaurant.description,
                 imageUrl: restaurant.imageUrl,
                 website: restaurant.website,
                 contactPhone: restaurant.contactPhone,
                 isActive: restaurant.isActive,
-                slug: restaurant.autoGenerateLink ? undefined : restaurant.slug,
-                autoGenerateLink: restaurant.autoGenerateLink,
+                slug: slug,
                 category: restaurant.category,
                 price_range: restaurant.priceRange,
                 min_price: restaurant.minPrice,
-                delivery_time: restaurant.deliveryTime
+                delivery_time: restaurant.deliveryTime,
+                hours: `${restaurant.workingHours.openTime}-${restaurant.workingHours.closeTime}`
             };
             
             console.log("Отправляемые данные:", formData);
+            console.log("Генерированный slug:", slug);
             
             let response;
             
@@ -157,9 +243,11 @@ const RestaurantEditor = ({ user }) => {
                 response = await api.put(`/restaurants/${id}`, formData);
             }
 
+            console.log("Ответ сервера:", response);
             navigate('/admin');
         } catch (error) {
             console.error('Error saving restaurant:', error);
+            console.error('Error response:', error.response?.data);
             setError(error.response?.data?.message || 'Ошибка при сохранении ресторана');
         } finally {
             setSaving(false);
@@ -233,6 +321,8 @@ const RestaurantEditor = ({ user }) => {
                             name="name"
                             value={restaurant.name}
                             onChange={handleChange}
+                            pattern="[А-Яа-яA-Za-z0-9\s\-&№]+"
+                            title="Разрешены русские и английские буквы, цифры, пробелы, дефисы"
                             required
                             className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                         />
@@ -384,14 +474,19 @@ const RestaurantEditor = ({ user }) => {
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Категория кухни
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 name="category"
                                 value={restaurant.category}
                                 onChange={handleChange}
-                                placeholder="Разная, Итальянская, Японская и т.д."
                                 className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
-                            />
+                            >
+                                <option value="">Выберите категорию</option>
+                                {categories.map(category => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -434,7 +529,47 @@ const RestaurantEditor = ({ user }) => {
                                 name="deliveryTime"
                                 value={restaurant.deliveryTime}
                                 onChange={handleChange}
-                                placeholder="Например: 30-60"
+                                placeholder="Например: 30-55"
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                            />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Формат: минимальное-максимальное время (например: 30-55)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Время открытия
+                            </label>
+                            <input
+                                type="time"
+                                value={restaurant.workingHours.openTime}
+                                onChange={(e) => setRestaurant(prev => ({
+                                    ...prev,
+                                    workingHours: {
+                                        ...prev.workingHours,
+                                        openTime: e.target.value
+                                    }
+                                }))}
+                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Время закрытия
+                            </label>
+                            <input
+                                type="time"
+                                value={restaurant.workingHours.closeTime}
+                                onChange={(e) => setRestaurant(prev => ({
+                                    ...prev,
+                                    workingHours: {
+                                        ...prev.workingHours,
+                                        closeTime: e.target.value
+                                    }
+                                }))}
                                 className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>

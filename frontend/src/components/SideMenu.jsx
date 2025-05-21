@@ -105,8 +105,7 @@ const SideMenu = ({
                                 </motion.button>
 
                                 {(user.role === 'admin' || user.role === 'super_admin' || user.role === 'moderator' || 
-                                user.role === 'глав_админ' || user.role === 'head_admin' || 
-                                user.role === 'manager' || user.role === 'менеджер') && (
+                                user.role === 'глав_админ' || user.role === 'head_admin') && (
                                     <motion.button
                                         variants={menuItemVariants}
                                         onClick={() => {

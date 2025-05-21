@@ -13,4 +13,8 @@ ADD COLUMN min_price VARCHAR(20) COMMENT 'Минимальная цена';
 
 -- Для column delivery_time
 ALTER TABLE restaurants 
-ADD COLUMN delivery_time VARCHAR(20) COMMENT 'Время доставки'; 
+ADD COLUMN delivery_time VARCHAR(20) COMMENT 'Время доставки';
+
+-- Для column hours
+ALTER TABLE restaurants 
+ADD COLUMN hours VARCHAR(20) COMMENT 'Время работы ресторана'; 

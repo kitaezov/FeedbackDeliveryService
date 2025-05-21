@@ -260,7 +260,7 @@ export const restaurantService = {
                 }
             });
             
-            // Make sure we return the correct response format with imageUrl field
+            // Убедитесь, что мы возвращаем правильный формат ответа с полем imageUrl
             if (response.data && !response.data.imageUrl && response.data.image_url) {
                 response.data.imageUrl = response.data.image_url;
             }

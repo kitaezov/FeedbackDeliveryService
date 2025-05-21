@@ -1,6 +1,6 @@
 /**
- * Review Controller
- * Handles all operations related to restaurant reviews
+ * Контроллер отзывов
+ * Обрабатывает все операции, связанные с отзывами на рестораны
  */
 
 const reviewModel = require('../models/reviewModel');
@@ -9,7 +9,7 @@ const notificationController = require('./notificationController');
 const { validateRating, validateComment, validateRestaurantName } = require('../utils/validators');
 
 /**
- * Create a new review
+ * Создать новый отзыв
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -30,11 +30,19 @@ const createReview = async (req, res) => {
         
         const userId = req.user.id;
         
-        // Validate input
+        // Проверка входных данных
         if (!userId || !restaurantName || !rating || !comment) {
             return res.status(400).json({
                 message: 'Недостаточно данных для создания отзыва',
                 details: 'Пожалуйста, заполните все обязательные поля'
+            });
+        }
+        
+        // Проверка минимальной длины отзыва
+        if (comment.length < 10) {
+            return res.status(400).json({
+                message: 'Слишком короткий отзыв',
+                details: 'Минимальная длина отзыва - 10 символов'
             });
         }
         
@@ -59,7 +67,7 @@ const createReview = async (req, res) => {
             });
         }
         
-        // Check if user exists
+        // Проверка, существует ли пользователь
         const user = await userModel.findById(userId);
         if (!user) {
             return res.status(404).json({
@@ -68,7 +76,7 @@ const createReview = async (req, res) => {
             });
         }
         
-        // Create review
+        // Создание отзыва
         const reviewData = {
             userId,
             restaurantName,
@@ -83,7 +91,7 @@ const createReview = async (req, res) => {
         
         const review = await reviewModel.create(reviewData);
         
-        // Prepare review with user info for response and broadcasting
+        // Подготовка отзыва с информацией о пользователе для ответа и трансляции
         const fullReview = {
             id: review.id,
             ...reviewData,
@@ -103,7 +111,7 @@ const createReview = async (req, res) => {
             }
         };
         
-        // Broadcast the new review to all connected clients
+        // Трансляция нового отзыва всем подключенным клиентам
         if (req.app.broadcastReview) {
             req.app.broadcastReview(fullReview);
         }
@@ -125,20 +133,22 @@ const createReview = async (req, res) => {
 };
 
 /**
- * Get all reviews
+ * Получить все отзывы
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const getAllReviews = async (req, res) => {
     try {
         const { page = 1, limit = 10, userId, restaurantName } = req.query;
+        const currentUserId = req.user ? req.user.id : null;
         
-        // Get reviews
+        // Получить отзывы
         const reviews = await reviewModel.getAll({
             page: parseInt(page),
             limit: parseInt(limit),
             userId: userId ? parseInt(userId) : undefined,
-            restaurantName
+            restaurantName,
+            currentUserId
         });
         
         res.json({
@@ -159,16 +169,16 @@ const getAllReviews = async (req, res) => {
 };
 
 /**
- * Get review by ID
+ * Получить отзыв по ID
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const getReviewById = async (req, res) => {
     try {
         const { id } = req.params;
+        const currentUserId = req.user ? req.user.id : null;
         
-        // Get review
-        const review = await reviewModel.getById(parseInt(id));
+        const review = await reviewModel.getById(parseInt(id), currentUserId);
         
         if (!review) {
             return res.status(404).json({
@@ -191,7 +201,7 @@ const getReviewById = async (req, res) => {
 };
 
 /**
- * Update review
+ * Обновить отзыв
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -210,7 +220,7 @@ const updateReview = async (req, res) => {
             } = {}
         } = req.body;
         
-        // Get review
+        // Получить отзыв
         const review = await reviewModel.getById(parseInt(id));
         
         if (!review) {
@@ -220,7 +230,7 @@ const updateReview = async (req, res) => {
             });
         }
         
-        // Check if user is the owner or admin
+        // Проверка, является ли пользователь владельцем или администратором
         if (review.user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'moderator') {
             return res.status(403).json({
                 message: 'Доступ запрещен',
@@ -228,7 +238,7 @@ const updateReview = async (req, res) => {
             });
         }
         
-        // Validate input
+        // Проверка входных данных
         if (rating && !validateRating(rating)) {
             return res.status(400).json({
                 message: 'Некорректная оценка',
@@ -243,7 +253,7 @@ const updateReview = async (req, res) => {
             });
         }
         
-        // Update review
+        // Обновление отзыва
         const reviewData = {
             rating: rating || review.rating,
             comment: comment || review.comment,
@@ -273,7 +283,7 @@ const updateReview = async (req, res) => {
 };
 
 /**
- * Delete review
+ * Удалить отзыв
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -281,7 +291,7 @@ const deleteReview = async (req, res) => {
     try {
         const { id } = req.params;
         
-        // Get review
+        // Получить отзыв
         const review = await reviewModel.getById(parseInt(id));
         
         if (!review) {
@@ -291,7 +301,7 @@ const deleteReview = async (req, res) => {
             });
         }
         
-        // Check if user is the owner or admin
+        // Проверка, является ли пользователь владельцем или администратором
         if (review.user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'moderator') {
             return res.status(403).json({
                 message: 'Доступ запрещен',
@@ -299,7 +309,7 @@ const deleteReview = async (req, res) => {
             });
         }
         
-        // Delete review
+        // Удаление отзыва
         await reviewModel.delete(parseInt(id));
         
         res.json({
@@ -315,7 +325,7 @@ const deleteReview = async (req, res) => {
 };
 
 /**
- * Like a review
+ * Оценить отзыв
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -324,7 +334,7 @@ const likeReview = async (req, res) => {
         const { reviewId } = req.body;
         const userId = req.user.id;
         
-        // Validate input
+        // Проверка входных данных
         if (!reviewId) {
             return res.status(400).json({
                 message: 'Недостаточно данных',
@@ -332,7 +342,7 @@ const likeReview = async (req, res) => {
             });
         }
         
-        // Check if review exists
+        // Проверка, существует ли отзыв
         const review = await reviewModel.getById(parseInt(reviewId, 10));
         if (!review) {
             return res.status(404).json({
@@ -341,7 +351,7 @@ const likeReview = async (req, res) => {
             });
         }
         
-        // Check if review author is not the same as the user liking it
+        // Проверка, не является ли автор отзыва тем же пользователем, который оценивает его
         if (review.user_id === userId) {
             return res.status(400).json({
                 message: 'Невозможно оценить собственный отзыв',
@@ -349,7 +359,7 @@ const likeReview = async (req, res) => {
             });
         }
         
-        // Check if user has already liked this review
+        // Проверка, не оценил ли пользователь отзыв ранее
         const hasLiked = await reviewModel.checkLiked(parseInt(reviewId, 10), userId);
         if (hasLiked) {
             return res.status(400).json({
@@ -358,13 +368,13 @@ const likeReview = async (req, res) => {
             });
         }
         
-        // Add like to the review
+        // Добавление оценки к отзыву
         await reviewModel.addLike(parseInt(reviewId, 10));
         
-        // Record the like
+        // Запись оценки
         await reviewModel.recordLike(parseInt(reviewId, 10), userId);
         
-        // Update user's likes count
+        // Обновление счетчика оценок пользователя
         const reviewAuthor = await userModel.findById(review.user_id);
         if (reviewAuthor) {
             await userModel.updateLikesCount(review.user_id);
@@ -384,12 +394,15 @@ const likeReview = async (req, res) => {
 };
 
 /**
- * Create a review with photos
+ * Создать отзыв с фотографиями
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const createReviewWithPhotos = async (req, res) => {
     try {
+        console.log('Received files:', req.files);
+        console.log('Received body:', req.body);
+        
         if (!req.body.reviewData) {
             return res.status(400).json({
                 message: 'Недостаточно данных для создания отзыва',
@@ -397,13 +410,15 @@ const createReviewWithPhotos = async (req, res) => {
             });
         }
 
-        // Parse the review data from the form
+        // Разбор данных отзыва из формы
         const reviewData = JSON.parse(req.body.reviewData);
+        console.log('Разбор данных отзыва:', reviewData);
         
         const {
             restaurantName,
             rating,
             comment,
+            hasReceipt,
             ratings: {
                 food: foodRating = 0,
                 service: serviceRating = 0,
@@ -415,11 +430,19 @@ const createReviewWithPhotos = async (req, res) => {
         
         const userId = req.user.id;
         
-        // Validate input
+        // Проверка входных данных
         if (!userId || !restaurantName || !rating || !comment) {
             return res.status(400).json({
                 message: 'Недостаточно данных для создания отзыва',
                 details: 'Пожалуйста, заполните все обязательные поля'
+            });
+        }
+        
+        // Проверка минимальной длины отзыва
+        if (comment.length < 10) {
+            return res.status(400).json({
+                message: 'Слишком короткий отзыв',
+                details: 'Минимальная длина отзыва - 10 символов'
             });
         }
         
@@ -444,7 +467,7 @@ const createReviewWithPhotos = async (req, res) => {
             });
         }
         
-        // Check if user exists
+        // Проверка, существует ли пользователь
         const user = await userModel.findById(userId);
         if (!user) {
             return res.status(404).json({
@@ -453,14 +476,38 @@ const createReviewWithPhotos = async (req, res) => {
             });
         }
         
-        // Process uploaded photos
+        // Обработка загруженных фотографий
         const photoUrls = [];
-        if (req.files && req.files.length > 0) {
+        let receiptPhotoUrl = null;
+
+        // Обработка обычных фотографий
+        if (req.files && req.files.photos && req.files.photos.length > 0) {
+            console.log('Обработка обычных фотографий:', req.files.photos.length);
             const baseUrl = `${req.protocol}://${req.get('host')}`;
-            photoUrls.push(...req.files.map(file => `${baseUrl}/uploads/reviews/${file.filename}`));
+            photoUrls.push(...req.files.photos.map(file => ({
+                url: `${baseUrl}/uploads/reviews/${file.filename}`,
+                isReceipt: false
+            })));
+        }
+
+        // Обработка фотографии чека, если она присутствует
+        if (req.files && req.files.receiptPhoto && req.files.receiptPhoto.length > 0) {
+            console.log('Обработка фотографии чека');
+            const baseUrl = `${req.protocol}://${req.get('host')}`;
+            const receiptFile = req.files.receiptPhoto[0];
+            receiptPhotoUrl = `${baseUrl}/uploads/receipts/${receiptFile.filename}`;
+            
+            // Добавление чека в массив фотографий с особым флагом
+            photoUrls.push({
+                url: receiptPhotoUrl,
+                isReceipt: true
+            });
         }
         
-        // Create review with photos
+        console.log('URL фотографий:', photoUrls);
+        console.log('URL фотографии чека:', receiptPhotoUrl);
+        
+        // Создание отзыва с фотографиями
         const reviewDataWithPhotos = {
             userId,
             restaurantName,
@@ -471,12 +518,14 @@ const createReviewWithPhotos = async (req, res) => {
             atmosphereRating,
             priceRating,
             cleanlinessRating,
-            photos: photoUrls
+            photos: photoUrls,
+            hasReceipt: !!receiptPhotoUrl || hasReceipt,
+            receiptPhoto: receiptPhotoUrl
         };
         
         const review = await reviewModel.createWithPhotos(reviewDataWithPhotos);
         
-        // Prepare review with user info for response and broadcasting
+        // Подготовка отзыв а с информацией о пользователе для ответа и трансляции
         const fullReview = {
             id: review.id,
             ...reviewDataWithPhotos,
@@ -488,6 +537,8 @@ const createReviewWithPhotos = async (req, res) => {
             avatar: user.avatar || null,
             likes: 0,
             photos: photoUrls,
+            hasReceipt: !!receiptPhotoUrl || hasReceipt,
+            receiptPhoto: receiptPhotoUrl,
             ratings: {
                 food: foodRating,
                 service: serviceRating,
@@ -497,7 +548,7 @@ const createReviewWithPhotos = async (req, res) => {
             }
         };
         
-        // Broadcast the new review to all connected clients
+        // Трансляция нового отзыва всем подключенным клиентам
         if (req.app.broadcastReview) {
             req.app.broadcastReview(fullReview);
         }

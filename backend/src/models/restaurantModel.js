@@ -1,13 +1,16 @@
 /**
- * Restaurant Model
- * Handles all database operations related to restaurants
+ * Модель ресторана
+ * Обрабатывает все операции с базой данных, связанные с ресторанами
  */
 
 const pool = require('../config/database');
 
+/**
+ * Класс для работы с ресторанами
+ */
 class RestaurantModel {
     constructor() {
-        // Schedule column check for next tick to allow database initialization to complete
+        // Планирование проверки столбцов на следующий тик, чтобы позволить завершиться инициализации базы данных
         process.nextTick(() => {
             this.ensureColumnsExist().catch(err => {
                 console.log('Warning: Initial column check failed, will retry when used:', err.message);
@@ -16,8 +19,8 @@ class RestaurantModel {
     }
     
     /**
-     * Ensure that all required columns exist in the restaurants table
-     * This method runs when the model is first initialized
+     * Убедиться, что все необходимые столбцы существуют в таблице ресторанов
+     * Этот метод запускается при первой инициализации модели
      */
     async ensureColumnsExist() {
         try {
@@ -66,29 +69,28 @@ class RestaurantModel {
     }
 
     /**
-     * Make sure ensureColumnsExist has run before any database operations
+     * Убедиться, что ensureColumnsExist выполнен перед операциями с базой данных
      */
     async ensureColumnsExistBeforeOperation() {
         try {
             await this.ensureColumnsExist();
         } catch (error) {
             console.error('Failed to ensure columns exist before operation:', error.message);
-            // Continue anyway as the operation might still succeed
+            // Продолжаем операцию, даже если она может все еще быть успешной
         }
     }
     
     /**
-     * Create a new restaurant
-     * @param {Object} restaurantData - Restaurant data
-     * @returns {Promise<Object>} - Created restaurant info
+     * Создать новый ресторан
+     * @param {Object} restaurantData - Данные ресторана
+     * @returns {Promise<Object>} - Информация о созданном ресторане
      */
     async create(restaurantData) {
         try {
-            // Ensure columns exist before proceeding
             await this.ensureColumnsExistBeforeOperation();
             
             console.log('=== RestaurantModel.create called ===');
-            console.log('Input data:', JSON.stringify(restaurantData, null, 2));
+            console.log('Входные данные:', JSON.stringify(restaurantData, null, 2));
             
             const {
                 name,
@@ -98,29 +100,66 @@ class RestaurantModel {
                 website,
                 contactPhone,
                 criteria = {},
-                autoGenerateLink = true,
+                slug,
                 category,
                 price_range,
                 min_price,
-                delivery_time
+                delivery_time,
+                hours
             } = restaurantData;
             
-            // Generate a URL-friendly slug from the name if autoGenerateLink is true
-            const slug = autoGenerateLink ? this.generateSlug(name) : null;
+            if (!name || name.trim() === '') {
+                throw new Error('Название ресторана не может быть пустым');
+            }
+
+            // Генерируем базовый slug из названия
+            let finalSlug = this.generateSlug(name);
             
-            console.log('=== Prepared data for SQL ===');
-            console.log('Name:', name);
-            console.log('Slug:', slug);
-            console.log('Category:', category);
-            console.log('Price Range:', price_range);
-            console.log('Min Price:', min_price);
-            console.log('Delivery Time:', delivery_time);
+            // Если slug все еще пустой, генерируем случайный
+            if (!finalSlug || finalSlug.trim() === '') {
+                finalSlug = `restaurant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+
+            // Проверяем уникальность slug
+            let isUnique = false;
+            let attempts = 0;
+            let currentSlug = finalSlug;
+
+            while (!isUnique && attempts < 5) {
+                const existing = await this.getBySlug(currentSlug);
+                if (!existing) {
+                    isUnique = true;
+                    finalSlug = currentSlug;
+                } else {
+                    currentSlug = `${finalSlug}-${Date.now()}-${attempts}`;
+                    attempts++;
+                }
+            }
+
+            // Если все попытки исчерпаны, генерируем полностью случайный slug
+            if (!isUnique) {
+                finalSlug = `restaurant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+
+            // Финальная проверка перед вставкой
+            if (!finalSlug || finalSlug.trim() === '') {
+                throw new Error('Не удалось сгенерировать корректный slug для ресторана');
+            }
+            
+            console.log('=== Подготовленные данные для SQL ===');
+            console.log('Имя:', name);
+            console.log('Финальный слаг:', finalSlug);
+            console.log('Категория:', category);
+            console.log('Ценовой диапазон:', price_range);
+            console.log('Минимальная цена:', min_price);
+            console.log('Время доставки:', delivery_time);
+            console.log('Время работы:', hours);
             console.log('============================');
             
             const [result] = await pool.execute(
                 `INSERT INTO restaurants 
-                (name, address, description, image_url, website, contact_phone, criteria, slug, category, price_range, min_price, delivery_time) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                (name, address, description, image_url, website, contact_phone, criteria, slug, category, price_range, min_price, delivery_time, hours) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     name,
                     address || null,
@@ -129,49 +168,85 @@ class RestaurantModel {
                     website || null,
                     contactPhone || null,
                     JSON.stringify(criteria),
-                    slug,
+                    finalSlug,
                     category || null,
                     price_range || null,
                     min_price || null,
-                    delivery_time || null
+                    delivery_time || null,
+                    hours || null
                 ]
             );
             
-            console.log('=== SQL execution result ===');
+            console.log('=== Результат выполнения SQL ===');
             console.log('Insert ID:', result.insertId);
             console.log('===========================');
             
             return { 
                 id: result.insertId, 
                 ...restaurantData,
-                slug
+                slug: finalSlug
             };
         } catch (error) {
-            console.error('Error in RestaurantModel.create:', error);
-            console.error('SQL Error Code:', error.code);
-            console.error('SQL Error Message:', error.message);
-            console.error('SQL Error SQL:', error.sql);
+            console.error('Ошибка в RestaurantModel.create:', error);
+            console.error('Код ошибки SQL:', error.code);
+            console.error('Сообщение ошибки SQL:', error.message);
+            console.error('Ошибка SQL:', error.sql);
             throw error;
         }
     }
     
     /**
-     * Generate a URL-friendly slug from a restaurant name
-     * @param {string} name - Restaurant name
-     * @returns {string} - URL-friendly slug
+     * Генерирует URL-дружественный slug из названия
+     * @param {string} name - Название ресторана
+     * @returns {string} - Сгенерированный slug
      */
     generateSlug(name) {
-        return name
-            .toLowerCase()
-            .replace(/[^\w\s-]/g, '') // Remove non-word chars
-            .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-            .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+        // Если имя пустое или undefined, сразу возвращаем уникальный идентификатор
+        if (!name || typeof name !== 'string' || name.trim() === '') {
+            return `restaurant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        // Таблица транслитерации для русских букв
+        const transliteration = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+            'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '',
+            'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+            'А': 'a', 'Б': 'b', 'В': 'v', 'Г': 'g', 'Д': 'd', 'Е': 'e', 'Ё': 'yo',
+            'Ж': 'zh', 'З': 'z', 'И': 'i', 'Й': 'y', 'К': 'k', 'Л': 'l', 'М': 'm',
+            'Н': 'n', 'О': 'o', 'П': 'p', 'Р': 'r', 'С': 's', 'Т': 't', 'У': 'u',
+            'Ф': 'f', 'Х': 'h', 'Ц': 'ts', 'Ч': 'ch', 'Ш': 'sh', 'Щ': 'sch', 'Ъ': '',
+            'Ы': 'y', 'Ь': '', 'Э': 'e', 'Ю': 'yu', 'Я': 'ya'
+        };
+
+        try {
+            // Транслитерация и очистка
+            let slug = name.trim()
+                .split('')
+                .map(char => transliteration[char] || char)
+                .join('')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            // Если после всех преобразований slug пустой или слишком короткий
+            if (!slug || slug.length < 3) {
+                return `restaurant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+
+            return slug;
+        } catch (error) {
+            console.error('Ошибка при генерации slug:', error);
+            // В случае любой ошибки возвращаем гарантированно уникальный slug
+            return `restaurant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        }
     }
     
     /**
-     * Get all restaurants
-     * @param {Object} options - Filtering and pagination options
-     * @returns {Promise<Array>} - List of restaurants
+     * Получить все рестораны
+     * @param {Object} options - Параметры фильтрации и пагинации
+     * @returns {Promise<Array>} - Список ресторанов
      */
     async getAll(options = {}) {
         await this.ensureColumnsExistBeforeOperation();
@@ -205,9 +280,9 @@ class RestaurantModel {
     }
     
     /**
-     * Get a restaurant by ID
-     * @param {number} id - Restaurant ID
-     * @returns {Promise<Object|null>} - Restaurant object or null
+     * Получить ресторан по ID
+     * @param {number} id - ID ресторана
+     * @returns {Promise<Object|null>} - Объект ресторана или null
      */
     async getById(id) {
         await this.ensureColumnsExistBeforeOperation();
@@ -221,9 +296,9 @@ class RestaurantModel {
     }
     
     /**
-     * Get a restaurant by slug
-     * @param {string} slug - Restaurant slug
-     * @returns {Promise<Object|null>} - Restaurant object or null
+     * Получить ресторан по слагу
+     * @param {string} slug - Слаг ресторана
+     * @returns {Promise<Object|null>} - Объект ресторана или null
      */
     async getBySlug(slug) {
         await this.ensureColumnsExistBeforeOperation();
@@ -237,9 +312,9 @@ class RestaurantModel {
     }
     
     /**
-     * Get a restaurant by name
-     * @param {string} name - Restaurant name
-     * @returns {Promise<Object|null>} - Restaurant object or null
+     * Получить ресторан по имени
+     * @param {string} name - Название ресторана
+     * @returns {Promise<Object|null>} - Объект ресторана или null
      */
     async getByName(name) {
         await this.ensureColumnsExistBeforeOperation();
@@ -253,10 +328,10 @@ class RestaurantModel {
     }
     
     /**
-     * Update a restaurant
-     * @param {number} id - Restaurant ID
-     * @param {Object} restaurantData - Data to update
-     * @returns {Promise<boolean>} - Success status
+     * Обновить данные ресторана
+     * @param {number} id - ID ресторана
+     * @param {Object} restaurantData - Новые данные ресторана
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async update(id, restaurantData) {
         try {
@@ -278,10 +353,11 @@ class RestaurantModel {
                 category,
                 price_range,
                 min_price,
-                delivery_time
+                delivery_time,
+                hours
             } = restaurantData;
             
-            // Build set clause and params array for SQL query
+            // Построение предложения set и массива параметров для SQL-запроса
             const setClauses = [];
             const params = [];
             
@@ -300,7 +376,7 @@ class RestaurantModel {
                 params.push(description);
             }
             
-            // Handle image URL properly
+            // Обработка URL-адреса изображения правильно
             if (imageUrl !== undefined) {
                 setClauses.push('image_url = ?');
                 params.push(imageUrl);
@@ -345,24 +421,29 @@ class RestaurantModel {
                 setClauses.push('delivery_time = ?');
                 params.push(delivery_time);
             }
+
+            if (hours !== undefined) {
+                setClauses.push('hours = ?');
+                params.push(hours);
+            }
             
-            // Add where clause param
+            // Добавление условия where и параметра
             params.push(id);
             
-            // If no set clauses, return false
+            // Если нет предложений set, возвращаем false
             if (setClauses.length === 0) {
-                console.log('No fields to update');
+                console.log('Нет полей для обновления');
                 return false;
             }
             
-            // Execute update query
+            // Выполнение запроса на обновление
             const sqlQuery = `UPDATE restaurants SET ${setClauses.join(', ')} WHERE id = ?`;
             console.log('SQL Query:', sqlQuery);
             console.log('Params:', params);
             
             await pool.execute(sqlQuery, params);
             
-            // Get updated restaurant to return
+            // Получение обновленного ресторана для возврата
             const [rows] = await pool.execute(
                 'SELECT * FROM restaurants WHERE id = ?',
                 [id]
@@ -370,15 +451,15 @@ class RestaurantModel {
             
             return rows.length > 0 ? rows[0] : false;
         } catch (error) {
-            console.error('Error updating restaurant:', error);
+            console.error('Ошибка при обновлении ресторана:', error);
             throw error;
         }
     }
     
     /**
-     * Delete a restaurant
-     * @param {number} id - Restaurant ID
-     * @returns {Promise<boolean>} - Success status
+     * Удалить ресторан
+     * @param {number} id - ID ресторана
+     * @returns {Promise<boolean>} - Результат удаления
      */
     async delete(id) {
         await this.ensureColumnsExistBeforeOperation();
@@ -388,10 +469,10 @@ class RestaurantModel {
     }
     
     /**
-     * Update restaurant criteria
-     * @param {number} id - Restaurant ID
-     * @param {Object} criteria - Criteria data
-     * @returns {Promise<boolean>} - Success status
+     * Обновить критерии ресторана
+     * @param {number} id - ID ресторана
+     * @param {Object} criteria - Объект с критериями
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async updateCriteria(id, criteria) {
         await this.ensureColumnsExistBeforeOperation();
@@ -405,19 +486,19 @@ class RestaurantModel {
     }
     
     /**
-     * Update a restaurant's slug/URL
-     * @param {number} id - Restaurant ID
-     * @param {string} slug - New URL slug
-     * @returns {Promise<boolean>} - Success status
+     * Обновить слаг ресторана
+     * @param {number} id - ID ресторана
+     * @param {string} slug - Новый слаг
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async updateSlug(id, slug) {
         await this.ensureColumnsExistBeforeOperation();
         
         const cleanSlug = slug
             .toLowerCase()
-            .replace(/[^\w\s-]/g, '') // Remove non-word chars
-            .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-            .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+            .replace(/[^\w\s-]/g, '') // Удаление не-словарных символов
+            .replace(/[\s_-]+/g, '-') // Замена пробелов и подчеркиваний на дефисы
+            .replace(/^-+|-+$/g, ''); // Удаление начальных/конечных дефисов
             
         await pool.execute(
             'UPDATE restaurants SET slug = ?, updated_at = NOW() WHERE id = ?',
@@ -428,14 +509,14 @@ class RestaurantModel {
     }
     
     /**
-     * Search restaurants by query string (searches in name, address, and description)
-     * @param {string} query - Search query
-     * @returns {Promise<Array>} - List of matching restaurants
+     * Поиск ресторанов
+     * @param {string} query - Поисковый запрос
+     * @returns {Promise<Array>} - Результаты поиска
      */
     async search(query) {
         await this.ensureColumnsExistBeforeOperation();
         
-        // Prepare the search query with wildcards for LIKE operation
+        // Подготовка поискового запроса с подстановочными знаками для операции LIKE
         const searchParam = `%${query}%`;
         
         const [rows] = await pool.execute(

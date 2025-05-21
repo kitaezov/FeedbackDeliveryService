@@ -35,7 +35,7 @@ const createTicket = async (req, res) => {
         
         const ticket = await supportTicketModel.create(ticketData);
         
-        // Create the initial message
+        // Создаем начальное сообщение
         await supportMessageModel.create({
             ticket_id: ticket.id,
             user_id: userId,
@@ -43,17 +43,17 @@ const createTicket = async (req, res) => {
             is_staff_reply: false
         });
         
-        // Get user information for WebSocket notification
+        // Получаем информацию о пользователе для WebSocket-уведомления
         const user = await userModel.findById(userId);
         if (user) {
-            // Add user info to ticket for notification
+            // Добавляем информацию о пользователе в билет для уведомления
             const ticketWithUser = {
                 ...ticket,
                 user_name: user.name,
                 user_email: user.email
             };
             
-            // Send WebSocket notification to staff
+            // Отправляем WebSocket-уведомление сотрудникам
             if (req.app.broadcastSupportTicket) {
                 req.app.broadcastSupportTicket(ticketWithUser);
             }
@@ -61,23 +61,23 @@ const createTicket = async (req, res) => {
         
         return res.status(201).json({
             success: true,
-            message: 'Support ticket created successfully',
+            message: 'Билет поддержки успешно создан',
             data: ticket
         });
     } catch (error) {
-        console.error('Error creating support ticket:', error);
+        console.error('Ошибка при создании билета поддержки:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Внутренняя ошибка сервера'
         });
     }
 };
 
 /**
- * Get user's support tickets
+ * Получить билеты поддержки пользователя
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
- * @returns {Object} - Response with user's tickets
+ * @returns {Object} - Ответ с билетами пользователя
  */
 const getUserTickets = async (req, res) => {
     try {
@@ -92,30 +92,30 @@ const getUserTickets = async (req, res) => {
             data: tickets
         });
     } catch (error) {
-        console.error('Error getting user tickets:', error);
+        console.error('Ошибка при получении билетов пользователя:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Внутренняя ошибка сервера'
         });
     }
 };
 
 /**
- * Get all support tickets (for staff)
+ * Получить все билеты поддержки (для сотрудников)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
- * @returns {Object} - Response with tickets
+ * @returns {Object} - Ответ с билетами
  */
 const getAllTickets = async (req, res) => {
     try {
         const { status, priority, limit, offset } = req.query;
         
-        // Check if user is authorized (manager, admin, or head_admin)
+        // Проверяем, авторизован ли пользователь (manager, admin, или head_admin)
         const userRole = req.user.role;
         if (!['manager', 'admin', 'head_admin'].includes(userRole)) {
             return res.status(403).json({
                 success: false,
-                message: 'Unauthorized access'
+                message: 'Неавторизованный доступ'
             });
         }
         
@@ -127,19 +127,19 @@ const getAllTickets = async (req, res) => {
             data: tickets
         });
     } catch (error) {
-        console.error('Error getting all tickets:', error);
+        console.error('Ошибка при получении всех билетов:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Внутренняя ошибка сервера'
         });
     }
 };
 
 /**
- * Get ticket by ID with messages
+ * Получить билет по ID с сообщениями
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
- * @returns {Object} - Response with ticket and messages
+ * @returns {Object} - Ответ с билетом и сообщениями
  */
 const getTicketById = async (req, res) => {
     try {
@@ -152,22 +152,22 @@ const getTicketById = async (req, res) => {
         if (!ticket) {
             return res.status(404).json({
                 success: false,
-                message: 'Ticket not found'
+                message: 'Билет не найден'
             });
         }
         
-        // Check if user is authorized to view this ticket
+        // Проверяем, авторизован ли пользователь для просмотра этого билета
         const isAuthorized = ticket.user_id === userId || 
                              ['manager', 'admin', 'head_admin'].includes(userRole);
         
         if (!isAuthorized) {
             return res.status(403).json({
                 success: false,
-                message: 'Unauthorized access'
+                message: 'Неавторизованный доступ'
             });
         }
         
-        // Get messages for this ticket
+        // Получаем сообщения для этого билета
         const messages = await supportMessageModel.getByTicketId(ticketId);
         
         return res.status(200).json({
@@ -178,19 +178,19 @@ const getTicketById = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error getting ticket by ID:', error);
+        console.error('Ошибка при получении билета по ID:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Внутренняя ошибка сервера'
         });
     }
 };
 
 /**
- * Add a message to a ticket
+ * Добавить сообщение в билет
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
- * @returns {Object} - Response with created message
+ * @returns {Object} - Ответ с созданным сообщением
  */
 const addMessage = async (req, res) => {
     try {
@@ -202,31 +202,31 @@ const addMessage = async (req, res) => {
         if (!message) {
             return res.status(400).json({
                 success: false,
-                message: 'Message content is required'
+                message: 'Содержимое сообщения обязательно'
             });
         }
         
-        // Verify ticket exists
+        // Проверяем, существует ли билет
         const ticket = await supportTicketModel.findById(ticketId);
         if (!ticket) {
             return res.status(404).json({
                 success: false,
-                message: 'Ticket not found'
+                message: 'Билет не найден'
             });
         }
         
-        // Check permission to add message
+        // Проверяем, имеет ли пользователь право добавлять сообщение
         const isStaffUser = ['manager', 'admin', 'head_admin'].includes(userRole);
         const isTicketOwner = ticket.user_id === userId;
         
         if (!isTicketOwner && !isStaffUser) {
             return res.status(403).json({
                 success: false,
-                message: 'Unauthorized access'
+                message: 'Неавторизованный доступ'
             });
         }
         
-        // Create message
+        // Создаем сообщение
         const messageData = {
             ticket_id: ticketId,
             user_id: userId,
@@ -236,36 +236,36 @@ const addMessage = async (req, res) => {
         
         const createdMessage = await supportMessageModel.create(messageData);
         
-        // Update ticket status if needed
+        // Обновляем статус билета, если нужно
         if (isStaffUser && ticket.status === 'open') {
             await supportTicketModel.updateStatus(ticketId, 'in_progress');
         }
         
-        // Get user for notification purposes
+        // Получаем пользователя для целей уведомления
         const user = await userModel.findById(userId);
         
         return res.status(201).json({
             success: true,
-            message: 'Message added successfully',
+            message: 'Сообщение добавлено успешно',
             data: {
                 ...createdMessage,
                 user_name: user.name
             }
         });
     } catch (error) {
-        console.error('Error adding message:', error);
+        console.error('Ошибка при добавлении сообщения:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Внутренняя ошибка сервера'
         });
     }
 };
 
 /**
- * Update ticket status (staff only)
+ * Обновление статуса билета (для сотрудников)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
- * @returns {Object} - Response with updated ticket
+ * @returns {Object} - Ответ с обновленным билетом
  */
 const updateTicketStatus = async (req, res) => {
     try {
@@ -273,55 +273,55 @@ const updateTicketStatus = async (req, res) => {
         const userRole = req.user.role;
         const { status } = req.body;
         
-        // Check if user is authorized (staff only)
+        // Проверяем, авторизован ли пользователь (только для сотрудников)
         if (!['manager', 'admin', 'head_admin'].includes(userRole)) {
             return res.status(403).json({
                 success: false,
-                message: 'Unauthorized access'
+                message: 'Неавторизованный доступ'
             });
         }
         
         if (!status || !['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid status value'
+                message: 'Неверное значение статуса'
             });
         }
         
-        // Verify ticket exists
+        // Проверяем, существует ли билет
         const ticket = await supportTicketModel.findById(ticketId);
         if (!ticket) {
             return res.status(404).json({
                 success: false,
-                message: 'Ticket not found'
+                message: 'Билет не найден'
             });
         }
         
-        // Update ticket status
+        // Обновляем статус билета
         await supportTicketModel.updateStatus(ticketId, status);
         
         return res.status(200).json({
             success: true,
-            message: 'Ticket status updated successfully',
+            message: 'Статус билета обновлен успешно',
             data: {
                 id: ticketId,
                 status
             }
         });
     } catch (error) {
-        console.error('Error updating ticket status:', error);
+        console.error('Ошибка при обновлении статуса билета:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Внутренняя ошибка сервера'
         });
     }
 };
 
 /**
- * Update ticket priority (staff only)
+ * Обновление приоритета билета (для сотрудников)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
- * @returns {Object} - Response with updated ticket
+ * @returns {Object} - Ответ с обновленным билетом
  */
 const updateTicketPriority = async (req, res) => {
     try {
@@ -329,55 +329,55 @@ const updateTicketPriority = async (req, res) => {
         const userRole = req.user.role;
         const { priority } = req.body;
         
-        // Check if user is authorized (staff only)
+        // Проверяем, авторизован ли пользователь (только для сотрудников)
         if (!['manager', 'admin', 'head_admin'].includes(userRole)) {
             return res.status(403).json({
                 success: false,
-                message: 'Unauthorized access'
+                message: 'Неавторизованный доступ'
             });
         }
         
         if (!priority || !['low', 'medium', 'high', 'urgent'].includes(priority)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid priority value'
+                message: 'Неверное значение приоритета'
             });
         }
         
-        // Verify ticket exists
+        // Проверяем, существует ли билет
         const ticket = await supportTicketModel.findById(ticketId);
         if (!ticket) {
             return res.status(404).json({
                 success: false,
-                message: 'Ticket not found'
+                message: 'Билет не найден'
             });
         }
         
-        // Update ticket priority
+        // Обновляем приоритет билета
         await supportTicketModel.updatePriority(ticketId, priority);
         
         return res.status(200).json({
             success: true,
-            message: 'Ticket priority updated successfully',
+            message: 'Приоритет билета обновлен успешно',
             data: {
                 id: ticketId,
                 priority
             }
         });
     } catch (error) {
-        console.error('Error updating ticket priority:', error);
+        console.error('Ошибка при обновлении приоритета билета:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Внутренняя ошибка сервера'
         });
     }
 };
 
 /**
- * Delete a ticket
+ * Удаление билета
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
- * @returns {Object} - Response with deleted ticket
+ * @returns {Object} - Ответ с удаленным билетом
  */
 const deleteTicket = async (req, res) => {
     try {
@@ -385,41 +385,41 @@ const deleteTicket = async (req, res) => {
         const userId = req.user.id;
         const userRole = req.user.role;
         
-        // Verify ticket exists
+        // Проверяем, существует ли билет
         const ticket = await supportTicketModel.findById(ticketId);
         if (!ticket) {
             return res.status(404).json({
                 success: false,
-                message: 'Ticket not found'
+                message: 'Билет не найден'
             });
         }
         
-        // Check permission to delete
+        // Проверяем, имеет ли пользователь право удалить билет
         const isStaffUser = ['admin', 'head_admin'].includes(userRole);
         const isTicketOwner = ticket.user_id === userId;
         
         if (!isTicketOwner && !isStaffUser) {
             return res.status(403).json({
                 success: false,
-                message: 'Unauthorized access'
+                message: 'Неавторизованный доступ'
             });
         }
         
-        // Delete the ticket
+        // Удаляем билет
         await supportTicketModel.remove(ticketId);
         
         return res.status(200).json({
             success: true,
-            message: 'Ticket deleted successfully',
+            message: 'Билет удален успешно',
             data: {
                 id: ticketId
             }
         });
     } catch (error) {
-        console.error('Error deleting ticket:', error);
+        console.error('Ошибка при удалении билета:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Внутренняя ошибка сервера'
         });
     }
 };

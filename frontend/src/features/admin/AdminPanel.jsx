@@ -122,16 +122,24 @@ const AdminPanel = ({ user }) => {
     // После авторизации и проверки прав загружаем заблокированных пользователей
     useEffect(() => {
         // Проверка авторизации
-        if (!user || !user.token) {
+        console.log('AdminPanel: Проверка авторизации пользователя:', user);
+        
+        if (!user) {
+            console.error('AdminPanel: Пользователь не авторизован, перенаправление на главную');
             navigate('/');
             return;
         }
         
         const adminRoles = ['admin', 'head_admin', 'manager', 'moderator', 'super_admin', 'глав_админ', 'менеджер', 'модератор'];
+        console.log('AdminPanel: Роль пользователя:', user.role, 'Допустимые роли:', adminRoles);
+        
         if (!adminRoles.includes(user.role)) {
+            console.error('AdminPanel: Недостаточно прав для доступа, перенаправление на главную');
             navigate('/');
             return;
         }
+        
+        console.log('AdminPanel: Пользователь авторизован с правильной ролью, продолжаем загрузку');
         
         // Автоматически загружаем заблокированных пользователей
         if (user.role === 'admin' || user.role === 'head_admin') {

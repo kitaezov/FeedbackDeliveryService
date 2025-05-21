@@ -4,19 +4,19 @@ const bcrypt = require('bcryptjs');
 
 async function checkAdmin() {
     try {
-        console.log('Checking admin credentials...');
+        console.log('Проверка учетных данных администратора...');
         
-        // Get admin user
+        // Получаем администратора пользователя
         const [rows] = await pool.execute(
             'SELECT * FROM users WHERE email = ?',
             ['admin@yandex.ru']
         );
         
         if (rows.length === 0) {
-            console.log('Admin user not found in database!');
+            console.log('Администратор пользователя не найден в базе данных!');
             
-            // Create a new admin user
-            console.log('Creating new admin user...');
+            // Создаем нового администратора пользователя
+            console.log('Создаем нового администратора пользователя...');
             const hashedPassword = await bcrypt.hash('admin123', 10);
             
             const [result] = await pool.execute(
@@ -24,23 +24,23 @@ async function checkAdmin() {
                 ['Head Admin', 'admin@yandex.ru', hashedPassword, 'head_admin']
             );
             
-            console.log('New admin user created with ID:', result.insertId);
+            console.log('Новый администратор пользователя создан с ID:', result.insertId);
         } else {
             const admin = rows[0];
-            console.log('Admin user found:');
+            console.log('Администратор пользователя найден:');
             console.log('ID:', admin.id);
-            console.log('Name:', admin.name);
+            console.log('Имя:', admin.name);
             console.log('Email:', admin.email);
-            console.log('Role:', admin.role);
-            console.log('Is Blocked:', admin.is_blocked);
+            console.log('Роль:', admin.role);
+            console.log('Блокировка:', admin.is_blocked);
             
-            // Let's test the password
+            // Давайте протестируем пароль
             const testPassword = 'admin123';
             const isPasswordValid = await bcrypt.compare(testPassword, admin.password);
-            console.log('Password "admin123" is valid:', isPasswordValid);
+            console.log('Пароль "admin123" действителен:', isPasswordValid);
             
             if (!isPasswordValid) {
-                console.log('Resetting admin password to admin123...');
+                console.log('Сброс пароля администратора на admin123...');
                 const hashedPassword = await bcrypt.hash('admin123', 10);
                 
                 await pool.execute(
@@ -48,13 +48,13 @@ async function checkAdmin() {
                     [hashedPassword, admin.id]
                 );
                 
-                console.log('Admin password has been reset');
+                console.log('Пароль администратора сброшен');
             }
         }
     } catch (error) {
-        console.error('Error checking admin:', error);
+        console.error('Ошибка проверки администратора:', error);
     } finally {
-        // Close the database connection pool
+        // Закрываем пул соединений с базой данных
         await pool.end();
     }
 }

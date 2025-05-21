@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNotification } from '../../components/NotificationContext';
 import api from '../../utils/api';
 
-// Animation variants
+// Варианты анимации
 const buttonVariants = {
     initial: { opacity: 0, y: 5 },
     animate: { opacity: 1, y: 0 },
@@ -14,7 +14,7 @@ const buttonVariants = {
     tap: { scale: 0.95, transition: { duration: 0.1 }}
 };
 
-// Empty Reviews Component
+// Компонент пустых отзывов
 const EmptyReviews = ({ sortMode, themeClasses }) => (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -43,7 +43,7 @@ const EmptyReviews = ({ sortMode, themeClasses }) => (
     </motion.div>
 );
 
-// Sort Buttons Component
+// Компонент кнопок сортировки
 const SortButtons = ({ sortMode, setSortMode, setCurrentPage, handleRefresh, isRotating, themeClasses }) => (
     <div className="flex items-center space-x-2">
         <motion.button
@@ -90,7 +90,7 @@ const SortButtons = ({ sortMode, setSortMode, setCurrentPage, handleRefresh, isR
     </div>
 );
 
-// Pagination Component
+// Компонент пагинации
 const Pagination = ({ currentPage, totalPages, setCurrentPage }) => (
     <div className="flex justify-center mt-3">
         <div className="flex items-center space-x-1 p-1 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-xs">
@@ -131,7 +131,7 @@ const Pagination = ({ currentPage, totalPages, setCurrentPage }) => (
     </div>
 );
 
-// Review List Component
+// Компонент списка отзывов
 const ReviewList = ({ paginatedReviews, user, handleLikeReview, handleDeleteReview, isDarkMode }) => (
     <div className="grid gap-3">
         <AnimatePresence initial={false}>
@@ -157,8 +157,30 @@ const ReviewList = ({ paginatedReviews, user, handleLikeReview, handleDeleteRevi
     </div>
 );
 
+// Образец отзыва для демонстрации
+const sampleReview = {
+    id: 'sample-1',
+    userId: 'admin-1',
+    userName: 'Test Admin',
+    restaurantName: 'asdsadas',
+    rating: 5,
+    comment: 'asdasdasd',
+    date: '2025-05-10T12:00:00Z', // May 10, 2025
+    avatar: null,
+    likes: 0,
+    photos: [],
+    hasReceipt: true,
+    receiptPhoto: {
+        url: 'https://via.placeholder.com/200x300?text=Receipt+Photo',
+        isReceipt: true
+    }
+};
+
 const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewReview, isDarkMode }) => {
-    const [reviews, setReviews] = useState(initialReviews);
+    // Для демонстрации, если не было предоставлено отзывов, используйте образец отзыва
+    const startingReviews = initialReviews.length > 0 ? initialReviews : [sampleReview];
+    
+    const [reviews, setReviews] = useState(startingReviews);
     const [isRotating, setIsRotating] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortMode, setSortMode] = useState('recent');
@@ -167,7 +189,9 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
     const notifications = useNotification();
 
     React.useEffect(() => {
-        setReviews(initialReviews);
+        if (initialReviews.length > 0) {
+            setReviews(initialReviews);
+        }
     }, [initialReviews]);
 
     const addNewReview = useCallback((newReview) => {
@@ -256,7 +280,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         }
     };
 
-    // Styles configuration
+    // Конфигурация стилей
     const themeClasses = {
         card: isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800',
         button: isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
@@ -264,12 +288,6 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         paginationButton: isDarkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
         emptyState: isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-50 text-gray-600'
     };
-
-    // Add debugging logs
-    console.log('ReviewsSection initialReviews:', initialReviews);
-    console.log('ReviewsSection current reviews:', reviews);
-    console.log('ReviewsSection processedReviews:', processedReviews);
-    console.log('ReviewsSection paginatedReviews:', paginatedReviews);
 
     return (
         <div className="mb-8">

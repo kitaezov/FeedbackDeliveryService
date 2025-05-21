@@ -23,26 +23,24 @@ const cardVariants = {
         opacity: 1, 
         y: 0,
         transition: { 
-            type: 'spring',
-            stiffness: 300,
-            damping: 20
+            type: 'tween',
+            duration: 0.15
         }
     },
     hover: {
-        scale: 1.02,
-        transition: { duration: 0.2, type: "spring", stiffness: 400 }
+        scale: 1.01,
+        transition: { duration: 0.15, type: "tween" }
     }
 };
 
 // Анимации для иконок
 const iconVariants = {
     hover: { 
-        scale: 1.15,
-        rotate: 5,
+        scale: 1.1,
+        rotate: 3,
         transition: { 
-            duration: 0.2,
-            type: "spring", 
-            stiffness: 400 
+            duration: 0.15,
+            type: "tween"
         }
     }
 };
@@ -50,15 +48,14 @@ const iconVariants = {
 // Анимации для кнопок
 const buttonVariants = {
     hover: {
-        scale: 1.05,
+        scale: 1.03,
         transition: { 
-            duration: 0.2,
-            type: "spring", 
-            stiffness: 400 
+            duration: 0.15,
+            type: "tween" 
         }
     },
     tap: {
-        scale: 0.95,
+        scale: 0.97,
         transition: { 
             duration: 0.1 
         }
@@ -75,26 +72,26 @@ const featureIcons = {
     // Добавьте другие соответствия по необходимости
 };
 
-// Utility function to format image URL
+// Утилитная функция для форматирования URL изображения
 const getImageUrl = (image) => {
     if (!image) return null;
     
-    // If it's a full URL, use it directly
+    // Если это полный URL, используйте его напрямую
     if (image.startsWith('http://') || image.startsWith('https://')) {
         return image;
     }
     
-    // If it starts with a slash, prepend the API base URL
+    // Если он начинается с косой черты, добавьте базовый URL API
     if (image.startsWith('/')) {
         return `${process.env.REACT_APP_API_URL || ''}${image}`;
     }
     
-    // If it has a domain but no protocol, add https://
+    // Если он имеет домен, но не протокол, добавьте https://
     if (image.includes('.') && !image.includes(' ') && !image.match(/^[a-zA-Z]+:\/\//)) {
         return 'https://' + image;
     }
     
-    // Otherwise, prepend the API base URL
+    // В противном случае, добавьте базовый URL API
     return `${process.env.REACT_APP_API_URL || ''}${image}`;
 };
 

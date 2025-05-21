@@ -1,5 +1,5 @@
 /**
- * Restaurant Routes
+ * Маршруты ресторана
  */
 
 const express = require('express');
@@ -10,10 +10,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Path for storing restaurant images
+// Путь для хранения изображений ресторанов
 const uploadDir = path.join(__dirname, '../../public/uploads/restaurants');
 
-// Create directories if they don't exist
+// Создать директории, если они не существуют
 if (!fs.existsSync(path.join(__dirname, '../../public'))) {
     fs.mkdirSync(path.join(__dirname, '../../public'), { recursive: true });
 }
@@ -24,7 +24,7 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure storage for file uploads
+// Настроить хранилище для загрузки файлов
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
         cb(null, uploadDir);
@@ -37,7 +37,7 @@ const storage = multer.diskStorage({
     }
 });
 
-// Filter for checking file type
+// Фильтр для проверки типа файла
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -47,7 +47,7 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Configure uploader
+// Настроить загрузчик
 const upload = multer({ 
     storage: storage,
     fileFilter: fileFilter,
@@ -56,13 +56,13 @@ const upload = multer({
     }
 });
 
-// Public routes
+// Публичные маршруты
 router.get('/', restaurantController.getAllRestaurants);
 router.get('/search', restaurantController.searchRestaurants);
 router.get('/:id', restaurantController.getRestaurant);
 router.get('/by-slug/:slug', restaurantController.getRestaurantBySlug);
 
-// Admin routes (protected)
+// Маршруты администратора (защищенные)
 router.post('/', authenticateToken, checkRole('admin'), restaurantController.createRestaurant);
 router.post('/:id/image', authenticateToken, checkRole('admin'), upload.single('image'), restaurantController.uploadRestaurantImage);
 router.put('/:id', authenticateToken, checkRole('admin'), restaurantController.updateRestaurant);

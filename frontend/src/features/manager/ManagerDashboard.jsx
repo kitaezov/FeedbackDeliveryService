@@ -72,31 +72,33 @@ const ReviewItem = ({ review, onRespond }) => {
     // Форматирование даты с учетом возможных ошибок
     const formatDate = (dateString) => {
         try {
-            // Проверка является ли строка датой в ISO формате
-            if (dateString && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateString)) {
-                return new Date(dateString).toLocaleDateString();
+            // ISO формат (наиболее распространенный)
+            if (dateString && typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateString)) {
+                const date = new Date(dateString);
+                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
             } 
-            // Проверка является ли строка Unix timestamp (в миллисекундах)
+            // Unix timestamp в миллисекундах
             else if (dateString && !isNaN(Number(dateString)) && Number(dateString) > 1000000000000) {
-                return new Date(Number(dateString)).toLocaleDateString();
+                const date = new Date(Number(dateString));
+                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
             }
-            // Проверка является ли строка Unix timestamp (в секундах)
+            // Unix timestamp в секундах
             else if (dateString && !isNaN(Number(dateString)) && Number(dateString) < 1000000000000) {
-                return new Date(Number(dateString) * 1000).toLocaleDateString();
+                const date = new Date(Number(dateString) * 1000);
+                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
             }
-            // Если обычное форматирование не сработало, пробуем разные форматы
+            // Формат YYYY-MM-DD
+            else if (dateString && typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                const [year, month, day] = dateString.split('-');
+                return `${day}.${month}.${year}`;
+            }
+            // Формат DD.MM.YYYY
+            else if (dateString && typeof dateString === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(dateString)) {
+                return dateString;
+            }
+            // Если не распознан формат
             else if (dateString) {
-                // Пробуем формат YYYY-MM-DD
-                if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-                    const [year, month, day] = dateString.split('-');
-                    return new Date(year, month - 1, day).toLocaleDateString();
-                }
-                // Пробуем формат DD.MM.YYYY
-                else if (/^\d{2}\.\d{2}\.\d{4}$/.test(dateString)) {
-                    const [day, month, year] = dateString.split('.');
-                    return new Date(year, month - 1, day).toLocaleDateString();
-                }
-                // Другие форматы при необходимости
+                return String(dateString);
             }
             
             // Если ничего не сработало
@@ -167,16 +169,29 @@ const ReviewItem = ({ review, onRespond }) => {
                 <div className="mt-3">
                     {review.responded ? (
                         <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                            <p className="text-sm font-medium mb-1 dark:text-gray-300">Ваш ответ:</p>
+                            <p className="text-sm font-medium mb-1 dark:text-gray-300">
+                                <span className="text-blue-600 dark:text-blue-400">
+                                    {review.restaurant?.name || 'Ресторан'}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400"> • Менеджер ресторана</span>
+                            </p>
                             <p className="text-gray-700 dark:text-gray-300">{review.response}</p>
                         </div>
                     ) : (
                         <div>
+                            <div className="mb-2 flex items-center">
+                                <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">
+                                    Вы отвечаете как менеджер ресторана
+                                </span>
+                                <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                    {review.restaurant?.name || 'Неизвестный ресторан'}
+                                </span>
+                            </div>
                             <textarea
                                 value={responseText}
                                 onChange={(e) => setResponseText(e.target.value)}
                                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                placeholder="Напишите ваш ответ..."
+                                placeholder="Напишите ваш ответ от имени ресторана..."
                                 rows={3}
                             />
                             <button
@@ -258,21 +273,77 @@ const SimpleBarChart = ({ data }) => (
     </div>
 );
 
-const SimplePieChart = ({ data }) => (
-    <div className="h-full flex items-center justify-center">
-        <div className="grid grid-cols-2 gap-4 w-full">
-            {data?.labels?.map((label, index) => (
-                <div key={index} className="flex items-center">
-                    <div 
-                        className="w-4 h-4 mr-2 rounded-full" 
-                        style={{ backgroundColor: data.datasets[0].backgroundColor[index] }}
-                    ></div>
-                    <div className="text-sm">{label}: {data.datasets[0].data[index]}</div>
+const SimplePieChart = ({ data }) => {
+    // Проверяем наличие данных
+    if (!data || !data.labels || !data.datasets || !data.datasets[0] || !data.datasets[0].data) {
+        return <div className="h-full flex items-center justify-center text-gray-500">Нет данных</div>;
+    }
+
+    // Получаем данные о ресторанах
+    const restaurants = data.labels.map((label, index) => ({
+        name: label,
+        reviews: data.datasets[0].data[index],
+        color: data.datasets[0].backgroundColor[index]
+    })).sort((a, b) => b.reviews - a.reviews); // Сортируем по убыванию количества отзывов
+
+    // Используем динамически рассчитанные критерии оценок из данных, если они доступны
+    // Или используем заглушку, если данных нет
+    const reviewCriteria = data.criteriasRatings || [
+        { name: 'Качество еды', score: 4.2 },
+        { name: 'Обслуживание', score: 4.0 },
+        { name: 'Интерьер', score: 4.5 }, 
+        { name: 'Соотношение цена/качество', score: 3.8 },
+        { name: 'Скорость обслуживания', score: 3.9 }
+    ];
+
+    return (
+        <div className="h-full flex flex-col">
+            {/* Распределение по ресторанам */}
+            <div className="mb-5">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">По количеству отзывов:</h4>
+                <div className="grid grid-cols-2 gap-3 w-full">
+                    {restaurants.map((restaurant, index) => (
+                        <div key={index} className="flex items-center">
+                            <div 
+                                className="w-4 h-4 mr-2 rounded-full" 
+                                style={{ backgroundColor: restaurant.color }}
+                            ></div>
+                            <div className="text-sm truncate">{restaurant.name}: {restaurant.reviews}</div>
+                        </div>
+                    ))}
                 </div>
-            ))}
+                
+                {/* Если данных мало, показываем сообщение */}
+                {restaurants.length === 0 && (
+                    <div className="text-center text-gray-500 dark:text-gray-400 mt-4">
+                        Нет данных о ресторанах. Добавьте рестораны и отзывы, чтобы увидеть статистику.
+                    </div>
+                )}
+            </div>
+            
+            {/* Критерии оценок в отзывах */}
+            {restaurants.length > 0 && (
+                <div>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Основные критерии оценки:</h4>
+                    <div className="space-y-2">
+                        {reviewCriteria.map((criterion, index) => (
+                            <div key={index} className="flex items-center">
+                                <div className="text-sm min-w-20 truncate">{criterion.name}:</div>
+                                <div className="flex-grow h-2 bg-gray-200 dark:bg-gray-700 rounded-full mx-2">
+                                    <div 
+                                        className="h-full bg-blue-500 rounded-full"
+                                        style={{ width: `${(criterion.score / 5) * 100}%` }}
+                                    ></div>
+                                </div>
+                                <div className="text-sm font-medium">{criterion.score}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 const ManagerDashboard = () => {
     const [restaurants, setRestaurants] = useState([]);
@@ -482,6 +553,124 @@ const ManagerDashboard = () => {
             const data = await fetchData('manager/analytics/charts', { period: chartPeriod });
             console.log('Получены данные для графиков:', data);
             
+            // Если данных нет или нет распределения по ресторанам, создаем его из текущих данных
+            if (!data.categoryDistribution || !data.categoryDistribution.labels || data.categoryDistribution.labels.length === 0) {
+                console.log('Генерируем данные распределения по ресторанам из имеющихся ресторанов и отзывов');
+                
+                // Подсчитываем количество отзывов для каждого ресторана
+                const restaurantCounts = {};
+                
+                if (reviews && reviews.length > 0) {
+                    reviews.forEach(review => {
+                        // Получаем название ресторана из отзыва
+                        const restaurantName = review.restaurant?.name || 
+                                              review.restaurantName || 
+                                              (typeof review.restaurant === 'string' ? review.restaurant : null);
+                        
+                        if (restaurantName) {
+                            restaurantCounts[restaurantName] = (restaurantCounts[restaurantName] || 0) + 1;
+                        }
+                    });
+                }
+                
+                // Если до сих пор нет данных, используем данные из списка ресторанов
+                if (Object.keys(restaurantCounts).length === 0 && restaurants && restaurants.length > 0) {
+                    restaurants.forEach(restaurant => {
+                        if (restaurant.name) {
+                            restaurantCounts[restaurant.name] = restaurant.reviewCount || restaurant.reviews || 0;
+                        }
+                    });
+                }
+                
+                // Сортируем рестораны по количеству отзывов (по убыванию)
+                const sortedRestaurants = Object.entries(restaurantCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10); // Берем топ-10 ресторанов
+                
+                // Формируем данные для графика
+                const restaurantLabels = sortedRestaurants.map(([name]) => name);
+                const restaurantData = sortedRestaurants.map(([_, count]) => count);
+                
+                // Генерируем цвета для ресторанов
+                const restaurantColors = [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(153, 102, 255, 0.6)',
+                    'rgba(255, 159, 64, 0.6)',
+                    'rgba(75, 192, 80, 0.6)',
+                    'rgba(153, 81, 255, 0.6)',
+                    'rgba(255, 150, 132, 0.6)',
+                    'rgba(54, 100, 235, 0.6)'
+                ].slice(0, restaurantLabels.length);
+                
+                // Создаем объект с данными для диаграммы
+                data.categoryDistribution = {
+                    labels: restaurantLabels,
+                    datasets: [{
+                        label: 'Количество отзывов',
+                        data: restaurantData,
+                        backgroundColor: restaurantColors
+                    }]
+                };
+                
+                console.log('Сгенерированы данные для распределения по ресторанам:', data.categoryDistribution);
+            }
+            
+            // Рассчитываем оценки по критериям из реальных отзывов
+            if (!data.criteriasRatings) {
+                // Список критериев, которые мы ищем в отзывах
+                const criterias = [
+                    { name: 'Качество еды', keywords: ['еда', 'блюдо', 'вкус', 'кухня', 'приготовлен'], totalRating: 0, count: 0 },
+                    { name: 'Обслуживание', keywords: ['персонал', 'официант', 'обслуживание', 'сервис', 'внимание'], totalRating: 0, count: 0 },
+                    { name: 'Интерьер', keywords: ['интерьер', 'атмосфера', 'дизайн', 'комфорт', 'чисто'], totalRating: 0, count: 0 },
+                    { name: 'Соотношение цена/качество', keywords: ['цена', 'стоимость', 'деньги', 'дорого', 'дешево'], totalRating: 0, count: 0 },
+                    { name: 'Скорость обслуживания', keywords: ['скорость', 'быстро', 'ожидание', 'долго', 'ждать'], totalRating: 0, count: 0 }
+                ];
+
+                // Проходим по всем отзывам и подсчитываем упоминания критериев
+                if (reviews && reviews.length > 0) {
+                    reviews.forEach(review => {
+                        if (!review.text || !review.rating) return;
+                        
+                        // Текст отзыва в нижнем регистре для поиска ключевых слов
+                        const lowerText = review.text.toLowerCase();
+                        
+                        criterias.forEach(criteria => {
+                            // Проверяем, есть ли в отзыве упоминание критерия по ключевым словам
+                            const mentionedKeyword = criteria.keywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
+                            
+                            if (mentionedKeyword) {
+                                criteria.totalRating += Number(review.rating);
+                                criteria.count += 1;
+                            }
+                        });
+                    });
+                }
+
+                // Вычисляем средний рейтинг для каждого критерия
+                const criteriasRatings = criterias.map(criteria => {
+                    return {
+                        name: criteria.name,
+                        score: criteria.count > 0 ? parseFloat((criteria.totalRating / criteria.count).toFixed(1)) : 0
+                    };
+                }).sort((a, b) => b.count - a.count); // Сортируем по количеству упоминаний
+                
+                // Если не хватает данных, заполняем средними значениями от общего рейтинга
+                const avgRating = stats.averageRating || 4.0;
+                criteriasRatings.forEach(criteria => {
+                    if (criteria.score === 0) {
+                        criteria.score = avgRating;
+                    }
+                });
+                
+                // Добавляем данные о критериях в общий объект данных
+                data.criteriasRatings = criteriasRatings;
+                
+                console.log('Рассчитаны оценки по критериям:', data.criteriasRatings);
+            }
+            
             // Устанавливаем данные для графиков
             setChartData(data);
             
@@ -634,16 +823,48 @@ const ManagerDashboard = () => {
                 let dateFormatted = "Нет даты";
                 try {
                     if (review.createdAt) {
+                        // ISO формат (наиболее распространенный)
                         if (typeof review.createdAt === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(review.createdAt)) {
-                            dateFormatted = new Date(review.createdAt).toLocaleDateString();
-                        } else if (!isNaN(Number(review.createdAt))) {
-                            dateFormatted = new Date(Number(review.createdAt)).toLocaleDateString();
-                        } else {
+                            const date = new Date(review.createdAt);
+                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+                        } 
+                        // Unix timestamp в миллисекундах
+                        else if (!isNaN(Number(review.createdAt)) && Number(review.createdAt) > 1000000000000) {
+                            const date = new Date(Number(review.createdAt));
+                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+                        } 
+                        // Unix timestamp в секундах
+                        else if (!isNaN(Number(review.createdAt)) && Number(review.createdAt) < 1000000000000) {
+                            const date = new Date(Number(review.createdAt) * 1000);
+                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+                        } 
+                        // Формат YYYY-MM-DD
+                        else if (typeof review.createdAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(review.createdAt)) {
+                            const [year, month, day] = review.createdAt.split('-');
+                            dateFormatted = `${day}.${month}.${year}`;
+                        } 
+                        // Формат DD.MM.YYYY
+                        else if (typeof review.createdAt === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(review.createdAt)) {
                             dateFormatted = review.createdAt;
+                        } 
+                        else {
+                            // Если не удалось распознать формат, оставляем как есть
+                            dateFormatted = String(review.createdAt);
+                        }
+                    } else if (review.date) {
+                        // Пробуем использовать поле date, если createdAt отсутствует
+                        if (typeof review.date === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(review.date)) {
+                            const date = new Date(review.date);
+                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+                        } else if (!isNaN(Number(review.date))) {
+                            const date = new Date(Number(review.date) > 1000000000000 ? Number(review.date) : Number(review.date) * 1000);
+                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+                        } else {
+                            dateFormatted = String(review.date);
                         }
                     }
                 } catch (e) {
-                    console.warn('Ошибка форматирования даты для CSV:', e);
+                    console.warn('Ошибка форматирования даты для CSV:', e, review.createdAt);
                 }
                 
                 return {

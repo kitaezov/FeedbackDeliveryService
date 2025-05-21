@@ -109,7 +109,7 @@ const ManagerDashboard = () => {
                 params: { period: chartPeriod },
                 headers: { Authorization: `Bearer ${token}` }
             });
-            console.log('Chart data response:', response.data);
+            console.log('Данные диаграммы получены:', response.data);
             
             // Обработка данных для графиков
             const chartDataResponse = response.data;

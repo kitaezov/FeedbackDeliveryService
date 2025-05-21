@@ -92,7 +92,7 @@ const ManagerPanel = () => {
                 // Обновляем состояние с обработанными данными
                 setRestaurants(processedRestaurants);
             } catch (error) {
-                console.error('Error fetching manager data:', error);
+                console.error('Ошибка загрузки данных менеджера:', error);
             } finally {
                 setLoading(false);
             }

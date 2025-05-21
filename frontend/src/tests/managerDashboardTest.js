@@ -1,8 +1,8 @@
 /**
- * Manual Test Script for Manager Dashboard
+ * Ручной скрипт тестирования для панели управления менеджером
  * 
- * This file contains instructions for manually testing the manager dashboard functionality.
- * Run through this checklist to ensure that the feature is working correctly.
+ * Этот файл содержит инструкции для ручного тестирования функциональности панели управления менеджером.
+ * Пройдите по этому списку, чтобы убедиться, что функция работает правильно.
  */
 
 const testSteps = [
@@ -51,16 +51,5 @@ const testSteps = [
   }
 ];
 
-// Export the test steps for a potential test runner
+// Экспортировать шаги теста для потенциального тестового прогонщика
 export default testSteps;
-
-/**
- * EXPECTED BEHAVIOR:
- * 
- * 1. Only users with manager, admin, or head_admin roles should be able to access the manager dashboard
- * 2. The dashboard should display statistics, charts, and a review management interface
- * 3. Managers should be able to respond to reviews
- * 4. The dashboard should be responsive and work on different screen sizes
- * 5. Charts should update when changing the time period
- * 6. Review filters should work correctly
- */ 

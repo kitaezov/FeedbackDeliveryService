@@ -104,7 +104,7 @@ const RestaurantRatingsPage = () => {
         }
     };
 
-    // Card animation variants
+    // Варианты анимации карточек
     const cardVariants = {
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0 }
@@ -118,7 +118,7 @@ const RestaurantRatingsPage = () => {
         button: isDarkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-100'
     };
 
-    // Get rating color based on score
+    // Получить цвет рейтинга на основе оценки
     const getRatingColor = (rating) => {
         if (!rating || rating === 0) return isDarkMode ? 'text-gray-400' : 'text-gray-500';
         if (rating >= 4.5) return isDarkMode ? 'text-emerald-400' : 'text-emerald-600';
@@ -127,7 +127,7 @@ const RestaurantRatingsPage = () => {
         return isDarkMode ? 'text-red-400' : 'text-red-600';
     };
 
-    // Render star rating
+    // Рендеринг рейтинга звезд
     const renderStars = (rating) => (
         <div className="flex">
             {[1, 2, 3, 4, 5].map(star => (
@@ -145,14 +145,14 @@ const RestaurantRatingsPage = () => {
         </div>
     );
 
-    // Add this utility function for image URLs
+    // Добавьте эту утилитную функцию для URL-адресов изображений
     const getImageUrl = (image) => {
         if (!image) return null;
         if (image.startsWith('http')) return image;
         return `${process.env.REACT_APP_API_URL || ''}${image}`;
     };
 
-    // Format rating display
+    // Форматирование отображения рейтинга
     const formatRating = (rating) => {
         if (rating === undefined || rating === null || isNaN(rating)) return '0.0';
         return rating.toFixed(1);
@@ -206,7 +206,7 @@ const RestaurantRatingsPage = () => {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
-                                    transition={{ duration: 0.2 }}
+                                    transition={{ duration: 0.15 }}
                                     className={`absolute z-10 right-0 mt-2 w-48 rounded-lg shadow-lg ${themeClasses.card} border`}
                                 >
                                     <div className="py-1">
@@ -319,7 +319,6 @@ const RestaurantRatingsPage = () => {
     );
 };
 
-// Mock data for development/fallback
 const mockRestaurants = [
     {
         id: 1,

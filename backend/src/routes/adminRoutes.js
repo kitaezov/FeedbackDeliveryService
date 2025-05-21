@@ -1,5 +1,5 @@
 /**
- * Admin Routes
+ * Маршруты администратора
  */
 
 const express = require('express');
@@ -7,28 +7,28 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { authenticateToken, checkRole } = require('../middleware/authMiddleware');
 
-// Initialize head admin (public route, only works once)
+// Инициализация главного администратора (публичный маршрут, работает только один раз)
 router.get('/init-head-admin', adminController.initializeHeadAdmin);
 
-// Get all users - Admin or higher only
+// Получить всех пользователей - только администраторы или выше
 router.get('/users', authenticateToken, checkRole('admin'), adminController.getUsers);
 
-// Update user role - Admin can assign manager, head_admin can assign any role
+// Обновить роль пользователя - администратор может назначить менеджера, главный администратор может назначить любую роль
 router.put('/users/:id/role', authenticateToken, checkRole('admin'), adminController.updateUserRole);
 
-// Block user account - Admin or higher only
+// Блокировать учетную запись пользователя - только администраторы или выше
 router.post('/users/:id/block', authenticateToken, checkRole('admin'), adminController.blockUser);
 
-// Unblock user account - Admin or higher only
+// Разблокировать учетную запись пользователя - только администраторы или выше
 router.post('/users/:id/unblock', authenticateToken, checkRole('admin'), adminController.unblockUser);
 
-// Delete review - Manager or higher
+// Удалить отзыв - только менеджеры или выше
 router.delete('/reviews/:id', authenticateToken, checkRole('manager'), adminController.deleteReview);
 
-// Get all deleted reviews with reasons - Manager or higher
+// Получить все удаленные отзывы с причинами - только менеджеры или выше
 router.get('/deleted-reviews', authenticateToken, checkRole('manager'), adminController.getDeletedReviews);
 
-// Restaurant management routes
+// Маршруты управления ресторанами
 router.get('/restaurants', authenticateToken, checkRole('admin'), adminController.getRestaurants);
 router.post('/restaurants', authenticateToken, checkRole('admin'), adminController.createRestaurant);
 router.put('/restaurants/:id', authenticateToken, checkRole('admin'), adminController.updateRestaurant);

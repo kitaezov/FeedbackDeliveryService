@@ -3,56 +3,56 @@ const pool = require('./src/config/database');
 
 async function updateRoleSchema() {
   try {
-    console.log('Starting database update...');
+    console.log('Начало обновления базы данных...');
     
-    // Check if we can connect to the database
+    // Проверяем, можем ли мы подключиться к базе данных
     const [testConnection] = await pool.query('SELECT 1 as test');
-    console.log('Database connection successful:', testConnection);
+    console.log('Успешное подключение к базе данных:', testConnection);
     
     try {
-      // First check the current schema
+      // Проверяем текущую схему
       const [describeResult] = await pool.query('DESCRIBE users');
       const roleColumn = describeResult.find(col => col.Field === 'role');
-      console.log('Current users table columns:', describeResult.map(col => col.Field).join(', '));
+      console.log('Текущие столбцы таблицы users:', describeResult.map(col => col.Field).join(', '));
       
       if (roleColumn) {
-        console.log('Current role column definition:', roleColumn);
+        console.log('Текущее определение столбца роли:', roleColumn);
         
-        // Alter the table to support all necessary roles
-        console.log('Updating role column...');
+        // Помещаем в таблицу все необходимые роли
+        console.log('Обновление столбца роли...');
         await pool.query(`
           ALTER TABLE users 
           MODIFY COLUMN role ENUM('user', 'manager', 'admin', 'head_admin', 'moderator', 'super_admin', 'глав_админ', 'менеджер', 'модератор') 
           NOT NULL DEFAULT 'user'
         `);
         
-        console.log('Role column updated successfully!');
+        console.log('Столбец роли обновлен успешно!');
         
-        // Verify the updated schema
+        // Проверяем обновленную схему
         const [verifyResult] = await pool.query('DESCRIBE users');
         const updatedRoleColumn = verifyResult.find(col => col.Field === 'role');
-        console.log('New role column definition:', updatedRoleColumn);
+        console.log('Новое определение столбца роли:', updatedRoleColumn);
       } else {
-        console.error('Role column not found in users table!');
+        console.error('Столбец роли не найден в таблице users!');
       }
     } catch (error) {
-      console.error('Error accessing users table:', error.message);
+      console.error('Ошибка доступа к таблице users:', error.message);
     }
     
-    console.log('Update process completed.');
+    console.log('Обновление процесса завершено.');
   } catch (error) {
-    console.error('Database error:', error.message);
+    console.error('Ошибка базы данных:', error.message);
   } finally {
-    console.log('Closing database connection...');
+    console.log('Закрытие соединения с базой данных...');
     pool.end().then(() => {
-      console.log('Database connection closed.');
+      console.log('Соединение с базой данных закрыто.');
       process.exit(0);
     }).catch(err => {
-      console.error('Error closing connection:', err);
+      console.error('Ошибка закрытия соединения:', err);
       process.exit(1);
     });
   }
 }
 
-console.log('Script started...');
+console.log('Скрипт запущен...');
 updateRoleSchema(); 

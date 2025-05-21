@@ -1,15 +1,18 @@
 /**
- * Support Ticket Model
- * Handles all database operations related to support tickets
+ * Модель тикетов поддержки
+ * Обрабатывает все операции с базой данных, связанные с тикетами поддержки
  */
 
 const pool = require('../config/database');
 
+/**
+ * Класс для работы с тикетами поддержки пользователей
+ */
 class SupportTicketModel {
     /**
-     * Create a new support ticket
-     * @param {Object} ticketData - Ticket data
-     * @returns {Promise<Object>} - Created ticket info
+     * Создать новый тикет поддержки
+     * @param {Object} ticketData - Данные тикета
+     * @returns {Promise<Object>} - Информация о созданном тикете
      */
     async create(ticketData) {
         const { user_id, subject, message, priority = 'medium', status = 'open' } = ticketData;
@@ -36,9 +39,9 @@ class SupportTicketModel {
     }
     
     /**
-     * Find ticket by ID
-     * @param {number} id - Ticket ID
-     * @returns {Promise<Object|null>} - Ticket object or null
+     * Найти тикет по ID
+     * @param {number} id - ID тикета
+     * @returns {Promise<Object|null>} - Объект тикета или null
      */
     async findById(id) {
         const [rows] = await pool.execute(
@@ -50,20 +53,20 @@ class SupportTicketModel {
     }
     
     /**
-     * Get tickets by user ID
-     * @param {number} userId - User ID
-     * @returns {Promise<Array>} - List of tickets
+     * Получить тикеты по ID пользователя
+     * @param {number} userId - ID пользователя
+     * @returns {Promise<Array>} - Список тикетов
      */
     async getByUserId(userId, options = {}) {
-        // Ensure limit and offset are valid positive integers
+        // Убедиться, что limit и offset являются корректными положительными целыми числами
         let limit = parseInt(options.limit || 50, 10);
         let offset = parseInt(options.offset || 0, 10);
         
-        // Validate values
+        // Проверка значений
         if (isNaN(limit) || limit <= 0) limit = 50;
         if (isNaN(offset) || offset < 0) offset = 0;
         
-        // Cap maximum limit
+        // Ограничение максимального лимита
         if (limit > 1000) limit = 1000;
         
         const [rows] = await pool.execute(
@@ -76,22 +79,22 @@ class SupportTicketModel {
     }
     
     /**
-     * Get all tickets with optional filtering
-     * @param {Object} options - Filter options
-     * @returns {Promise<Array>} - List of tickets
+     * Получить все тикеты с опциональной фильтрацией
+     * @param {Object} options - Параметры фильтрации
+     * @returns {Promise<Array>} - Список тикетов
      */
     async getAll(options = {}) {
         const { status, priority } = options;
         
-        // Ensure limit and offset are valid positive integers
+        // Убедиться, что limit и offset являются корректными положительными целыми числами
         let limit = parseInt(options.limit || 50, 10);
         let offset = parseInt(options.offset || 0, 10);
         
-        // Validate values
+        // Проверка значений
         if (isNaN(limit) || limit <= 0) limit = 50;
         if (isNaN(offset) || offset < 0) offset = 0;
         
-        // Cap maximum limit
+        // Ограничение максимального лимита
         if (limit > 1000) limit = 1000;
         
         let query = `
@@ -131,13 +134,13 @@ class SupportTicketModel {
     }
     
     /**
-     * Update ticket status
-     * @param {number} id - Ticket ID
-     * @param {string} status - New status ('open', 'in_progress', 'closed')
-     * @returns {Promise<boolean>} - Success status
+     * Обновить статус тикета
+     * @param {number} id - ID тикета
+     * @param {string} status - Новый статус ('open', 'in_progress', 'closed')
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async updateStatus(id, status) {
-        // Ensure status is one of the valid statuses
+        // Убедиться, что статус является одним из допустимых значений
         const validStatuses = ['open', 'in_progress', 'closed'];
         if (!validStatuses.includes(status)) {
             throw new Error('Invalid status value');
@@ -152,13 +155,13 @@ class SupportTicketModel {
     }
     
     /**
-     * Update ticket priority
-     * @param {number} id - Ticket ID
-     * @param {string} priority - New priority ('low', 'medium', 'high')
-     * @returns {Promise<boolean>} - Success status
+     * Обновить приоритет тикета
+     * @param {number} id - ID тикета
+     * @param {string} priority - Новый приоритет ('low', 'medium', 'high')
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async updatePriority(id, priority) {
-        // Ensure priority is one of the valid priorities
+        // Убедиться, что приоритет является одним из допустимых значений
         const validPriorities = ['low', 'medium', 'high'];
         if (!validPriorities.includes(priority)) {
             throw new Error('Invalid priority value');
@@ -173,15 +176,15 @@ class SupportTicketModel {
     }
     
     /**
-     * Delete a ticket
-     * @param {number} id - Ticket ID
-     * @returns {Promise<boolean>} - Success status
+     * Удалить тикет
+     * @param {number} id - ID тикета
+     * @returns {Promise<boolean>} - Результат удаления
      */
     async delete(id) {
-        // First delete related messages
+        // Сначала удалить связанные сообщения
         await pool.execute('DELETE FROM support_messages WHERE ticket_id = ?', [id]);
         
-        // Then delete the ticket
+        // Затем удалить сам тикет
         await pool.execute('DELETE FROM support_tickets WHERE id = ?', [id]);
         
         return true;

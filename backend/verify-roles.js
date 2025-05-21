@@ -3,9 +3,9 @@ const pool = require('./src/config/database');
 
 async function verifyRoles() {
   try {
-    console.log('Starting role verification...');
+    console.log('Начало проверки ролей...');
     
-    // Get current role column definition
+    // Получаем текущее определение столбца роли
     const [columns] = await pool.query(`
       SELECT COLUMN_TYPE 
       FROM INFORMATION_SCHEMA.COLUMNS 
@@ -13,58 +13,58 @@ async function verifyRoles() {
     `, [process.env.DB_NAME || 'feedback']);
     
     if (columns.length > 0) {
-      console.log('Current role column definition:', columns[0].COLUMN_TYPE);
+      console.log('Текущее определение столбца роли:', columns[0].COLUMN_TYPE);
       
-      // Test each valid role value
+      // Проверяем каждое допустимое значение роли
       const validRoles = ['user', 'manager', 'admin', 'head_admin'];
-      console.log('\nTesting each valid role value:');
+      console.log('\nТестирование каждого допустимого значения роли:');
       
-      // Create a test user
+      // Создаем тестового пользователя
       const [testUserResult] = await pool.query(`
         INSERT INTO users (name, email, password, role) 
         VALUES (?, ?, ?, ?)
       `, ['Test User', 'testuser_' + Date.now() + '@example.com', 'password123', 'user']);
       
       const testUserId = testUserResult.insertId;
-      console.log(`Created test user with ID ${testUserId}`);
+      console.log(`Создан тестовый пользователь с ID ${testUserId}`);
       
-      // Try updating to each role
+      // Пытаемся обновить до каждой роли
       for (const role of validRoles) {
         try {
           await pool.query('UPDATE users SET role = ? WHERE id = ?', [role, testUserId]);
-          console.log(`✅ Successfully set role to "${role}"`);
+          console.log(`✅ Успешно установлена роль "${role}"`);
         } catch (error) {
-          console.error(`❌ Error setting role to "${role}":`, error.message);
+          console.error(`❌ Ошибка установки роли "${role}":`, error.message);
         }
       }
       
-      // Check if any non-standard role is in the column definition
+      // Проверяем, есть ли в определении столбца роли нестандартные роли
       const columnType = columns[0].COLUMN_TYPE;
       const enumValues = columnType.substring(columnType.indexOf('(') + 1, columnType.lastIndexOf(')')).split(',');
       
-      console.log('\nAll defined enum values:');
+      console.log('\nВсе определенные значения перечисления:');
       enumValues.forEach(val => {
         const cleanVal = val.replace(/^'|'$/g, '');
         console.log(`- ${cleanVal}`);
         
         if (!validRoles.includes(cleanVal)) {
-          console.log(`  ⚠️ Warning: "${cleanVal}" is not in the standard roles list`);
+          console.log(`  ⚠️ Предупреждение: "${cleanVal}" не входит в список стандартных ролей`);
         }
       });
       
-      // Clean up test user
+      // Очистка тестового пользователя
       await pool.query('DELETE FROM users WHERE id = ?', [testUserId]);
-      console.log(`\nDeleted test user ${testUserId}`);
+      console.log(`\nУдален тестовый пользователь ${testUserId}`);
     } else {
-      console.error('Role column not found!');
+      console.error('Столбец роли не найден!');
     }
     
-    console.log('\nVerification completed.');
+    console.log('\nПроверка завершена.');
   } catch (error) {
-    console.error('Error during verification:', error);
+    console.error('Ошибка при проверке:', error);
   } finally {
     await pool.end();
-    console.log('Database connection closed.');
+    console.log('Соединение с базой данных закрыто.');
   }
 }
 

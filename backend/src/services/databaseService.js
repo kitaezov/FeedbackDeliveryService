@@ -18,7 +18,7 @@ async function initializeUserTables() {
                 name VARCHAR(15) NOT NULL,
                 email VARCHAR(100) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
-                role ENUM('user', 'moderator', 'admin', 'head_admin') DEFAULT 'user',
+                role ENUM('user', 'manager', 'moderator', 'admin', 'head_admin') DEFAULT 'user',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 total_likes INT DEFAULT 0
             )
@@ -33,20 +33,24 @@ async function initializeUserTables() {
             console.log('Добавление столбца role в таблицу пользователей...');
             await pool.query(`
                 ALTER TABLE users 
-                ADD COLUMN role ENUM('user', 'moderator', 'admin', 'head_admin') DEFAULT 'user'
+                ADD COLUMN role ENUM('user', 'manager', 'moderator', 'admin', 'head_admin') DEFAULT 'user'
             `);
             console.log('Столбец role успешно добавлен');
         } else {
-            // Make sure the role column includes 'head_admin'
+            // Make sure the role column includes all required roles
             const [roleEnum] = await pool.query(`
                 SHOW COLUMNS FROM users WHERE Field = 'role'
             `);
             
-            if (!roleEnum[0].Type.includes('head_admin')) {
-                console.log('Обновление перечисления role для добавления head_admin...');
+            const roleType = roleEnum[0].Type;
+            console.log(`Current role enum type: ${roleType}`);
+            
+            // Check if all needed roles are included
+            if (!roleType.includes('manager') || !roleType.includes('head_admin')) {
+                console.log('Обновление перечисления role для добавления всех ролей...');
                 await pool.query(`
                     ALTER TABLE users 
-                    MODIFY COLUMN role ENUM('user', 'moderator', 'admin', 'head_admin') DEFAULT 'user'
+                    MODIFY COLUMN role ENUM('user', 'manager', 'moderator', 'admin', 'head_admin') DEFAULT 'user'
                 `);
                 console.log('Перечисление role успешно обновлено');
             }

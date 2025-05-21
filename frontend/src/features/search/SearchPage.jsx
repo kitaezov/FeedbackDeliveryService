@@ -17,7 +17,7 @@ const SearchPage = ({ isDarkMode }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Extract search query from URL parameters
+    // Извлечение запроса поиска из URL-параметров
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         const query = queryParams.get('q');
@@ -27,7 +27,7 @@ const SearchPage = ({ isDarkMode }) => {
         }
     }, [location.search]);
 
-    // Search function to fetch restaurants based on query
+    // Функция поиска для получения ресторанов на основе запроса
     const performSearch = async (query) => {
         if (!query.trim()) return;
 
@@ -46,7 +46,7 @@ const SearchPage = ({ isDarkMode }) => {
         }
     };
 
-    // Handle search form submission
+    // Обработка отправки формы поиска
     const handleSubmit = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) {

@@ -6,7 +6,7 @@ import { useDebounce } from '../../../common/hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Coffee, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
-// Animation variants
+// Варианты анимации
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: {

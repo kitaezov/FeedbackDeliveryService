@@ -1,15 +1,18 @@
 /**
- * Support Message Model
- * Handles all database operations related to support ticket messages
+ * Модель сообщений поддержки
+ * Обрабатывает все операции с базой данных, связанные с сообщениями тикетов поддержки
  */
 
 const pool = require('../config/database');
 
+/**
+ * Класс для работы с сообщениями в тикетах поддержки
+ */
 class SupportMessageModel {
     /**
-     * Create a new support ticket message
-     * @param {Object} messageData - Message data
-     * @returns {Promise<Object>} - Created message info
+     * Создать новое сообщение в тикете поддержки
+     * @param {Object} messageData - Данные сообщения
+     * @returns {Promise<Object>} - Информация о созданном сообщении
      */
     async create(messageData) {
         const { ticket_id, user_id, message, is_staff_reply = false } = messageData;
@@ -19,13 +22,13 @@ class SupportMessageModel {
             [ticket_id, user_id, message, is_staff_reply]
         );
         
-        // Update the ticket's updated_at timestamp
+        // Обновление временной метки updated_at у тикета
         await pool.execute(
             'UPDATE support_tickets SET updated_at = NOW() WHERE id = ?',
             [ticket_id]
         );
         
-        // If this is a staff reply, update the ticket status to 'in_progress' if it's 'open'
+        // Если это ответ от персонала, обновляем статус тикета на 'in_progress', если сейчас статус 'open'
         if (is_staff_reply) {
             await pool.execute(
                 'UPDATE support_tickets SET status = CASE WHEN status = "open" THEN "in_progress" ELSE status END WHERE id = ?',
@@ -49,9 +52,9 @@ class SupportMessageModel {
     }
     
     /**
-     * Get messages by ticket ID
-     * @param {number} ticketId - Ticket ID
-     * @returns {Promise<Array>} - List of messages
+     * Получить сообщения по ID тикета
+     * @param {number} ticketId - ID тикета
+     * @returns {Promise<Array>} - Список сообщений
      */
     async getByTicketId(ticketId) {
         const [rows] = await pool.execute(
@@ -67,9 +70,9 @@ class SupportMessageModel {
     }
     
     /**
-     * Delete a message
-     * @param {number} id - Message ID
-     * @returns {Promise<boolean>} - Success status
+     * Удалить сообщение
+     * @param {number} id - ID сообщения
+     * @returns {Promise<boolean>} - Результат удаления
      */
     async delete(id) {
         await pool.execute('DELETE FROM support_messages WHERE id = ?', [id]);
@@ -77,9 +80,9 @@ class SupportMessageModel {
     }
     
     /**
-     * Delete all messages for a ticket
-     * @param {number} ticketId - Ticket ID
-     * @returns {Promise<boolean>} - Success status
+     * Удалить все сообщения тикета
+     * @param {number} ticketId - ID тикета
+     * @returns {Promise<boolean>} - Результат удаления
      */
     async deleteAllForTicket(ticketId) {
         await pool.execute('DELETE FROM support_messages WHERE ticket_id = ?', [ticketId]);

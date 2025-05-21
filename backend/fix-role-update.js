@@ -3,26 +3,26 @@ const pool = require('./src/config/database');
 
 async function fixRoleUpdate() {
   try {
-    console.log('Starting to fix role update issue...');
+    console.log('Начинаем исправление проблемы с обновлением роли...');
     
-    // Check role values in users table
+    // Проверяем значения ролей в таблице users
     const [users] = await pool.query('SELECT id, role FROM users');
-    console.log('Current users and their roles:');
+    console.log('Текущие пользователи и их роли:');
     console.table(users);
     
-    // Check specific user with ID 7
+    // Проверяем конкретного пользователя с ID 7
     const [user7] = await pool.query('SELECT id, role FROM users WHERE id = 7');
     if (user7.length > 0) {
-      console.log('User with ID 7:', user7[0]);
+      console.log('Пользователь с ID 7:', user7[0]);
       
-      // Try updating to manager
+      // Попробуем обновить до роли manager
       try {
         await pool.query('UPDATE users SET role = ? WHERE id = ?', ['manager', 7]);
-        console.log('Successfully updated user 7 to manager role');
+        console.log('Успешно обновлен пользователь 7 до роли manager');
       } catch (error) {
-        console.error('Error updating to manager:', error.message);
+        console.error('Ошибка обновления до роли manager:', error.message);
         
-        // Check for valid enum values in the database schema
+        // Проверяем допустимые значения в схеме базы данных
         const [columns] = await pool.query(`
           SELECT COLUMN_TYPE 
           FROM INFORMATION_SCHEMA.COLUMNS 
@@ -30,31 +30,31 @@ async function fixRoleUpdate() {
         `, [process.env.DB_NAME || 'feedback']);
         
         if (columns.length > 0) {
-          console.log('Role column definition:', columns[0].COLUMN_TYPE);
+          console.log('Определение столбца роли:', columns[0].COLUMN_TYPE);
           
-          // Ensure the role column allows all needed roles
+          // Убеждаемся, что столбец роли поддерживает все необходимые роли
           await pool.query(`
             ALTER TABLE users 
             MODIFY COLUMN role ENUM('user', 'manager', 'admin', 'head_admin') NOT NULL DEFAULT 'user'
           `);
           
-          console.log('Role column updated to support standard roles');
+          console.log('Столбец роли обновлен для поддержки стандартных ролей');
           
-          // Try update again
+          // Попробуем обновить снова
           await pool.query('UPDATE users SET role = ? WHERE id = ?', ['manager', 7]);
-          console.log('Successfully updated user 7 to manager role after schema fix');
+          console.log('Успешно обновлен пользователь 7 до роли manager после исправления схемы');
         }
       }
     } else {
-      console.log('User with ID 7 not found');
+      console.log('Пользователь с ID 7 не найден');
     }
     
-    console.log('Fix completed.');
+    console.log('Исправление завершено.');
   } catch (error) {
-    console.error('Error during fix process:', error);
+    console.error('Ошибка при исправлении:', error);
   } finally {
     await pool.end();
-    console.log('Database connection closed.');
+    console.log('Соединение с базой данных закрыто.');
   }
 }
 

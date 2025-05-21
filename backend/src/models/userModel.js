@@ -1,16 +1,19 @@
 /**
- * User Model
- * Handles all database operations related to users
+ * Модель пользователя
+ * Обрабатывает все операции с базой данных, связанные с пользователями
  */
 
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 
+/**
+ * Класс для работы с пользователями
+ */
 class UserModel {
     /**
-     * Create a new user
-     * @param {Object} userData - User data (name, email, password)
-     * @returns {Promise<Object>} - Created user info
+     * Создать нового пользователя
+     * @param {Object} userData - Данные пользователя (имя, email, пароль)
+     * @returns {Promise<Object>} - Информация о созданном пользователе
      */
     async create(userData) {
         const { name, email, password } = userData;
@@ -37,9 +40,9 @@ class UserModel {
     }
     
     /**
-     * Find user by email
-     * @param {string} email - User email
-     * @returns {Promise<Object|null>} - User object or null
+     * Найти пользователя по email
+     * @param {string} email - Email пользователя
+     * @returns {Promise<Object|null>} - Объект пользователя или null
      */
     async findByEmail(email) {
         const [rows] = await pool.execute(
@@ -51,9 +54,9 @@ class UserModel {
     }
     
     /**
-     * Find user by ID
-     * @param {number} id - User ID
-     * @returns {Promise<Object|null>} - User object or null
+     * Найти пользователя по ID
+     * @param {number} id - ID пользователя
+     * @returns {Promise<Object|null>} - Объект пользователя или null
      */
     async findById(id) {
         const [rows] = await pool.execute(
@@ -63,7 +66,7 @@ class UserModel {
         
         if (rows.length === 0) return null;
         
-        // Map database role values to frontend values
+        // Преобразование значений ролей из базы данных в значения для фронтенда
         const roleMapping = {
             'user': 'user',
             'mgr': 'manager',
@@ -78,10 +81,10 @@ class UserModel {
     }
     
     /**
-     * Update user info
-     * @param {number} id - User ID
-     * @param {Object} userData - User data to update
-     * @returns {Promise<boolean>} - Success status
+     * Обновить информацию о пользователе
+     * @param {number} id - ID пользователя
+     * @param {Object} userData - Данные пользователя для обновления
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async update(id, userData) {
         try {
@@ -91,7 +94,7 @@ class UserModel {
             console.log('- phoneNumber:', phoneNumber);
             console.log('- birthDate:', birthDate);
             
-            // Build the update query dynamically based on provided fields
+            // Динамическое построение запроса на обновление на основе предоставленных полей
             let queryParts = [];
             let params = [];
             
@@ -122,24 +125,24 @@ class UserModel {
                 console.log('UserModel.update - Добавлен параметр birth_date:', birthDate);
             }
             
-            // If no fields to update, return
+            // Если нет полей для обновления, возвращаем false
             if (queryParts.length === 0) {
                 console.log('UserModel.update - Нет полей для обновления');
                 return false;
             }
             
-            // Complete the query with parameters
+            // Завершаем формирование запроса с параметрами
             const query = `UPDATE users SET ${queryParts.join(', ')} WHERE id = ?`;
             params.push(id);
             
             console.log('UserModel.update - SQL запрос:', query);
             console.log('UserModel.update - Параметры:', params);
             
-            // Execute update query
+            // Выполняем запрос на обновление
             const [result] = await pool.execute(query, params);
             console.log('UserModel.update - Результат обновления:', result);
             
-            // Get updated user data
+            // Получаем обновленные данные пользователя
             const [rows] = await pool.execute(
                 'SELECT id, name, email, role, created_at, avatar, phone_number as phoneNumber, birth_date as birthDate FROM users WHERE id = ?',
                 [id]
@@ -155,10 +158,10 @@ class UserModel {
     }
     
     /**
-     * Update user password
-     * @param {number} id - User ID
-     * @param {string} password - New password
-     * @returns {Promise<boolean>} - Success status
+     * Обновить пароль пользователя
+     * @param {number} id - ID пользователя
+     * @param {string} password - Новый пароль
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async updatePassword(id, password) {
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -172,27 +175,27 @@ class UserModel {
     }
 
     /**
-     * Update user role
-     * @param {number} id - User ID
-     * @param {string} role - New role ('user', 'manager', 'admin', 'head_admin')
-     * @returns {Promise<boolean>} - Success status
+     * Обновить роль пользователя
+     * @param {number} id - ID пользователя
+     * @param {string} role - Новая роль ('user', 'manager', 'admin', 'head_admin')
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async updateRole(id, role) {
         try {
             console.log(`UserModel: Updating user ${id} role to "${role}"`);
             
-            // Map longer role names to shorter ones that fit in the database
+            // Преобразование полных названий ролей в короткие для хранения в базе данных
             const roleMapping = {
                 'user': 'user',
-                'manager': 'manager',  // Changed from 'mgr' to 'manager'
+                'manager': 'manager',  // Изменено с 'mgr' на 'manager'
                 'admin': 'admin',
-                'head_admin': 'head_admin'  // Changed from 'head' to 'head_admin'
+                'head_admin': 'head_admin'  // Изменено с 'head' на 'head_admin'
             };
             
             const dbRole = roleMapping[role] || 'user';
             console.log(`UserModel: Mapped role "${role}" to database value "${dbRole}"`);
             
-            // Check if the user exists before updating
+            // Проверяем существование пользователя перед обновлением
             const [userCheck] = await pool.execute(
                 'SELECT id FROM users WHERE id = ?',
                 [id]
@@ -225,24 +228,24 @@ class UserModel {
     }
 
     /**
-     * Get all users with optional filtering
-     * @param {Object} options - Filter options
-     * @returns {Promise<Array>} - List of users
+     * Получить всех пользователей с опциональной фильтрацией
+     * @param {Object} options - Параметры фильтрации
+     * @returns {Promise<Array>} - Список пользователей
      */
     async getAll(options = {}) {
         try {
             console.log('UserModel.getAll: Получение списка пользователей');
             const { role } = options;
             
-            // Ensure limit and offset are valid positive integers
+            // Убедиться, что limit и offset являются корректными положительными целыми числами
             let limit = parseInt(options.limit || 50, 10);
             let offset = parseInt(options.offset || 0, 10);
             
-            // Validate values
+            // Проверка значений
             if (isNaN(limit) || limit <= 0) limit = 50;
             if (isNaN(offset) || offset < 0) offset = 0;
             
-            // Cap maximum limit
+            // Ограничение максимального лимита
             if (limit > 1000) limit = 1000;
             
             let query = 'SELECT id, name, email, role, created_at, is_blocked, blocked_reason FROM users';
@@ -253,14 +256,14 @@ class UserModel {
                 queryParams.push(role);
             }
             
-            // MySQL2 doesn't handle ? placeholders correctly for LIMIT OFFSET
-            // Using direct integer values is safe here since we've validated them above
+            // MySQL2 не обрабатывает placeholders ? корректно для LIMIT OFFSET
+            // Использование прямых числовых значений безопасно, так как мы проверили их выше
             query += ` ORDER BY id LIMIT ${limit} OFFSET ${offset}`;
             
             console.log('Выполнение SQL-запроса:', query);
             console.log('Параметры:', queryParams);
             
-            // Check database connection
+            // Проверка соединения с базой данных
             console.log('Проверка соединения с базой данных...');
             if (!pool) {
                 console.error('Ошибка: Отсутствует соединение с базой данных');
@@ -278,25 +281,24 @@ class UserModel {
     }
 
     /**
-     * Ensure head admin exists (admin@yandex.ru)
-     * This method will create or update the user with email admin@yandex.ru to have head_admin role
-     * @returns {Promise<Object>} - Head admin user data
+     * Убедиться, что в системе существует главный администратор
+     * @returns {Promise<void>}
      */
     async ensureHeadAdmin() {
         try {
-            // Check if head admin exists
+            // Проверяем существование главного администратора
             const headAdmin = await this.findByEmail('admin@yandex.ru');
             
             if (headAdmin) {
-                // If exists but not head_admin role, update role
+                // Если существует, но не имеет роль head_admin, обновляем роль
                 if (headAdmin.role !== 'head_admin') {
                     await this.updateRole(headAdmin.id, 'head_admin');
                     console.log('Updated admin@yandex.ru to head_admin role');
                 }
                 return headAdmin;
             } else {
-                // Create head admin if doesn't exist
-                const hashedPassword = await bcrypt.hash('admin123', 10); // Default password
+                // Создаем главного администратора, если он не существует
+                const hashedPassword = await bcrypt.hash('admin123', 10); // Пароль по умолчанию
                 
                 const [result] = await pool.execute(
                     'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
@@ -325,10 +327,10 @@ class UserModel {
     }
 
     /**
-     * Block user account
-     * @param {number} id - User ID
-     * @param {string} reason - Reason for blocking the account
-     * @returns {Promise<boolean>} - Success status
+     * Заблокировать пользователя
+     * @param {number} id - ID пользователя
+     * @param {string} reason - Причина блокировки
+     * @returns {Promise<boolean>} - Результат блокировки
      */
     async blockUser(id, reason) {
         await pool.execute(
@@ -340,9 +342,9 @@ class UserModel {
     }
     
     /**
-     * Unblock user account
-     * @param {number} id - User ID
-     * @returns {Promise<boolean>} - Success status
+     * Разблокировать пользователя
+     * @param {number} id - ID пользователя
+     * @returns {Promise<boolean>} - Результат разблокировки
      */
     async unblockUser(id) {
         await pool.execute(
@@ -354,9 +356,9 @@ class UserModel {
     }
     
     /**
-     * Check if user account is blocked
-     * @param {number} id - User ID
-     * @returns {Promise<Object>} - Object with isBlocked and reason properties
+     * Проверить статус блокировки пользователя
+     * @param {number} id - ID пользователя
+     * @returns {Promise<Object>} - Статус блокировки
      */
     async checkBlockStatus(id) {
         const [rows] = await pool.execute(
@@ -375,10 +377,10 @@ class UserModel {
     }
 
     /**
-     * Update user avatar
-     * @param {number} id - User ID
-     * @param {string|null} avatarPath - Path to avatar or null to remove avatar
-     * @returns {Promise<boolean>} - Success status
+     * Обновить аватар пользователя
+     * @param {number} id - ID пользователя
+     * @param {string} avatarPath - Путь к файлу аватара
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async updateAvatar(id, avatarPath) {
         try {
@@ -402,12 +404,12 @@ class UserModel {
     }
 
     /**
-     * Update user's total likes count based on their reviews
-     * @param {number} userId - User ID
-     * @returns {Promise<boolean>} - Success status
+     * Обновить количество лайков пользователя
+     * @param {number} userId - ID пользователя
+     * @returns {Promise<boolean>} - Результат обновления
      */
     async updateLikesCount(userId) {
-        // First calculate the total likes from all user's reviews
+        // Сначала вычисляем общее количество лайков из всех отзывов пользователя
         const [likesResult] = await pool.execute(
             'SELECT COALESCE(SUM(likes), 0) as total_likes FROM reviews WHERE user_id = ?',
             [userId]
@@ -415,7 +417,7 @@ class UserModel {
         
         const totalLikes = likesResult[0]?.total_likes || 0;
         
-        // Update the user's total_likes field
+        // Обновляем поле total_likes пользователя
         await pool.execute(
             'UPDATE users SET total_likes = ?, updated_at = NOW() WHERE id = ?',
             [totalLikes, userId]
@@ -425,9 +427,9 @@ class UserModel {
     }
 
     /**
-     * Create a user with a specific role
-     * @param {Object} userData - User data including name, email, password, and role
-     * @returns {Promise<Object>} - Created user info
+     * Создать пользователя (альтернативный метод)
+     * @param {Object} userData - Данные пользователя
+     * @returns {Promise<Object>} - Созданный пользователь
      */
     async createUser(userData) {
         const { name, email, password, role } = userData;
@@ -438,7 +440,7 @@ class UserModel {
                 [name, email, password, role]
             );
             
-            // Get the created user with timestamp
+            // Получаем созданного пользователя с временной меткой
             const [userRows] = await pool.execute(
                 'SELECT id, name, email, role, created_at FROM users WHERE id = ?',
                 [result.insertId]
@@ -458,46 +460,119 @@ class UserModel {
     }
 
     /**
-     * Ensure the existence of default users for testing
+     * Убедиться, что в системе существуют пользователи по умолчанию
      * @returns {Promise<void>}
      */
     async ensureDefaultUsers() {
         try {
-            // Check if we already have users
+            // Проверяем, есть ли уже пользователи
             const [userCount] = await pool.execute('SELECT COUNT(*) as count FROM users');
             
-            // Only create default users if the database is empty (except for the head admin)
-            if (userCount[0].count <= 1) {
-                console.log('Creating default testing users...');
-                
-                // Create a standard user
-                await this.createUser({
+            // Сначала проверяем существующих пользователей
+            console.log('Checking existing users and roles...');
+            const [allUsers] = await pool.execute('SELECT id, name, email, role FROM users');
+            console.log(`Found ${allUsers.length} existing users:`);
+            allUsers.forEach(user => {
+                console.log(`- User: ${user.name}, Email: ${user.email}, Role: ${user.role}`);
+            });
+            
+            // Определяем пользователей по умолчанию
+            const defaultUsers = [
+                {
                     name: 'Test User',
                     email: 'user@example.com',
-                    password: await bcrypt.hash('password123', 10),
+                    password: 'password123',
                     role: 'user'
-                });
-                
-                // Create a manager
-                await this.createUser({
+                },
+                {
                     name: 'Test Manager',
                     email: 'manager@example.com',
-                    password: await bcrypt.hash('password123', 10),
+                    password: 'password123',
                     role: 'manager'
-                });
-                
-                // Create an admin
-                await this.createUser({
+                },
+                {
                     name: 'Test Admin',
                     email: 'admin@example.com',
-                    password: await bcrypt.hash('password123', 10),
+                    password: 'password123',
                     role: 'admin'
-                });
+                },
+                {
+                    name: 'Test Head Admin',
+                    email: 'head_admin@example.com',
+                    password: 'password123',
+                    role: 'head_admin'
+                }
+            ];
+            
+            // Убеждаемся, что каждый пользователь по умолчанию существует
+            for (const userData of defaultUsers) {
+                // Проверяем, существует ли пользователь по email
+                const [existingUser] = await pool.execute(
+                    'SELECT id, name, email, role FROM users WHERE email = ?', 
+                    [userData.email]
+                );
                 
-                console.log('Default testing users created successfully!');
+                if (existingUser.length === 0) {
+                    console.log(`Creating default user: ${userData.name} (${userData.email})`);
+                    
+                    // Хешируем пароль
+                    const hashedPassword = await bcrypt.hash(userData.password, 10);
+                    
+                    // Преобразуем роль для хранения в базе данных
+                    const roleMapping = {
+                        'user': 'user',
+                        'manager': 'manager',
+                        'admin': 'admin',
+                        'head_admin': 'head_admin'
+                    };
+                    
+                    const dbRole = roleMapping[userData.role] || 'user';
+                    
+                    // Добавляем пользователя
+                    await pool.execute(
+                        'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+                        [userData.name, userData.email, hashedPassword, dbRole]
+                    );
+                    
+                    console.log(`User ${userData.email} created with role ${dbRole}`);
+                } else {
+                    console.log(`User already exists: ${userData.email}`);
+                }
             }
+            
+            console.log('Default user check completed');
         } catch (error) {
             console.error('Error ensuring default users:', error);
+        }
+    }
+
+    /**
+     * Сбросить пароль пользователя по email
+     * @param {string} email - Email пользователя
+     * @param {string} newPassword - Новый пароль
+     * @returns {Promise<boolean>} - Результат сброса пароля
+     */
+    async resetPasswordByEmail(email, newPassword) {
+        try {
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            
+            console.log(`Resetting password for user with email: ${email}`);
+            
+            const [result] = await pool.execute(
+                'UPDATE users SET password = ? WHERE email = ?',
+                [hashedPassword, email]
+            );
+            
+            if (result.affectedRows === 0) {
+                console.log(`Password reset failed: No user found with email ${email}`);
+                return false;
+            }
+            
+            console.log(`Password reset successful for user: ${email}`);
+            return true;
+        } catch (error) {
+            console.error('Error resetting password:', error);
+            return false;
         }
     }
 }

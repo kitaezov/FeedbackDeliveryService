@@ -15,11 +15,12 @@ const morgan = require('morgan');
 const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
-const connectDB = require('./config/mongodb');
+// MongoDB connect is disabled - using SQL database instead
+// const connectDB = require('./config/mongodb');
 require('dotenv').config();
 
-// Подключение к MongoDB
-connectDB();
+// MongoDB connection is disabled - using SQL database instead
+// connectDB();
 
 // Инициализация приложения Express
 const app = express();

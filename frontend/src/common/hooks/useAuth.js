@@ -71,7 +71,7 @@ export const useAuth = () => {
             }
             
             // В любом случае запрашиваем актуальные данные с сервера
-            const { data } = await api.get('auth/me');
+            const { data } = await api.get('auth/profile');
             
             // Сохраняем данные в localStorage и устанавливаем в состояние
             localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));

@@ -190,7 +190,7 @@ const markAsRead = async (req, res) => {
             [notificationId]
         );
         
-        // Get the updated notification
+        // Получаем обновленное уведомление
         const updatedNotification = await db.query(
             'SELECT * FROM notifications WHERE id = ?',
             [notificationId]

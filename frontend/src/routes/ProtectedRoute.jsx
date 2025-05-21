@@ -18,7 +18,7 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
     // Если проверка авторизации еще не завершена, показываем загрузку
     if (isAuthLoading) {
         return (
-            <div className="flex justify-center items-center h-screen">
+            <div className="flex justify-center items-center min-h-screen">
                 <LoadingSpinner size="large" />
             </div>
         );
@@ -31,13 +31,15 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
     
     // Проверка роли, если указаны разрешенные роли
     if (allowedRoles && allowedRoles.length > 0) {
+        const hasRequiredRole = allowedRoles.some(role => user.role === role);
+        
         // Если роль пользователя не входит в список разрешенных, перенаправляем на главную
-        if (!allowedRoles.includes(user.role)) {
-            console.log(`Access denied: User role ${user.role} not in allowed roles [${allowedRoles.join(', ')}]`);
+        if (!hasRequiredRole) {
+            console.log(`Доступ запрещен: Роль пользователя ${user.role} не входит в список разрешенных ролей [${allowedRoles.join(', ')}]`);
             return <Navigate to="/" replace />;
         }
     }
     
-    // Если пользователь авторизован и имеет необходимую роль, рендерим дочерние компоненты
+    // Если все проверки пройдены, рендерим дочерние компоненты
     return children;
 }; 

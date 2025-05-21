@@ -3,9 +3,9 @@ const pool = require('./src/config/database');
 
 async function testRoleUpdate() {
   try {
-    console.log('Testing role update functionality...');
+    console.log('Тестирование функционала обновления ролей...');
     
-    // Create a test user
+    // Создаем тестового пользователя
     const [testUserResult] = await pool.query(`
       INSERT INTO users (name, email, password, role) 
       VALUES (?, ?, ?, ?)
@@ -14,44 +14,44 @@ async function testRoleUpdate() {
     const testUserId = testUserResult.insertId;
     console.log(`Created test user with ID ${testUserId}`);
     
-    // Verify initial role
+    // Проверяем начальную роль
     const [initialUser] = await pool.query('SELECT id, role FROM users WHERE id = ?', [testUserId]);
-    console.log('Initial user role:', initialUser[0].role);
+    console.log('Начальная роль пользователя:', initialUser[0].role);
     
-    // Test each role update
+    // Тестируем каждую роль
     const roles = ['manager', 'admin', 'head_admin', 'user'];
     
     for (const role of roles) {
       try {
-        console.log(`\nAttempting to update user ${testUserId} to role "${role}"...`);
+        console.log(`\nПытаемся обновить роль пользователя ${testUserId} на "${role}"...`);
         
-        // Update role
+        // Обновляем роль
         await pool.query('UPDATE users SET role = ? WHERE id = ?', [role, testUserId]);
         
-        // Verify role was updated
+        // Проверяем, что роль была обновлена
         const [updatedUser] = await pool.query('SELECT id, role FROM users WHERE id = ?', [testUserId]);
-        console.log('Updated user role:', updatedUser[0].role);
+        console.log('Обновленная роль пользователя:', updatedUser[0].role);
         
         if (updatedUser[0].role === role) {
-          console.log(`✅ Successfully updated to "${role}"`);
+          console.log(`✅ Успешно обновлено до "${role}"`);
         } else {
-          console.log(`❌ Failed to update to "${role}"`);
+          console.log(`❌ Не удалось обновить до "${role}"`);
         }
       } catch (error) {
-        console.error(`❌ Error updating to "${role}":`, error.message);
+        console.error(`❌ Ошибка при обновлении до "${role}":`, error.message);
       }
     }
     
-    // Clean up test user
+    // Очищаем тестовый пользователь
     await pool.query('DELETE FROM users WHERE id = ?', [testUserId]);
-    console.log(`\nDeleted test user ${testUserId}`);
+    console.log(`\nУдален тестовый пользователь ${testUserId}`);
     
-    console.log('\nRole update tests completed successfully.');
+    console.log('\nТесты обновления ролей завершены успешно.');
   } catch (error) {
-    console.error('Error during role update testing:', error);
+    console.error('Ошибка при тестировании обновления ролей:', error);
   } finally {
     await pool.end();
-    console.log('Database connection closed.');
+    console.log('Соединение с базой данных закрыто.');
   }
 }
 

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import api from '../utils/api';
+import { buildUrl, getAuthHeaders } from '../utils/apiUtils';
 
 /**
  * Пользовательский хук для обработки запросов к бэкенду с состояниями загрузки и обработкой ошибок

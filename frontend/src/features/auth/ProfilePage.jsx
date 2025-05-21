@@ -786,7 +786,7 @@ const ProfilePage = ({ onLogout }) => {
                                     </div>
 
                                     {/* Статистика пользователя */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
                                         <motion.div
                                             whileHover={{ y: -2 }}
                                             className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30 transition-all duration-200"
@@ -805,16 +805,6 @@ const ProfilePage = ({ onLogout }) => {
                                                 <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Средняя оценка</span>
                                             </div>
                                             <div className="text-2xl font-bold text-gray-800 dark:text-white">{user.averageRating || 0}</div>
-                                        </motion.div>
-
-                                        <motion.div
-                                            whileHover={{ y: -2 }}
-                                            className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700 shadow-xl dark:shadow-gray-900/30 transition-all duration-200"
-                                        >
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Получено лайков</span>
-                                            </div>
-                                            <div className="text-2xl font-bold text-gray-800 dark:text-white">{user.totalLikes || 0}</div>
                                         </motion.div>
                                     </div>
                                 </motion.div>
@@ -889,11 +879,6 @@ const ProfilePage = ({ onLogout }) => {
                                             <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
                                                 <Calendar className="w-3.5 h-3.5 mr-1" />
                                                 {review.date ? formatDate(review.date) : 'Дата не указана'}
-                                                
-                                                <span className="mx-2">•</span>
-                                                
-                                                <ThumbsUp className="w-3.5 h-3.5 mr-1 text-blue-500 dark:text-blue-400" />
-                                                {Number(review.likes) || 0}
                                             </div>
                                             
                                             <motion.button
@@ -903,16 +888,7 @@ const ProfilePage = ({ onLogout }) => {
                                                 disabled={deleteReviewId === review.id}
                                                 className={`text-gray-400 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors ${deleteReviewId === review.id ? 'opacity-50' : ''}`}
                                             >
-                                                {deleteReviewId === review.id ? (
-                                                    <motion.div
-                                                        animate={{ rotate: 360 }}
-                                                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                                                    >
-                                                        <Coffee className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                                    </motion.div>
-                                                ) : (
-                                                    <Trash2 className="w-4 h-4" />
-                                                )}
+                                                <Trash2 className="w-4 h-4" />
                                             </motion.button>
                                         </div>
                                     </motion.div>

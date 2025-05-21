@@ -22,6 +22,8 @@ require('dotenv').config();
 // MongoDB connection is disabled - using SQL database instead
 // connectDB();
 
+const initializeDatabase = require('./config/initDatabase');
+
 // Инициализация приложения Express
 const app = express();
 const server = http.createServer(app);
@@ -128,5 +130,15 @@ app.use('*', (req, res) => {
 // Добавляем доступ к модели пользователя для сервера
 const userModel = require('./models/userModel');
 app.set('userModel', userModel);
+
+// Инициализация базы данных перед запуском сервера
+initializeDatabase()
+    .then(() => {
+        console.log('Database initialized successfully');
+    })
+    .catch(error => {
+        console.error('Failed to initialize database:', error);
+        process.exit(1);
+    });
 
 module.exports = { app, server }; 

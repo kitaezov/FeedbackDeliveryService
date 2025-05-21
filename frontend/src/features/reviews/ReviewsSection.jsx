@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNotification } from '../../components/NotificationContext';
 import api from '../../utils/api';
 
-// Варианты анимации
+// Варианты анимации для кнопок
 const buttonVariants = {
     initial: { opacity: 0, y: 5 },
     animate: { opacity: 1, y: 0 },
@@ -14,7 +14,7 @@ const buttonVariants = {
     tap: { scale: 0.95, transition: { duration: 0.1 }}
 };
 
-// Компонент пустых отзывов
+// Компонент для отображения состояния пустого списка отзывов
 const EmptyReviews = ({ sortMode, themeClasses }) => (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -43,7 +43,7 @@ const EmptyReviews = ({ sortMode, themeClasses }) => (
     </motion.div>
 );
 
-// Компонент кнопок сортировки
+// Компонент для кнопок сортировки
 const SortButtons = ({ sortMode, setSortMode, setCurrentPage, handleRefresh, isRotating, themeClasses }) => (
     <div className="flex items-center space-x-2">
         <motion.button
@@ -90,7 +90,7 @@ const SortButtons = ({ sortMode, setSortMode, setCurrentPage, handleRefresh, isR
     </div>
 );
 
-// Компонент пагинации
+// Компонент для пагинации
 const Pagination = ({ currentPage, totalPages, setCurrentPage }) => (
     <div className="flex justify-center mt-3">
         <div className="flex items-center space-x-1 p-1 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-xs">
@@ -131,8 +131,8 @@ const Pagination = ({ currentPage, totalPages, setCurrentPage }) => (
     </div>
 );
 
-// Компонент списка отзывов
-const ReviewList = ({ paginatedReviews, user, handleLikeReview, handleDeleteReview, isDarkMode }) => (
+// Компонент для отображения списка отзывов
+const ReviewList = ({ paginatedReviews, user, handleDeleteReview, isDarkMode }) => (
     <div className="grid gap-3">
         <AnimatePresence initial={false}>
             {paginatedReviews.map((review) => (
@@ -147,7 +147,6 @@ const ReviewList = ({ paginatedReviews, user, handleLikeReview, handleDeleteRevi
                         review={review}
                         user={user}
                         isDarkMode={isDarkMode}
-                        onLike={handleLikeReview}
                         onDelete={handleDeleteReview}
                         className="shadow-sm hover:shadow border border-gray-200 dark:border-gray-700 transition-all duration-200 rounded-lg"
                     />
@@ -157,30 +156,8 @@ const ReviewList = ({ paginatedReviews, user, handleLikeReview, handleDeleteRevi
     </div>
 );
 
-// Образец отзыва для демонстрации
-const sampleReview = {
-    id: 'sample-1',
-    userId: 'admin-1',
-    userName: 'Test Admin',
-    restaurantName: 'asdsadas',
-    rating: 5,
-    comment: 'asdasdasd',
-    date: '2025-05-10T12:00:00Z', // May 10, 2025
-    avatar: null,
-    likes: 0,
-    photos: [],
-    hasReceipt: true,
-    receiptPhoto: {
-        url: 'https://via.placeholder.com/200x300?text=Receipt+Photo',
-        isReceipt: true
-    }
-};
-
 const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewReview, isDarkMode }) => {
-    // Для демонстрации, если не было предоставлено отзывов, используйте образец отзыва
-    const startingReviews = initialReviews.length > 0 ? initialReviews : [sampleReview];
-    
-    const [reviews, setReviews] = useState(startingReviews);
+    const [reviews, setReviews] = useState(initialReviews);
     const [isRotating, setIsRotating] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortMode, setSortMode] = useState('recent');
@@ -188,18 +165,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
     const reviewsPerPage = 4; // Показываем меньше отзывов для компактности
     const notifications = useNotification();
 
-    React.useEffect(() => {
-        if (initialReviews.length > 0) {
-            // Ensure each review has the isLikedByUser property
-            const reviewsWithLikeStatus = initialReviews.map(review => ({
-                ...review,
-                isLikedByUser: Boolean(review.isLikedByUser),
-                likes: review.likes || 0
-            }));
-            setReviews(reviewsWithLikeStatus);
-        }
-    }, [initialReviews]);
-
+    // Функция для добавления нового отзыва
     const addNewReview = useCallback((newReview) => {
         setReviews(prevReviews => [{
             ...newReview,
@@ -210,12 +176,14 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         setCurrentPage(1);
     }, []);
 
+    // Эффект для обработки добавления нового отзыва
     React.useEffect(() => {
         if (onNewReview) {
             onNewReview(addNewReview);
         }
     }, [addNewReview, onNewReview]);
 
+    // Обработка сортировки отзывов
     const processedReviews = useMemo(() => {
         let sorted = [...reviews];
         if (sortMode === 'recent') {
@@ -226,6 +194,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         return sorted;
     }, [reviews, sortMode]);
 
+    // Пагинация отзывов
     const paginatedReviews = useMemo(() => {
         const startIndex = (currentPage - 1) * reviewsPerPage;
         return processedReviews.slice(startIndex, startIndex + reviewsPerPage);
@@ -233,6 +202,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
 
     const totalPages = Math.ceil(processedReviews.length / reviewsPerPage);
 
+    // Обработчик обновления списка отзывов
     const handleRefresh = () => {
         if (onRefresh) {
             setIsRotating(true);
@@ -241,6 +211,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         }
     };
 
+    // Обработчик удаления отзыва
     const handleDeleteReview = async (reviewId) => {
         if (!user || !user.token) {
             if (notifications) {
@@ -270,73 +241,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         }
     };
 
-    const handleLikeReview = async (reviewId, voteType = 'up') => {
-        if (!user || !user.token) {
-            if (notifications) {
-                notifications.notifyInfo('Войдите, чтобы оценить отзыв');
-            }
-            return;
-        }
-
-        // Проверяем, не голосовал ли уже пользователь за этот отзыв
-        const review = reviews.find(r => r.id === reviewId);
-        if (review && review.isLikedByUser) {
-            if (notifications) {
-                notifications.notifyInfo('Вы уже оценили этот отзыв');
-            }
-            return;
-        }
-
-        try {
-            // Оптимистичное обновление UI
-            setReviews(prevReviews => prevReviews.map(review => 
-                review.id === reviewId 
-                    ? { 
-                        ...review, 
-                        likes: review.likes + (voteType === 'up' ? 1 : -1),
-                        isLikedByUser: true 
-                    } 
-                    : review
-            ));
-
-            // Отправка запроса на сервер
-            await api.post('/reviews/vote', { reviewId, voteType });
-            
-            if (notifications) {
-                notifications.notifySuccess('Отзыв оценен');
-            }
-        } catch (error) {
-            // Если отзыв уже оценен, оставляем состояние как есть
-            if (error.response?.data?.message === 'Отзыв уже оценен') {
-                setReviews(prevReviews => prevReviews.map(review => 
-                    review.id === reviewId 
-                        ? { ...review, isLikedByUser: true } 
-                        : review
-                ));
-                // Уведомляем пользователя
-                if (notifications) {
-                    notifications.notifyInfo('Вы уже оценили этот отзыв');
-                }
-            } else {
-                // Для других ошибок откатываем изменения
-                setReviews(prevReviews => prevReviews.map(review => 
-                    review.id === reviewId 
-                        ? { 
-                            ...review, 
-                            likes: review.likes - (voteType === 'up' ? 1 : -1),
-                            isLikedByUser: false 
-                        } 
-                        : review
-                ));
-                if (notifications) {
-                    notifications.notifyError(error.response?.data?.message || 'Не удалось оценить отзыв');
-                }
-            }
-            console.error('Ошибка при оценке отзыва:', error);
-        }
-    };
-
-    // Конфигурация стилей
+    // Настройки темы
     const themeClasses = {
         card: isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800',
         button: isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
@@ -378,7 +283,6 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
                                 <ReviewList 
                                     paginatedReviews={paginatedReviews}
                                     user={user}
-                                    handleLikeReview={handleLikeReview}
                                     handleDeleteReview={handleDeleteReview}
                                     isDarkMode={isDarkMode}
                                 />

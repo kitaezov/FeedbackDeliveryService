@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/Card";
-import { ChevronDown, ThumbsUp, Clock, ChevronRight, Star } from 'lucide-react';
+import { ChevronDown, Clock, ChevronRight, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -20,7 +20,6 @@ const RestaurantCharts = ({ reviews = [], isDarkMode = false }) => {
                 restaurantName,
                 rating = 0,
                 ratings = {},
-                likes = 0,
                 date,
             } = review;
 
@@ -34,7 +33,6 @@ const RestaurantCharts = ({ reviews = [], isDarkMode = false }) => {
                     totalAtmosphereRating: 0,
                     totalPriceRating: 0,
                     totalCleanlinessRating: 0,
-                    totalLikes: 0,
                     latestDate: null
                 };
             }
@@ -52,7 +50,6 @@ const RestaurantCharts = ({ reviews = [], isDarkMode = false }) => {
             restaurant.totalAtmosphereRating += safeNumber(ratings.atmosphere);
             restaurant.totalPriceRating += safeNumber(ratings.price);
             restaurant.totalCleanlinessRating += safeNumber(ratings.cleanliness);
-            restaurant.totalLikes += safeNumber(likes);
 
             // Track latest review date
             const reviewDate = date ? new Date(date) : null;
@@ -73,7 +70,6 @@ const RestaurantCharts = ({ reviews = [], isDarkMode = false }) => {
                     totalAtmosphereRating,
                     totalPriceRating,
                     totalCleanlinessRating,
-                    totalLikes,
                     latestDate
                 } = restaurant;
 
@@ -86,7 +82,6 @@ const RestaurantCharts = ({ reviews = [], isDarkMode = false }) => {
                     avgPriceRating: Number((totalPriceRating / totalReviews).toFixed(1)),
                     avgCleanlinessRating: Number((totalCleanlinessRating / totalReviews).toFixed(1)),
                     totalReviews,
-                    totalLikes,
                     latestDate
                 };
             });
@@ -102,8 +97,6 @@ const RestaurantCharts = ({ reviews = [], isDarkMode = false }) => {
                     });
             case 'rating':
                 return processedData.sort((a, b) => b.avgRating - a.avgRating);
-            case 'likes':
-                return processedData.sort((a, b) => b.totalLikes - a.totalLikes);
             default:
                 return processedData;
         }
@@ -185,11 +178,6 @@ const SortButton = ({ sortMode, setSortMode, themeClasses, isDarkMode }) => {
             value: 'newest',
             label: 'Новые',
             icon: <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-        },
-        {
-            value: 'likes',
-            label: 'Популярные',
-            icon: <ThumbsUp className="w-4 h-4 text-red-500 dark:text-red-400" />
         }
     ];
 
@@ -305,7 +293,6 @@ RestaurantCharts.propTypes = {
     reviews: PropTypes.arrayOf(PropTypes.shape({
         restaurantName: PropTypes.string.isRequired,
         ratings: PropTypes.object,
-        likes: PropTypes.number,
         timestamp: PropTypes.number
     })),
     isDarkMode: PropTypes.bool

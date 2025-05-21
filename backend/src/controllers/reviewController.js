@@ -308,9 +308,21 @@ const deleteReview = async (req, res) => {
                 details: 'Вы не можете удалить чужой отзыв'
             });
         }
+
+        // Получаем количество лайков отзыва перед удалением
+        const likesCount = review.likes || 0;
         
         // Удаление отзыва
         await reviewModel.delete(parseInt(id));
+
+        // Обновляем счетчик лайков пользователя
+        if (likesCount > 0) {
+            const reviewAuthor = await userModel.findById(review.user_id);
+            if (reviewAuthor) {
+                // Уменьшаем количество лайков в профиле пользователя
+                await userModel.decreaseLikesCount(review.user_id, likesCount);
+            }
+        }
         
         res.json({
             message: 'Отзыв успешно удален'

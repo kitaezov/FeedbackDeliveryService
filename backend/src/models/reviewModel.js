@@ -22,7 +22,17 @@ class ReviewModel {
      */
     async initializeTables() {
         try {
-            // Create review_votes table if it doesn't exist
+            // Проверяем существование столбца likes
+            const [columns] = await pool.execute('SHOW COLUMNS FROM reviews');
+            const columnNames = columns.map(col => col.Field);
+
+            // Добавляем столбец likes, если он не существует
+            if (!columnNames.includes('likes')) {
+                await pool.execute('ALTER TABLE reviews ADD COLUMN likes INT DEFAULT 0');
+                console.log('Added likes column to reviews table');
+            }
+
+            // Проверяем существование таблицы review_votes
             await pool.execute(`
                 CREATE TABLE IF NOT EXISTS review_votes (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -35,6 +45,7 @@ class ReviewModel {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             `);
+            console.log('Review votes table initialized');
 
             // Create review_photos table if it doesn't exist
             await pool.execute(`
@@ -47,10 +58,7 @@ class ReviewModel {
                 )
             `);
 
-            // Add likes column to reviews table if it doesn't exist
-            await pool.execute(`
-                ALTER TABLE reviews ADD COLUMN IF NOT EXISTS likes INT DEFAULT 0
-            `);
+            return true;
         } catch (error) {
             console.error('Error initializing tables:', error);
             throw error;

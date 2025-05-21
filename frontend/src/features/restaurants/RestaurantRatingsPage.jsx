@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Star, Search, Filter, MapPin, Award, ArrowLeft, Coffee, PieChart, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { ChevronDown, Star, Search, Filter, MapPin, Award, ArrowLeft, Coffee, PieChart, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import RestaurantListView from "./RestaurantCharts";
 import { useParams, Link } from 'react-router-dom';
 import api from '../../utils/api';

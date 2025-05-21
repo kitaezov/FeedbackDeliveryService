@@ -575,6 +575,25 @@ class UserModel {
             return false;
         }
     }
+
+    /**
+     * Уменьшить количество лайков пользователя
+     * @param {number} userId - ID пользователя
+     * @param {number} amount - Количество лайков для уменьшения
+     * @returns {Promise<boolean>} - Результат операции
+     */
+    async decreaseLikesCount(userId, amount) {
+        try {
+            await pool.execute(
+                'UPDATE users SET likes_received = GREATEST(0, likes_received - ?) WHERE id = ?',
+                [amount, userId]
+            );
+            return true;
+        } catch (error) {
+            console.error('Error decreasing user likes count:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new UserModel(); 

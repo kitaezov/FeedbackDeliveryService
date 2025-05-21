@@ -144,11 +144,11 @@ router.post('/', authenticateToken, reviewController.createReview);
 router.get('/', reviewController.getAllReviews);
 
 /**
- * @route POST /api/reviews/like
- * @desc Like a review
+ * @route POST /api/reviews/vote
+ * @desc Vote on a review (up/down)
  * @access Private
  */
-router.post('/like', authenticateToken, reviewController.likeReview);
+router.post('/vote', authenticateToken, reviewController.voteReview);
 
 /**
  * @route GET /api/reviews/:id

@@ -22,14 +22,15 @@ class ReviewModel {
      */
     async initializeTables() {
         try {
-            // Create review_likes table if it doesn't exist
+            // Create review_votes table if it doesn't exist
             await pool.execute(`
-                CREATE TABLE IF NOT EXISTS review_likes (
+                CREATE TABLE IF NOT EXISTS review_votes (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     review_id INT NOT NULL,
                     user_id INT NOT NULL,
+                    vote_type ENUM('up', 'down') NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY unique_review_like (review_id, user_id),
+                    UNIQUE KEY unique_review_vote (review_id, user_id),
                     FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
@@ -44,6 +45,11 @@ class ReviewModel {
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
                 )
+            `);
+
+            // Add likes column to reviews table if it doesn't exist
+            await pool.execute(`
+                ALTER TABLE reviews ADD COLUMN IF NOT EXISTS likes INT DEFAULT 0
             `);
         } catch (error) {
             console.error('Error initializing tables:', error);
@@ -202,12 +208,18 @@ class ReviewModel {
                     u.name as user_name,
                     u.avatar,
                     COALESCE(r.likes, 0) as likes,
-                    FALSE as isLikedByUser
+                    CASE 
+                        WHEN rv.vote_type IS NOT NULL THEN TRUE 
+                        ELSE FALSE 
+                    END as isLikedByUser,
+                    rv.vote_type as userVoteType
                 FROM reviews r
-                LEFT JOIN users u ON r.user_id = u.id`;
+                LEFT JOIN users u ON r.user_id = u.id
+                LEFT JOIN review_votes rv ON r.id = rv.review_id AND rv.user_id = ?`;
+            
+            const params = [currentUserId || null];
             
             const conditions = [];
-            const params = [];
             
             if (userId) {
                 conditions.push('r.user_id = ?');
@@ -223,34 +235,27 @@ class ReviewModel {
                 query += ' WHERE ' + conditions.join(' AND ');
             }
             
-            // Используем конкретные значения для LIMIT и OFFSET
             query += ` ORDER BY r.date DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
             
             const [rows] = await pool.execute(query, params);
             
-            // Get photos and likes status for each review
             const reviewsWithDetails = await Promise.all(rows.map(async (review) => {
                 try {
-                    // Get photos if they exist
                     const photos = await this.getReviewPhotos(review.id);
-                    
-                    // Check if user liked this review
-                    let isLikedByUser = false;
-                    if (currentUserId) {
-                        isLikedByUser = await this.checkLiked(review.id, currentUserId);
-                    }
                     
                     return {
                         ...review,
                         photos: photos || [],
-                        isLikedByUser
+                        isLikedByUser: Boolean(review.isLikedByUser),
+                        userVoteType: review.userVoteType
                     };
                 } catch (error) {
                     console.error(`Error getting review details for review ${review.id}:`, error);
                     return {
                         ...review,
                         photos: [],
-                        isLikedByUser: false
+                        isLikedByUser: Boolean(review.isLikedByUser),
+                        userVoteType: review.userVoteType
                     };
                 }
             }));
@@ -469,83 +474,63 @@ class ReviewModel {
     }
 
     /**
-     * Добавить лайк к отзыву
+     * Добавить голос к отзыву
      * @param {number} reviewId - ID отзыва
+     * @param {string} voteType - Тип голоса ('up' или 'down')
      * @returns {Promise<boolean>} - Результат добавления
      */
-    async addLike(reviewId) {
-        // Обновляем счетчик лайков в отзыве
+    async addVote(reviewId, voteType) {
+        // Обновляем счетчик голосов в отзыве
         await pool.execute(
-            'UPDATE reviews SET likes = COALESCE(likes, 0) + 1 WHERE id = ?',
-            [reviewId]
+            'UPDATE reviews SET likes = COALESCE(likes, 0) + ? WHERE id = ?',
+            [voteType === 'up' ? 1 : -1, reviewId]
         );
         
         return true;
     }
     
     /**
-     * Проверить, поставил ли пользователь лайк отзыву
+     * Проверить, голосовал ли пользователь за отзыв
      * @param {number} reviewId - ID отзыва
      * @param {number} userId - ID пользователя
-     * @returns {Promise<boolean>} - Результат проверки
+     * @returns {Promise<{voted: boolean, voteType: string|null}>} - Результат проверки
      */
-    async checkLiked(reviewId, userId) {
+    async checkVoted(reviewId, userId) {
         try {
-            // Сначала проверяем, существует ли таблица review_likes
-            const [tables] = await pool.execute(`
-                SELECT * 
-                FROM information_schema.tables
-                WHERE table_schema = DATABASE()
-                AND table_name = 'review_likes'
-            `);
-            
-            // Создаем таблицу, если она не существует
-            if (tables.length === 0) {
-                await pool.execute(`
-                    CREATE TABLE review_likes (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        review_id INT NOT NULL,
-                        user_id INT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE KEY unique_review_like (review_id, user_id),
-                        FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                    )
-                `);
-            }
-            
-            // Проверяем, поставил ли пользователь лайк этому отзыву
             const [rows] = await pool.execute(
-                'SELECT 1 FROM review_likes WHERE review_id = ? AND user_id = ?',
+                'SELECT vote_type FROM review_votes WHERE review_id = ? AND user_id = ?',
                 [reviewId, userId]
             );
             
-            return rows.length > 0;
+            return {
+                voted: rows.length > 0,
+                voteType: rows.length > 0 ? rows[0].vote_type : null
+            };
         } catch (error) {
-            console.error('Error checking if review was liked:', error);
-            return false;
+            console.error('Error checking if review was voted:', error);
+            return { voted: false, voteType: null };
         }
     }
     
     /**
-     * Записать лайк
+     * Записать голос
      * @param {number} reviewId - ID отзыва
      * @param {number} userId - ID пользователя
+     * @param {string} voteType - Тип голоса ('up' или 'down')
      * @returns {Promise<boolean>} - Результат записи
      */
-    async recordLike(reviewId, userId) {
+    async recordVote(reviewId, userId, voteType) {
         try {
             await pool.execute(
-                'INSERT INTO review_likes (review_id, user_id) VALUES (?, ?)',
-                [reviewId, userId]
+                'INSERT INTO review_votes (review_id, user_id, vote_type) VALUES (?, ?, ?)',
+                [reviewId, userId, voteType]
             );
             return true;
         } catch (error) {
-            // Если возникла ошибка дублирования записи, значит пользователь уже поставил лайк этому отзыву
             if (error.code === 'ER_DUP_ENTRY') {
                 return false;
             }
-            console.error('Error recording review like:', error);
+            console.error('Error recording review vote:', error);
             throw error;
         }
     }

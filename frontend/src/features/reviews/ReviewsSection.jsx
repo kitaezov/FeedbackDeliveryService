@@ -190,12 +190,22 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
 
     React.useEffect(() => {
         if (initialReviews.length > 0) {
-            setReviews(initialReviews);
+            // Ensure each review has the isLikedByUser property
+            const reviewsWithLikeStatus = initialReviews.map(review => ({
+                ...review,
+                isLikedByUser: Boolean(review.isLikedByUser),
+                likes: review.likes || 0
+            }));
+            setReviews(reviewsWithLikeStatus);
         }
     }, [initialReviews]);
 
     const addNewReview = useCallback((newReview) => {
-        setReviews(prevReviews => [newReview, ...prevReviews]);
+        setReviews(prevReviews => [{
+            ...newReview,
+            isLikedByUser: false,
+            likes: 0
+        }, ...prevReviews]);
         setSortMode('recent');
         setCurrentPage(1);
     }, []);
@@ -260,7 +270,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         }
     };
 
-    const handleLikeReview = async (reviewId) => {
+    const handleLikeReview = async (reviewId, voteType = 'up') => {
         if (!user || !user.token) {
             if (notifications) {
                 notifications.notifyInfo('Войдите, чтобы оценить отзыв');
@@ -268,14 +278,60 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
             return;
         }
 
+        // Проверяем, не голосовал ли уже пользователь за этот отзыв
+        const review = reviews.find(r => r.id === reviewId);
+        if (review && review.isLikedByUser) {
+            if (notifications) {
+                notifications.notifyInfo('Вы уже оценили этот отзыв');
+            }
+            return;
+        }
+
         try {
-            await api.post('/reviews/like', { reviewId });
+            // Оптимистичное обновление UI
             setReviews(prevReviews => prevReviews.map(review => 
                 review.id === reviewId 
-                    ? { ...review, likes: (review.likes || 0) + 1 } 
+                    ? { 
+                        ...review, 
+                        likes: review.likes + (voteType === 'up' ? 1 : -1),
+                        isLikedByUser: true 
+                    } 
                     : review
             ));
+
+            // Отправка запроса на сервер
+            await api.post('/reviews/vote', { reviewId, voteType });
+            
+            if (notifications) {
+                notifications.notifySuccess('Отзыв оценен');
+            }
         } catch (error) {
+            // Если отзыв уже оценен, оставляем состояние как есть
+            if (error.response?.data?.message === 'Отзыв уже оценен') {
+                setReviews(prevReviews => prevReviews.map(review => 
+                    review.id === reviewId 
+                        ? { ...review, isLikedByUser: true } 
+                        : review
+                ));
+                // Уведомляем пользователя
+                if (notifications) {
+                    notifications.notifyInfo('Вы уже оценили этот отзыв');
+                }
+            } else {
+                // Для других ошибок откатываем изменения
+                setReviews(prevReviews => prevReviews.map(review => 
+                    review.id === reviewId 
+                        ? { 
+                            ...review, 
+                            likes: review.likes - (voteType === 'up' ? 1 : -1),
+                            isLikedByUser: false 
+                        } 
+                        : review
+                ));
+                if (notifications) {
+                    notifications.notifyError(error.response?.data?.message || 'Не удалось оценить отзыв');
+                }
+            }
             console.error('Ошибка при оценке отзыва:', error);
         }
     };

@@ -9,6 +9,9 @@ import { Container } from '../../common/components/ui';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
+// Define API base URL
+const API_BASE_URL = 'http://localhost:5000/api';
+
 // Animation variants
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -278,13 +281,13 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
             setLoading(true);
             setError(null);
             try {
-                // Define API base URL - use port 5000 instead of 8000
-                const API_BASE_URL = 'http://localhost:5000/api';
-                
                 // First fetch all reviews to have them available
                 let allReviews = [];
                 try {
-                    const reviewsResponse = await axios.get(`${API_BASE_URL}/reviews`);
+                    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                    const reviewsResponse = await axios.get(`${API_BASE_URL}/reviews`, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
                     console.log("All reviews response:", reviewsResponse.data);
                     
                     if (reviewsResponse.data && Array.isArray(reviewsResponse.data.reviews)) {
@@ -424,9 +427,6 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
         try {
             toast.info("Обновление отзывов...");
             
-            // Use the correct API base URL
-            const API_BASE_URL = 'http://localhost:5000/api';
-            
             // Fetch all reviews
             const reviewsResponse = await axios.get(`${API_BASE_URL}/reviews`);
             let allReviews = [];
@@ -491,6 +491,58 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
     const RestaurantReviews = ({ restaurantId, isDarkMode }) => {
         const reviews = restaurantReviews[restaurantId] || [];
         console.log(`Rendering ${reviews.length} reviews for restaurant ${restaurantId}`);
+        
+        // Add handleLike function
+        const handleLike = async (reviewId) => {
+            try {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    toast.info('Войдите, чтобы оценить отзыв');
+                    return;
+                }
+
+                // Оптимистичное обновление UI
+                setRestaurantReviews(prev => ({
+                    ...prev,
+                    [restaurantId]: prev[restaurantId].map(review =>
+                        review.id === reviewId
+                            ? { ...review, likes: (review.likes || 0) + 1, isLikedByUser: true }
+                            : review
+                    )
+                }));
+
+                // Отправляем запрос на сервер
+                await axios.post(`${API_BASE_URL}/reviews/like`, 
+                    { reviewId },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                toast.success('Отзыв оценен');
+            } catch (error) {
+                if (error.response?.data?.message === 'Отзыв уже оценен') {
+                    // Если отзыв уже оценен, оставляем состояние как есть
+                    setRestaurantReviews(prev => ({
+                        ...prev,
+                        [restaurantId]: prev[restaurantId].map(review =>
+                            review.id === reviewId
+                                ? { ...review, isLikedByUser: true }
+                                : review
+                        )
+                    }));
+                } else {
+                    // Для других ошибок откатываем изменения
+                    setRestaurantReviews(prev => ({
+                        ...prev,
+                        [restaurantId]: prev[restaurantId].map(review =>
+                            review.id === reviewId
+                                ? { ...review, likes: Math.max(0, (review.likes || 0) - 1), isLikedByUser: false }
+                                : review
+                        )
+                    }));
+                    toast.error(error.response?.data?.message || 'Не удалось оценить отзыв');
+                }
+            }
+        };
         
         // If reviews not fetched yet or empty
         if (reviews.length === 0) {
@@ -608,14 +660,24 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                                     
                                     {/* Add a clickable like counter similar to the image */}
                                     <motion.button
+                                        onClick={() => handleLike(review.id)}
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.95 }}
                                         className="flex items-center gap-1"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                                        <svg 
+                                            xmlns="http://www.w3.org/2000/svg" 
+                                            viewBox="0 0 24 24" 
+                                            fill={review.isLikedByUser ? "currentColor" : "none"}
+                                            stroke="currentColor" 
+                                            strokeWidth="2" 
+                                            strokeLinecap="round" 
+                                            strokeLinejoin="round" 
+                                            className={`w-4 h-4 ${review.isLikedByUser ? 'text-red-500' : ''}`}
+                                        >
                                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                                         </svg>
-                                        <span>{review.likes || 0}</span>
+                                        <span className={review.isLikedByUser ? 'text-red-500' : ''}>{review.likes || 0}</span>
                                     </motion.button>
                                 </div>
                             </motion.div>

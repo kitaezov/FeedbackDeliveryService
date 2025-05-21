@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
-import { Heart, ChevronDown, ChevronUp, Trash2, User, Receipt, ImageIcon, MessageCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, User, Receipt, ImageIcon, MessageCircle } from 'lucide-react';
 import { Card, CardContent } from './Card';
 import { motion } from 'framer-motion';
 import { restaurantData } from '../features/restaurants/restaurantData';
@@ -134,13 +134,13 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
     
     const [showDetails, setShowDetails] = useState(false);
     const [localLikes, setLocalLikes] = useState(review.likes || 0);
-    const [isLiked, setIsLiked] = useState(review.isLikedByUser || false);
+    const [userVote, setUserVote] = useState(review.isLikedByUser ? 'up' : null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [isLiking, setIsLiking] = useState(false);
+    const [isVoting, setIsVoting] = useState(false);
 
-    // Update isLiked state when review changes
+    // Update vote state when review changes
     useEffect(() => {
-        setIsLiked(review.isLikedByUser || false);
+        setUserVote(review.isLikedByUser ? 'up' : null);
         setLocalLikes(review.likes || 0);
     }, [review]);
 
@@ -207,34 +207,40 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
         return categories[categoryId] || categoryId;
     };
 
-    const handleLike = async () => {
+    const handleVote = async (voteType) => {
         if (!user) {
             return; // User must be logged in
         }
         
         if (isCurrentUserReview) {
-            return; // Can't like your own review
+            return; // Can't vote own review
         }
         
-        if (isLiked || isLiking) {
-            return; // Already liked or in process
+        if (isVoting || userVote === voteType) {
+            return; // Already in process or already voted
         }
         
         try {
-            setIsLiking(true);
-            // First visually update the UI for better user experience
-            setLocalLikes(prev => prev + 1);
-            setIsLiked(true);
+            setIsVoting(true);
             
-            // Then call the API
-            await onLike(reviewData.id);
+            // Оптимистичное обновление UI
+            setUserVote(voteType);
+            setLocalLikes(prev => voteType === 'up' ? prev + 1 : prev - 1);
+            
+            // Затем вызываем API через родительский компонент
+            await onLike(reviewData.id, voteType);
         } catch (error) {
-            // If there was an error, revert the UI change
-            console.error('Error liking review:', error);
-            setLocalLikes(prev => prev - 1);
-            setIsLiked(false);
+            // В любом случае оставляем голос, если это ошибка "уже проголосовал"
+            if (error.response?.data?.message === 'Отзыв уже оценен') {
+                setUserVote(voteType);
+            } else {
+                // Только для других ошибок откатываем изменения
+                console.error('Error voting review:', error);
+                setLocalLikes(prev => voteType === 'up' ? prev - 1 : prev + 1);
+                setUserVote(null);
+            }
         } finally {
-            setIsLiking(false);
+            setIsVoting(false);
         }
     };
 
@@ -425,29 +431,61 @@ const ReviewCard = ({ review, user, onLike = () => {}, onDelete = () => {}, isDa
                                     <Trash2 className="w-4 h-4" />
                                 </motion.button>
                             )}
-                            <motion.button
-                                onClick={handleLike}
-                                variants={buttonVariants}
-                                whileHover="hover"
-                                whileTap="tap"
-                                disabled={isCurrentUserReview || !user || isLiked || isLiking}
-                                className={`flex items-center transition-all px-3 py-1.5 rounded-full ${
-                                    isLiked
-                                        ? 'text-red-500 bg-red-50'
-                                        : isCurrentUserReview 
-                                          ? 'text-gray-300 cursor-not-allowed'
-                                          : isDarkMode 
-                                            ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/20' 
-                                            : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
-                                }`}
-                            >
-                                <Heart
-                                    className={`w-4 h-4 mr-2 ${isLiking ? 'animate-pulse' : ''}`}
-                                    fill={isLiked ? 'currentColor' : 'none'}
-                                    strokeWidth={1.5}
-                                />
-                                <span className="font-medium">{localLikes}</span>
-                            </motion.button>
+                            <div className="flex flex-col items-center space-y-1">
+                                <motion.button
+                                    onClick={() => handleVote('up')}
+                                    variants={buttonVariants}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                    disabled={isCurrentUserReview || !user || isVoting || userVote === 'up'}
+                                    className={`flex items-center justify-center p-1 rounded-full transition-all ${
+                                        userVote === 'up'
+                                            ? 'text-green-500 bg-green-50 cursor-not-allowed'
+                                            : isCurrentUserReview 
+                                              ? 'text-gray-300 cursor-not-allowed'
+                                              : isDarkMode 
+                                                ? 'text-gray-400 hover:text-green-400 hover:bg-green-900/20' 
+                                                : 'text-gray-500 hover:text-green-500 hover:bg-green-50'
+                                    }`}
+                                >
+                                    <ChevronUp
+                                        className={`w-5 h-5 ${isVoting ? 'animate-pulse' : ''}`}
+                                        strokeWidth={2.5}
+                                    />
+                                </motion.button>
+                                
+                                <span className={`text-sm font-medium ${
+                                    localLikes > 0 
+                                        ? 'text-green-500' 
+                                        : localLikes < 0 
+                                            ? 'text-red-500'
+                                            : 'text-gray-500'
+                                }`}>
+                                    {localLikes > 0 ? `+${localLikes}` : localLikes}
+                                </span>
+                                
+                                <motion.button
+                                    onClick={() => handleVote('down')}
+                                    variants={buttonVariants}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                    disabled={isCurrentUserReview || !user || isVoting || userVote === 'down'}
+                                    className={`flex items-center justify-center p-1 rounded-full transition-all ${
+                                        userVote === 'down'
+                                            ? 'text-red-500 bg-red-50 cursor-not-allowed'
+                                            : isCurrentUserReview 
+                                              ? 'text-gray-300 cursor-not-allowed'
+                                              : isDarkMode 
+                                                ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/20' 
+                                                : 'text-gray-500 hover:text-red-500 hover:bg-red-50'
+                                    }`}
+                                >
+                                    <ChevronDown
+                                        className={`w-5 h-5 ${isVoting ? 'animate-pulse' : ''}`}
+                                        strokeWidth={2.5}
+                                    />
+                                </motion.button>
+                            </div>
                         </div>
 
                         <motion.button

@@ -325,20 +325,27 @@ const deleteReview = async (req, res) => {
 };
 
 /**
- * Оценить отзыв
+ * Проголосовать за отзыв
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-const likeReview = async (req, res) => {
+const voteReview = async (req, res) => {
     try {
-        const { reviewId } = req.body;
+        const { reviewId, voteType } = req.body;
         const userId = req.user.id;
         
         // Проверка входных данных
-        if (!reviewId) {
+        if (!reviewId || !voteType) {
             return res.status(400).json({
                 message: 'Недостаточно данных',
-                details: 'Необходимо указать ID отзыва'
+                details: 'Необходимо указать ID отзыва и тип голоса'
+            });
+        }
+
+        if (!['up', 'down'].includes(voteType)) {
+            return res.status(400).json({
+                message: 'Некорректный тип голоса',
+                details: 'Тип голоса должен быть "up" или "down"'
             });
         }
         
@@ -351,7 +358,7 @@ const likeReview = async (req, res) => {
             });
         }
         
-        // Проверка, не является ли автор отзыва тем же пользователем, который оценивает его
+        // Проверка, не является ли автор отзыва тем же пользователем
         if (review.user_id === userId) {
             return res.status(400).json({
                 message: 'Невозможно оценить собственный отзыв',
@@ -359,20 +366,21 @@ const likeReview = async (req, res) => {
             });
         }
         
-        // Проверка, не оценил ли пользователь отзыв ранее
-        const hasLiked = await reviewModel.checkLiked(parseInt(reviewId, 10), userId);
-        if (hasLiked) {
+        // Проверка, не голосовал ли пользователь ранее
+        const { voted, voteType: existingVoteType } = await reviewModel.checkVoted(parseInt(reviewId, 10), userId);
+        if (voted) {
             return res.status(400).json({
                 message: 'Отзыв уже оценен',
-                details: 'Вы уже оценили этот отзыв'
+                details: 'Вы уже оценили этот отзыв',
+                voteType: existingVoteType
             });
         }
         
-        // Добавление оценки к отзыву
-        await reviewModel.addLike(parseInt(reviewId, 10));
+        // Добавление голоса к отзыву
+        await reviewModel.addVote(parseInt(reviewId, 10), voteType);
         
-        // Запись оценки
-        await reviewModel.recordLike(parseInt(reviewId, 10), userId);
+        // Запись голоса
+        await reviewModel.recordVote(parseInt(reviewId, 10), userId, voteType);
         
         // Обновление счетчика оценок пользователя
         const reviewAuthor = await userModel.findById(review.user_id);
@@ -382,7 +390,8 @@ const likeReview = async (req, res) => {
         
         res.json({
             message: 'Отзыв успешно оценен',
-            success: true
+            success: true,
+            voteType
         });
     } catch (error) {
         console.error('Ошибка при оценке отзыва:', error);
@@ -575,6 +584,6 @@ module.exports = {
     getReviewById,
     updateReview,
     deleteReview,
-    likeReview,
+    voteReview,
     createReviewWithPhotos
 }; 

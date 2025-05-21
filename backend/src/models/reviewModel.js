@@ -191,7 +191,6 @@ class ReviewModel {
      */
     async getAll({ page = 1, limit = 10, userId, restaurantName, currentUserId } = {}) {
         try {
-            const offset = (page - 1) * limit;
             let query = `
                 SELECT 
                     r.*,
@@ -200,30 +199,33 @@ class ReviewModel {
                     COALESCE(r.likes, 0) as likes,
                     FALSE as isLikedByUser
                 FROM reviews r
-                LEFT JOIN users u ON r.user_id = u.id
-            `;
+                LEFT JOIN users u ON r.user_id = u.id`;
             
+            const conditions = [];
             const params = [];
             
-            // Build WHERE clause
-            const conditions = [];
             if (userId) {
                 conditions.push('r.user_id = ?');
-                params.push(parseInt(userId, 10));
+                params.push(userId);
             }
+            
             if (restaurantName) {
-                conditions.push('r.restaurant_name = ?');
-                params.push(restaurantName);
+                conditions.push('r.restaurant_name LIKE ?');
+                params.push(`%${restaurantName}%`);
             }
             
             if (conditions.length > 0) {
                 query += ' WHERE ' + conditions.join(' AND ');
             }
             
-            // Add ORDER BY, LIMIT and OFFSET
+            // Преобразуем параметры пагинации в числа
+            const limitNum = Number(limit) || 10;
+            const pageNum = Number(page) || 1;
+            const offsetNum = (pageNum - 1) * limitNum;
+            
+            // Добавляем ORDER BY, LIMIT и OFFSET
             query += ' ORDER BY r.date DESC LIMIT ? OFFSET ?';
-            params.push(parseInt(limit, 10));
-            params.push(parseInt(offset, 10));
+            params.push(limitNum, offsetNum);
             
             const [rows] = await pool.execute(query, params);
             

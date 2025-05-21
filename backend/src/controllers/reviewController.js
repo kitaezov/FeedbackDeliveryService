@@ -416,13 +416,13 @@ const voteReview = async (req, res) => {
 
 /**
  * Создать отзыв с фотографиями
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * @param {Object} req - Объект запроса Express
+ * @param {Object} res - Объект ответа Express
  */
 const createReviewWithPhotos = async (req, res) => {
     try {
-        console.log('Received files:', req.files);
-        console.log('Received body:', req.body);
+        console.log('Получены файлы:', req.files);
+        console.log('Получено тело запроса:', req.body);
         
         if (!req.body.reviewData) {
             return res.status(400).json({
@@ -546,7 +546,7 @@ const createReviewWithPhotos = async (req, res) => {
         
         const review = await reviewModel.createWithPhotos(reviewDataWithPhotos);
         
-        // Подготовка отзыв а с информацией о пользователе для ответа и трансляции
+        // Подготовка отзыва с информацией о пользователе для ответа и трансляции
         const fullReview = {
             id: review.id,
             ...reviewDataWithPhotos,

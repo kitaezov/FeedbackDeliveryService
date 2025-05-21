@@ -1,32 +1,30 @@
 /**
- * Error Handler Utility
- * Provides standardized error handling for API responses
+ * Утилита обработки ошибок
+ * Предоставляет стандартизированную обработку ошибок для API-ответов
  */
 
 /**
- * Handle API errors with standardized response format
- * @param {Object} res - Express response object
- * @param {string} message - User-friendly error message
- * @param {number} statusCode - HTTP status code
- * @param {Error} error - Original error object
- * @returns {Object} - JSON response with error details
+ * Обработка ошибок API со стандартизированным форматом ответа
+ * @param {Object} res - Объект ответа Express
+ * @param {string} message - Понятное пользователю сообщение об ошибке
+ * @param {number} statusCode - HTTP код статуса
+ * @param {Error} error - Оригинальный объект ошибки
+ * @returns {Object} - JSON ответ с деталями ошибки
  */
 const errorHandler = (res, message, statusCode = 500, error = null) => {
-    // Log error details to console for debugging
-    console.error(`API Error (${statusCode}): ${message}`);
+    // Логируем детали ошибки в консоль для отладки
+    console.error(`Ошибка API (${statusCode}): ${message}`);
     if (error) {
-        console.error('Original error:', error);
+        console.error('Оригинальная ошибка:', error);
     }
     
-    // Send standardized error response
+    // Отправляем стандартизированный ответ с ошибкой
     return res.status(statusCode).json({
         success: false,
         message: message,
-        details: error?.message || 'No additional details available',
+        details: error?.message || 'Дополнительные детали отсутствуют',
         timestamp: new Date().toISOString()
     });
 };
 
-module.exports = {
-    errorHandler
-}; 
+module.exports = errorHandler; 

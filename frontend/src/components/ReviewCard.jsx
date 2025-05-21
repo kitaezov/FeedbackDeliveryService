@@ -129,13 +129,13 @@ const formatDate = (dateString) => {
 };
 
 const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) => {
-    // Add console log to debug the review object
-    console.log('ReviewCard received review:', review);
+    // Добавляем лог для отладки объекта отзыва
+    console.log('Получен отзыв в ReviewCard:', review);
     
     const [showDetails, setShowDetails] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Normalize review fields to handle different formats
+    // Нормализация полей отзыва для обработки разных форматов данных
     const reviewData = {
         id: review.id,
         userId: review.userId || review.user_id,
@@ -155,20 +155,20 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
             price: review.priceRating || review.price_rating || 0,
             cleanliness: review.cleanlinessRating || review.cleanliness_rating || 0
         },
-        // Add manager response data
+        // Добавляем данные ответа менеджера
         responded: review.responded || Boolean(review.response) || false,
         response: review.response || '',
         responseDate: review.responseDate || null
     };
 
-    // Function to process photos array to ensure proper format
+    // Функция для обработки массива фотографий и обеспечения правильного формата
     function processPhotosArray(photos) {
         if (!Array.isArray(photos)) {
             return [];
         }
         
         return photos.map(photo => {
-            // If it's a string that might be JSON, try to parse it
+            // Если это строка, которая может быть JSON, пробуем её разобрать
             if (typeof photo === 'string' && (photo.startsWith('{') || photo.startsWith('['))) {
                 try {
                     return JSON.parse(photo);
@@ -180,7 +180,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
         });
     }
 
-    // Check if this is the current user's review
+    // Проверяем, принадлежит ли отзыв текущему пользователю
     const isCurrentUserReview = user && (reviewData.userId === user.id);
     const restaurantSlug = reviewData.restaurantName ? reviewData.restaurantName.toLowerCase().replace(/\s+/g, '-') : '';
 
@@ -285,7 +285,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
                         "{reviewData.comment}"
                     </p>
 
-                    {/* Manager Response */}
+                    {/* Ответ менеджера */}
                     {reviewData.responded && reviewData.response && (
                         <div className={`mb-6 mt-6 pt-4 pb-4 px-4 rounded-lg
                                       ${isDarkMode ? 'bg-gray-700 border-l-4 border-blue-600' : 'bg-blue-50 border-l-4 border-blue-500'}`}>
@@ -310,7 +310,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
                         </div>
                     )}
 
-                    {/* Receipt photo indicator if exists */}
+                    {/* Индикатор наличия чека */}
                     {reviewData.hasReceipt && (
                         <div className={`mb-4 flex items-center text-xs ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                             <Receipt className="w-3 h-3 mr-1" />
@@ -318,7 +318,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
                         </div>
                     )}
                     
-                    {/* Photos section (including receipt) */}
+                    {/* Секция фотографий (включая чек) */}
                     {(reviewData.photos && reviewData.photos.length > 0) && (
                         <div className="mb-4">
                             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -333,7 +333,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
                                                     window.open(formattedUrl, '_blank');
                                                 }
                                             } catch (error) {
-                                                console.error("Error opening image:", error);
+                                                console.error("Ошибка при открытии изображения:", error);
                                             }
                                         }}
                                     >

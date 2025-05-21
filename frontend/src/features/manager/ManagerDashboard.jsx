@@ -10,6 +10,46 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
+// Форматирование даты с учетом возможных ошибок
+const formatDate = (dateString) => {
+    try {
+        // ISO формат (наиболее распространенный)
+        if (dateString && typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateString)) {
+            const date = new Date(dateString);
+            return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+        } 
+        // Unix timestamp в миллисекундах
+        else if (dateString && !isNaN(Number(dateString)) && Number(dateString) > 1000000000000) {
+            const date = new Date(Number(dateString));
+            return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+        }
+        // Unix timestamp в секундах
+        else if (dateString && !isNaN(Number(dateString)) && Number(dateString) < 1000000000000) {
+            const date = new Date(Number(dateString) * 1000);
+            return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+        }
+        // Формат YYYY-MM-DD
+        else if (dateString && typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            const [year, month, day] = dateString.split('-');
+            return `${day}.${month}.${year}`;
+        }
+        // Формат DD.MM.YYYY
+        else if (dateString && typeof dateString === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(dateString)) {
+            return dateString;
+        }
+        // Если не распознан формат
+        else if (dateString) {
+            return String(dateString);
+        }
+        
+        // Если ничего не сработало
+        return "Нет даты";
+    } catch (e) {
+        console.warn("Ошибка форматирования даты:", e, dateString);
+        return "Нет даты";
+    }
+};
+
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -68,46 +108,6 @@ const ChartCard = ({ title, children, className = '' }) => (
 const ReviewItem = ({ review, onRespond }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [responseText, setResponseText] = useState('');
-
-    // Форматирование даты с учетом возможных ошибок
-    const formatDate = (dateString) => {
-        try {
-            // ISO формат (наиболее распространенный)
-            if (dateString && typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateString)) {
-                const date = new Date(dateString);
-                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
-            } 
-            // Unix timestamp в миллисекундах
-            else if (dateString && !isNaN(Number(dateString)) && Number(dateString) > 1000000000000) {
-                const date = new Date(Number(dateString));
-                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
-            }
-            // Unix timestamp в секундах
-            else if (dateString && !isNaN(Number(dateString)) && Number(dateString) < 1000000000000) {
-                const date = new Date(Number(dateString) * 1000);
-                return `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
-            }
-            // Формат YYYY-MM-DD
-            else if (dateString && typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-                const [year, month, day] = dateString.split('-');
-                return `${day}.${month}.${year}`;
-            }
-            // Формат DD.MM.YYYY
-            else if (dateString && typeof dateString === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(dateString)) {
-                return dateString;
-            }
-            // Если не распознан формат
-            else if (dateString) {
-                return String(dateString);
-            }
-            
-            // Если ничего не сработало
-            return "Нет даты";
-        } catch (e) {
-            console.warn("Ошибка форматирования даты:", e, dateString);
-            return "Нет даты";
-        }
-    };
 
     // Получение имени пользователя с учетом разных форматов данных
     const getUserName = () => {
@@ -496,30 +496,38 @@ const ManagerDashboard = () => {
     
     const fetchReviewsFromDatabase = async () => {
         try {
-            const data = await fetchData('manager/reviews');
-            console.log(`Найдено ${data.length} отзывов из базы данных`, data);
+            // Получаем данные с правильного эндпоинта
+            const data = await fetchData('reviews');
+            console.log('Получены отзывы из базы данных:', data);
             
-            if (!Array.isArray(data)) {
-                console.error('Ответ сервера не является массивом:', data);
-                setReviews([]);
-                return [];
+            // Проверяем структуру ответа
+            let reviewsData = [];
+            if (data.reviews && Array.isArray(data.reviews)) {
+                reviewsData = data.reviews;
+            } else if (Array.isArray(data)) {
+                reviewsData = data;
             }
             
-            // Filter out invalid reviews
-            const validReviews = data.filter(review => {
-                if (!review || typeof review !== 'object') {
-                    console.warn('Невалидный отзыв (не объект):', review);
-                    return false;
+            // Нормализуем данные отзывов
+            const normalizedReviews = reviewsData.map(review => ({
+                id: review.id,
+                text: review.comment || review.text || review.content || '',
+                rating: Number(review.rating) || 0,
+                createdAt: review.created_at || review.createdAt || review.date || new Date().toISOString(),
+                responded: review.responded || Boolean(review.response),
+                response: review.response || '',
+                responseDate: review.responseDate || review.response_date || null,
+                user: {
+                    name: review.user_name || review.userName || review.username || 'Пользователь'
+                },
+                restaurant: {
+                    name: review.restaurant_name || review.restaurantName || 'Ресторан'
                 }
-                return true;
-            });
+            })).filter(review => review.text && review.rating); // Фильтруем невалидные отзывы
             
-            if (validReviews.length === 0 && data.length > 0) {
-                console.warn('Все полученные отзывы недействительны. Проверьте формат данных от сервера.');
-            }
-            
-            setReviews(validReviews);
-            return validReviews;
+            console.log(`Обработано ${normalizedReviews.length} валидных отзывов`);
+            setReviews(normalizedReviews);
+            return normalizedReviews;
         } catch (error) {
             console.error('Ошибка при получении отзывов из базы данных:', error);
             setReviews([]);
@@ -769,16 +777,16 @@ const ManagerDashboard = () => {
         return true;
     });
 
-    // Sort reviews (newest first)
+    // Сортировка отзывов (сначала новые)
     const sortedReviews = [...filteredReviews].sort((a, b) => {
-        // Handle potential missing dates by using current time as fallback
+        // Обработка возможных отсутствующих дат, используя текущее время как значение по умолчанию
         const dateA = a.createdAt ? new Date(a.createdAt) : new Date();
         const dateB = b.createdAt ? new Date(b.createdAt) : new Date();
         return dateB - dateA;
     });
-    
-    console.log(`Filtered reviews: ${filteredReviews.length} of ${reviews.length} total`);
-    console.log(`Current filters:`, filters);
+
+    console.log(`Отфильтрованные отзывы: ${filteredReviews.length} из ${reviews.length} всего`);
+    console.log(`Текущие фильтры:`, filters);
 
     const refreshData = () => {
         loadAllData();
@@ -806,122 +814,48 @@ const ManagerDashboard = () => {
                 return str;
             };
             
-            // Определяем разделитель для CSV (точка с запятой лучше работает с Excel в русской локали)
-            const delimiter = ';';
+            // Определяем заголовки для CSV
+            const headers = [
+                'ID',
+                'Дата',
+                'Пользователь',
+                'Ресторан',
+                'Рейтинг',
+                'Комментарий',
+                'Статус ответа'
+            ];
             
-            // Получаем все отзывы для экспорта с корректным форматированием
-            const rows = reviews.map(review => {
-                // Определяем имя пользователя
-                const userName = review.user?.name || review.userName || 
-                                (review.author ? (typeof review.author === 'string' ? review.author : review.author.name) : null) || 
-                                review.username || "Анонимно";
-                
-                // Определяем название ресторана
-                const restaurantName = review.restaurant?.name || review.restaurantName || "Неизвестно";
-                
-                // Форматируем дату
-                let dateFormatted = "Нет даты";
-                try {
-                    if (review.createdAt) {
-                        // ISO формат (наиболее распространенный)
-                        if (typeof review.createdAt === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(review.createdAt)) {
-                            const date = new Date(review.createdAt);
-                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
-                        } 
-                        // Unix timestamp в миллисекундах
-                        else if (!isNaN(Number(review.createdAt)) && Number(review.createdAt) > 1000000000000) {
-                            const date = new Date(Number(review.createdAt));
-                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
-                        } 
-                        // Unix timestamp в секундах
-                        else if (!isNaN(Number(review.createdAt)) && Number(review.createdAt) < 1000000000000) {
-                            const date = new Date(Number(review.createdAt) * 1000);
-                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
-                        } 
-                        // Формат YYYY-MM-DD
-                        else if (typeof review.createdAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(review.createdAt)) {
-                            const [year, month, day] = review.createdAt.split('-');
-                            dateFormatted = `${day}.${month}.${year}`;
-                        } 
-                        // Формат DD.MM.YYYY
-                        else if (typeof review.createdAt === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(review.createdAt)) {
-                            dateFormatted = review.createdAt;
-                        } 
-                        else {
-                            // Если не удалось распознать формат, оставляем как есть
-                            dateFormatted = String(review.createdAt);
-                        }
-                    } else if (review.date) {
-                        // Пробуем использовать поле date, если createdAt отсутствует
-                        if (typeof review.date === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(review.date)) {
-                            const date = new Date(review.date);
-                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
-                        } else if (!isNaN(Number(review.date))) {
-                            const date = new Date(Number(review.date) > 1000000000000 ? Number(review.date) : Number(review.date) * 1000);
-                            dateFormatted = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth()+1).toString().padStart(2, '0')}.${date.getFullYear()}`;
-                        } else {
-                            dateFormatted = String(review.date);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Ошибка форматирования даты для CSV:', e, review.createdAt);
-                }
-                
-                return {
-                    "ID": review.id || review._id || "",
-                    "Пользователь": userName,
-                    "Ресторан": restaurantName,
-                    "Рейтинг": review.rating || review.stars || 0,
-                    "Отзыв": review.text || review.comment || review.content || review.feedback || "",
-                    "Дата": dateFormatted,
-                    "Статус": review.responded ? "Отвечено" : "Ожидает ответа",
-                    "Ответ": review.response || review.answer || review.responseText || ""
-                };
-            });
+            // Преобразуем отзывы в строки CSV
+            const csvRows = [
+                headers.join(';'),
+                ...reviews.map(review => [
+                    review.id,
+                    formatDate(review.date),
+                    review.userName,
+                    review.restaurantName,
+                    review.rating,
+                    escapeCSV(review.comment),
+                    review.responded ? 'Отвечено' : 'Без ответа'
+                ].join(';'))
+            ];
             
-            // Формируем заголовки CSV
-            const headers = Object.keys(rows[0]);
-            const headerRow = headers.map(escapeCSV).join(delimiter);
+            // Создаем содержимое файла
+            const csvContent = csvRows.join('\n');
             
-            // Формируем строки данных
-            const csvRows = rows.map(row => {
-                return headers.map(header => {
-                    return escapeCSV(row[header]);
-                }).join(delimiter);
-            });
-            
-            // Добавляем BOM для корректного отображения кириллицы в Excel
-            const BOM = "\uFEFF";
-            
-            // Создаем полный CSV с заголовками и BOM
-            const csvContent = BOM + headerRow + '\r\n' + csvRows.join('\r\n');
-            
-            // Создаем blob и ссылку для скачивания
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
+            // Создаем Blob и ссылку для скачивания
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `reviews_export_${formatDate(new Date())}.csv`;
             
-            // Создаем имя файла с датой
-            const date = new Date();
-            const formattedDate = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-            const fileName = `reviews_export_${formattedDate}.csv`;
-            
-            link.setAttribute('href', url);
-            link.setAttribute('download', fileName);
-            link.style.visibility = 'hidden';
+            // Запускаем скачивание
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
-            // Освобождаем URL объект
-            setTimeout(() => {
-                URL.revokeObjectURL(url);
-                console.log('CSV файл успешно сохранен:', fileName);
-                alert(`Файл "${fileName}" успешно сохранен`);
-            }, 100);
-            
+            console.log('Экспорт в CSV завершен успешно');
         } catch (error) {
-            console.error('Ошибка при экспорте данных в CSV:', error);
+            console.error('Ошибка при экспорте в CSV:', error);
             alert('Произошла ошибка при экспорте данных');
         }
     };

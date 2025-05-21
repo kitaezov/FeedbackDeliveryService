@@ -231,17 +231,17 @@ const CustomPagination = ({ currentPage, totalPages, onPageChange, isDarkMode })
     </div>
 );
 
-// Add a debug function to help diagnose review loading issues
+// Функция отладки для диагностики проблем загрузки отзывов
 const logReviewData = (source, data) => {
-    console.log(`[DEBUG] Reviews from ${source}:`, data);
+    console.log(`[ОТЛАДКА] Отзывы из ${source}:`, data);
     return data;
 };
 
-// Add formatDate function to format dates in Russian
+// Функция форматирования даты на русском языке
 const formatDate = (dateString) => {
     const date = new Date(dateString || Date.now());
     
-    // Russian month names in genitive case
+    // Названия месяцев в родительном падеже
     const months = [
         'января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 
         'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'

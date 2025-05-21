@@ -2,7 +2,7 @@ const restaurantModel = require('../models/restaurantModel');
 const reviewModel = require('../models/reviewModel');
 const userModel = require('../models/userModel');
 const pool = require('../config/database');
-const { errorHandler } = require('../utils/errorHandler');
+const errorHandler = require('../utils/errorHandler');
 
 /**
  * Получение статистики для панели управления менеджером
@@ -96,61 +96,26 @@ const getManagerStatistics = async (req, res) => {
 };
 
 /**
- * Получение отзывов для панели управления менеджером
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Получить все отзывы для панели управления менеджера
+ * @param {Object} req - Объект запроса Express
+ * @param {Object} res - Объект ответа Express
  */
-const getReviews = async (req, res) => {
+const getManagerReviews = async (req, res) => {
     try {
-        const [rows] = await pool.query(`
+        const [reviews] = await pool.query(`
             SELECT 
-                r.id, 
-                r.user_id, 
-                r.restaurant_id, 
-                r.rating, 
-                r.comment as text, 
-                r.date as createdAt, 
-                r.date as updatedAt,
-                CASE WHEN mr.id IS NOT NULL THEN true ELSE false END as responded,
-                mr.response_text as response,
-                mr.created_at as responseDate,
-                u.name as userName,
-                u.email as userEmail,
-                COALESCE(rest.name, r.restaurant_name) as restaurantName
-            FROM 
-                reviews r
-            LEFT JOIN 
-                manager_responses mr ON r.id = mr.review_id
-            LEFT JOIN 
-                users u ON r.user_id = u.id
-            LEFT JOIN 
-                restaurants rest ON r.restaurant_id = rest.id
-            ORDER BY 
-                r.date DESC
+                r.*,
+                u.name as user_name,
+                u.avatar as user_avatar,
+                mr.response,
+                mr.created_at as response_date
+            FROM reviews r
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN manager_responses mr ON r.id = mr.review_id
+            ORDER BY r.created_at DESC
         `);
 
-        // Преобразование данных для фронтенда
-        const reviews = rows.map(row => ({
-            id: row.id,
-            user: {
-                id: row.user_id,
-                name: row.userName || 'Пользователь',
-                email: row.userEmail || ''
-            },
-            restaurant: {
-                id: row.restaurant_id,
-                name: row.restaurantName || 'Ресторан'
-            },
-            rating: row.rating || 0,
-            text: row.text || '',
-            createdAt: row.createdAt,
-            updatedAt: row.updatedAt,
-            responded: Boolean(row.responded),
-            response: row.response || '',
-            responseDate: row.responseDate
-        }));
-
-        // Записываем в лог количество найденных отзывов в базе данных
+        // Записываем в лог количество найденных отзывов
         console.log(`Найдено ${reviews.length} отзывов для панели управления менеджером`);
         
         res.json(reviews);
@@ -162,8 +127,8 @@ const getReviews = async (req, res) => {
 
 /**
  * Ответить на отзыв
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * @param {Object} req - Объект запроса Express
+ * @param {Object} res - Объект ответа Express
  */
 const respondToReview = async (req, res) => {
     try {
@@ -196,30 +161,34 @@ const respondToReview = async (req, res) => {
 
         // Проверяем, существует ли уже ответ
         const [responseCheck] = await pool.query('SELECT id FROM manager_responses WHERE review_id = ?', [reviewId]);
-        
         if (responseCheck.length > 0) {
             // Обновляем существующий ответ
             await pool.query(
-                'UPDATE manager_responses SET response_text = ?, updated_at = NOW() WHERE review_id = ?',
+                'UPDATE manager_responses SET response = ?, updated_at = CURRENT_TIMESTAMP WHERE review_id = ?',
                 [responseText, reviewId]
             );
-            console.log(`Обновлен существующий ответ для отзыва ${reviewId}`);
         } else {
             // Создаем новый ответ
             await pool.query(
-                'INSERT INTO manager_responses (review_id, manager_id, response_text, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
+                'INSERT INTO manager_responses (review_id, manager_id, response) VALUES (?, ?, ?)',
                 [reviewId, managerId, responseText]
             );
-            console.log(`Создан новый ответ для отзыва ${reviewId}`);
         }
 
+        // Обновляем статус отзыва
+        await pool.query(
+            'UPDATE reviews SET responded = true WHERE id = ?',
+            [reviewId]
+        );
+
         res.json({
-            success: true,
-            message: 'Ответ успешно отправлен'
+            message: 'Ответ успешно сохранен',
+            reviewId,
+            response: responseText
         });
     } catch (error) {
-        console.error('Ошибка при ответе на отзыв:', error);
-        return errorHandler(res, 'Не удалось ответить на отзыв', 500, error);
+        console.error('Ошибка при сохранении ответа:', error);
+        return errorHandler(res, 'Не удалось сохранить ответ', 500, error);
     }
 };
 
@@ -521,7 +490,7 @@ const getRestaurants = async (req, res) => {
 
 module.exports = {
     getManagerStatistics,
-    getReviews,
+    getManagerReviews,
     respondToReview,
     getStats,
     getChartData,

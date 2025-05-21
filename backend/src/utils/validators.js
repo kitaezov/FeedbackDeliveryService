@@ -7,10 +7,15 @@
  */
 
 /**
- * Проверка корректности адреса электронной почты
+ * Проверка корректности email адреса
  * 
- * @param {string} email - Адрес электронной почты для проверки
- * @returns {boolean} - true если адрес корректен, false в противном случае
+ * Email должен соответствовать стандартному формату:
+ * - Содержать @ и домен
+ * - Не содержать специальных символов
+ * - Иметь корректную длину
+ * 
+ * @param {string} email - Email адрес для проверки
+ * @returns {boolean} - true если email корректен, false в противном случае
  */
 const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,51 +23,34 @@ const validateEmail = (email) => {
 };
 
 /**
- * Проверка надежности пароля
+ * Проверка корректности пароля
  * 
- * Пароль должен содержать не менее 6 символов
+ * Пароль должен соответствовать следующим требованиям:
+ * - Минимум 8 символов
+ * - Содержать хотя бы одну цифру
+ * - Содержать хотя бы одну букву
  * 
  * @param {string} password - Пароль для проверки
- * @returns {boolean} - true если пароль соответствует требованиям, false в противном случае
+ * @returns {boolean} - true если пароль корректен, false в противном случае
  */
 const validatePassword = (password) => {
-    return password && password.length >= 6;
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    return passwordRegex.test(password);
 };
 
 /**
  * Проверка корректности имени пользователя
  * 
- * Имя должно быть не пустым и содержать не более 15 символов
+ * Имя должно соответствовать следующим требованиям:
+ * - Содержать только буквы, цифры и пробелы
+ * - Быть длиной от 2 до 50 символов
  * 
- * @param {string} name - Имя для проверки
+ * @param {string} name - Имя пользователя для проверки
  * @returns {boolean} - true если имя корректно, false в противном случае
  */
 const validateName = (name) => {
-    return name && name.length > 0 && name.length <= 15;
-};
-
-/**
- * Проверка корректности оценки отзыва
- * 
- * Оценка должна быть целым числом от 1 до 5
- * 
- * @param {number} rating - Оценка для проверки
- * @returns {boolean} - true если оценка корректна, false в противном случае
- */
-const validateRating = (rating) => {
-    return rating >= 1 && rating <= 5 && Number.isInteger(Number(rating));
-};
-
-/**
- * Проверка корректности названия ресторана
- * 
- * Название должно быть не пустым и содержать не более 50 символов
- * 
- * @param {string} name - Название ресторана для проверки
- * @returns {boolean} - true если название корректно, false в противном случае
- */
-const validateRestaurantName = (name) => {
-    return name && name.length > 0 && name.length <= 50;
+    const nameRegex = /^[A-Za-zА-Яа-я\s\d]{2,50}$/;
+    return nameRegex.test(name);
 };
 
 /**
@@ -77,11 +65,35 @@ const validateComment = (comment) => {
     return comment && comment.length > 0 && comment.length <= 1000;
 };
 
+/**
+ * Проверка корректности рейтинга
+ * 
+ * Рейтинг должен быть числом от 1 до 5
+ * 
+ * @param {number} rating - Значение рейтинга для проверки
+ * @returns {boolean} - true если рейтинг корректен, false в противном случае
+ */
+const validateRating = (rating) => {
+    return Number.isInteger(rating) && rating >= 1 && rating <= 5;
+};
+
+/**
+ * Проверка корректности названия ресторана
+ * 
+ * Название должно быть не пустым и содержать не более 50 символов
+ * 
+ * @param {string} name - Название ресторана для проверки
+ * @returns {boolean} - true если название корректно, false в противном случае
+ */
+const validateRestaurantName = (name) => {
+    return name && name.length > 0 && name.length <= 50;
+};
+
 module.exports = {
     validateEmail,
     validatePassword,
     validateName,
+    validateComment,
     validateRating,
-    validateRestaurantName,
-    validateComment
+    validateRestaurantName
 }; 

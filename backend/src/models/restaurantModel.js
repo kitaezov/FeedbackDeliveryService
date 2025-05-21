@@ -108,6 +108,32 @@ class RestaurantModel {
                 hours
             } = restaurantData;
             
+            // Проверка обязательных полей
+            const requiredFields = {
+                'Название ресторана': name,
+                'Категория кухни': category,
+                'Ценовой диапазон': price_range,
+                'Время доставки': delivery_time,
+                'Минимальная цена заказа': min_price
+            };
+
+            const missingFields = Object.entries(requiredFields)
+                .filter(([_, value]) => !value)
+                .map(([fieldName]) => fieldName);
+
+            if (missingFields.length > 0) {
+                throw new Error(`Следующие поля обязательны для заполнения: ${missingFields.join(', ')}`);
+            }
+
+            // Дополнительная валидация
+            if (typeof min_price !== 'number' || min_price < 0) {
+                throw new Error('Минимальная цена заказа должна быть положительным числом');
+            }
+
+            if (typeof delivery_time !== 'number' || delivery_time < 0) {
+                throw new Error('Время доставки должно быть положительным числом');
+            }
+
             if (!name || name.trim() === '') {
                 throw new Error('Название ресторана не может быть пустым');
             }

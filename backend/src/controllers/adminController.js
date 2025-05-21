@@ -494,6 +494,33 @@ const getRestaurants = async (req, res) => {
 const createRestaurant = async (req, res) => {
     try {
         const restaurantData = req.body;
+
+        // Проверяем наличие обязательных полей перед отправкой в модель
+        const requiredFields = ['name', 'category', 'price_range', 'delivery_time', 'min_price'];
+        const missingFields = requiredFields.filter(field => !restaurantData[field]);
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                message: 'Отсутствуют обязательные поля',
+                details: `Следующие поля обязательны для заполнения: ${missingFields.join(', ')}`
+            });
+        }
+
+        // Проверяем корректность числовых значений
+        if (isNaN(restaurantData.min_price) || restaurantData.min_price < 0) {
+            return res.status(400).json({
+                message: 'Некорректное значение',
+                details: 'Минимальная цена заказа должна быть положительным числом'
+            });
+        }
+
+        if (isNaN(restaurantData.delivery_time) || restaurantData.delivery_time < 0) {
+            return res.status(400).json({
+                message: 'Некорректное значение',
+                details: 'Время доставки должно быть положительным числом'
+            });
+        }
+
         const newRestaurant = await restaurantModel.create(restaurantData);
         res.status(201).json({
             message: 'Ресторан успешно создан',
@@ -501,7 +528,10 @@ const createRestaurant = async (req, res) => {
         });
     } catch (error) {
         console.error('Ошибка создания ресторана:', error);
-        res.status(500).json({ message: 'Ошибка создания ресторана' });
+        res.status(400).json({ 
+            message: 'Ошибка создания ресторана',
+            details: error.message
+        });
     }
 };
 

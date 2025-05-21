@@ -191,6 +191,11 @@ class ReviewModel {
      */
     async getAll({ page = 1, limit = 10, userId, restaurantName, currentUserId } = {}) {
         try {
+            // Преобразуем параметры пагинации в числа
+            const limitNum = Math.max(1, parseInt(limit) || 10);
+            const pageNum = Math.max(1, parseInt(page) || 1);
+            const offsetNum = (pageNum - 1) * limitNum;
+
             let query = `
                 SELECT 
                     r.*,
@@ -218,14 +223,8 @@ class ReviewModel {
                 query += ' WHERE ' + conditions.join(' AND ');
             }
             
-            // Преобразуем параметры пагинации в числа
-            const limitNum = Number(limit) || 10;
-            const pageNum = Number(page) || 1;
-            const offsetNum = (pageNum - 1) * limitNum;
-            
-            // Добавляем ORDER BY, LIMIT и OFFSET
-            query += ' ORDER BY r.date DESC LIMIT ? OFFSET ?';
-            params.push(limitNum, offsetNum);
+            // Используем конкретные значения для LIMIT и OFFSET
+            query += ` ORDER BY r.date DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
             
             const [rows] = await pool.execute(query, params);
             

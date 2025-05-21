@@ -122,20 +122,30 @@ class RestaurantModel {
                 .map(([fieldName]) => fieldName);
 
             if (missingFields.length > 0) {
-                throw new Error(`Следующие поля обязательны для заполнения: ${missingFields.join(', ')}`);
+                throw new Error(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
             }
 
             // Дополнительная валидация
             if (typeof min_price !== 'number' || min_price < 0) {
-                throw new Error('Минимальная цена заказа должна быть положительным числом');
+                throw new Error('Пожалуйста, укажите минимальную цену заказа в виде положительного числа');
             }
 
-            if (typeof delivery_time !== 'number' || delivery_time < 0) {
-                throw new Error('Время доставки должно быть положительным числом');
+            // Validate delivery time format (min-max)
+            if (!delivery_time || typeof delivery_time !== 'string') {
+                throw new Error('Пожалуйста, укажите время доставки в формате "минимум-максимум" (например: "30-60")');
+            }
+
+            const [minTime, maxTime] = delivery_time.split('-').map(t => parseInt(t, 10));
+            if (isNaN(minTime) || isNaN(maxTime) || minTime < 0 || maxTime < 0) {
+                throw new Error('Пожалуйста, укажите время доставки в минутах. Оба значения должны быть положительными числами');
+            }
+
+            if (minTime >= maxTime) {
+                throw new Error('Минимальное время доставки должно быть меньше максимального. Например: "30-60"');
             }
 
             if (!name || name.trim() === '') {
-                throw new Error('Название ресторана не может быть пустым');
+                throw new Error('Пожалуйста, укажите название ресторана');
             }
 
             // Генерируем базовый slug из названия

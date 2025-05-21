@@ -4,6 +4,7 @@ import { Card } from '../../../common/components/ui';
 import { StarRating } from './StarRating';
 import { MapPin, Star, ArrowUpRight, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getCategoryName } from '../constants/categories';
 
 // Animation variants
 const cardVariants = {
@@ -57,6 +58,7 @@ const buttonVariants = {
  * @param {number} props.rating - Рейтинг ресторана
  * @param {number} props.reviewCount - Количество отзывов
  * @param {number} props.index - Индекс для анимации
+ * @param {string} props.category - Категория ресторана
  * @returns {JSX.Element}
  */
 export const RestaurantCard = ({
@@ -67,8 +69,12 @@ export const RestaurantCard = ({
     address,
     rating,
     reviewCount,
-    index
+    index,
+    category
 }) => {
+    // Используем функцию getCategoryName для отображения категории
+    const displayCategory = category ? getCategoryName(category) : cuisine;
+
     return (
         <motion.div
             variants={cardVariants}
@@ -101,9 +107,9 @@ export const RestaurantCard = ({
                         </motion.div>
                         
                         {/* Указатель кухни */}
-                        {cuisine && (
+                        {displayCategory && (
                             <div className="absolute top-3 left-3 bg-white dark:bg-gray-800 px-3 py-1 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm">
-                                {cuisine}
+                                {displayCategory}
                             </div>
                         )}
                     </div>
@@ -116,28 +122,25 @@ export const RestaurantCard = ({
                             </h3>
                             
                             {/* Рейтинг и отзывы */}
-                            <div className="flex items-center mb-3">
+                            <div className="flex items-center mb-4">
                                 <div className="flex items-center">
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                        <Star
-                                            key={star}
-                                            size={16}
-                                            fill={star <= Math.round(rating) ? "#FFB800" : "none"}
-                                            stroke={star <= Math.round(rating) ? "#FFB800" : "#94a3b8"}
-                                            className="mr-1"
-                                        />
-                                    ))}
+                                    <Star className="w-4 h-4 text-yellow-500 mr-1" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        {rating ? rating.toFixed(1) : '0.0'}
+                                    </span>
                                 </div>
-                                <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
-                                    <span className="font-medium text-yellow-600 dark:text-yellow-500">{Number(rating).toFixed(1)}</span> ({reviewCount || 0} {reviewCount === 1 ? 'отзыв' : reviewCount >= 2 && reviewCount <= 4 ? 'отзыва' : 'отзывов'})
-                                </span>
+                                {reviewCount !== undefined && (
+                                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                                        ({reviewCount} {reviewCount === 1 ? 'отзыв' : reviewCount > 1 && reviewCount < 5 ? 'отзыва' : 'отзывов'})
+                                    </span>
+                                )}
                             </div>
                             
                             {/* Адрес */}
                             {address && (
-                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-start mb-3">
-                                    <MapPin size={16} className="flex-shrink-0 mr-1 mt-0.5" />
-                                    <span className="line-clamp-2">{address}</span>
+                                <div className="flex items-start text-sm text-gray-500 dark:text-gray-400">
+                                    <MapPin className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
+                                    <span>{address}</span>
                                 </div>
                             )}
                         </div>

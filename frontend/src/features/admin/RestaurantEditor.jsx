@@ -4,6 +4,7 @@ import { Save, ArrowLeft, Link as LinkIcon, Image } from 'lucide-react';
 import api from '../../utils/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { RestaurantImageUploader } from '../restaurants/components';
+import { getCategoriesList } from '../restaurants/constants/categories';
 
 const RestaurantEditor = ({ user }) => {
     const { id } = useParams();
@@ -25,24 +26,16 @@ const RestaurantEditor = ({ user }) => {
         category: '',
         priceRange: '₽₽',
         minPrice: '',
-        deliveryTime: '',
+        deliveryTimeMin: '',
+        deliveryTimeMax: '',
         workingHours: {
             openTime: '10:00',
             closeTime: '22:00'
         }
     });
     
-    // Предопределенные категории ресторанов
-    const categories = [
-        { id: 'italian', name: 'Итальянская кухня' },
-        { id: 'asian', name: 'Азиатская кухня' },
-        { id: 'russian', name: 'Русская кухня' },
-        { id: 'seafood', name: 'Морепродукты' },
-        { id: 'french', name: 'Французская кухня' },
-        { id: 'georgian', name: 'Грузинская кухня' },
-        { id: 'mexican', name: 'Мексиканская кухня' },
-        { id: 'american', name: 'Американская кухня' }
-    ];
+    // Получаем список категорий из констант
+    const categories = getCategoriesList();
 
     // Function to validate and process image URL
     const processImageUrl = (url) => {
@@ -99,7 +92,8 @@ const RestaurantEditor = ({ user }) => {
                     category: restaurantData.category || '',
                     priceRange: restaurantData.price_range || '₽₽',
                     minPrice: restaurantData.min_price || '',
-                    deliveryTime: restaurantData.delivery_time || '',
+                    deliveryTimeMin: restaurantData.delivery_time ? restaurantData.delivery_time.split('-')[0] : '',
+                    deliveryTimeMax: restaurantData.delivery_time ? restaurantData.delivery_time.split('-')[1] : '',
                     workingHours: {
                         openTime: restaurantData.hours ? restaurantData.hours.split('-')[0].trim() : '10:00',
                         closeTime: restaurantData.hours ? restaurantData.hours.split('-')[1].trim() : '22:00'
@@ -130,9 +124,9 @@ const RestaurantEditor = ({ user }) => {
         }
 
         // Special handling for deliveryTime field
-        if (name === 'deliveryTime') {
-            // Разрешаем вводить только цифры и дефис
-            if (value === '' || /^[\d-]*$/.test(value)) {
+        if (name === 'deliveryTimeMin' || name === 'deliveryTimeMax') {
+            // Разрешаем вводить только цифры
+            if (value === '' || /^[\d]*$/.test(value)) {
                 setRestaurant(prev => ({
                     ...prev,
                     [name]: value
@@ -190,21 +184,20 @@ const RestaurantEditor = ({ user }) => {
             slug = `restaurant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         }
 
-        // Validate delivery time format if provided
-        if (restaurant.deliveryTime) {
-            const timeFormat = /^\d+-\d+$/;
-            if (!timeFormat.test(restaurant.deliveryTime)) {
-                setError('Неверный формат времени доставки. Используйте формат "число-число" (например: 30-55)');
-                setSaving(false);
-                return;
-            }
+        // Validate delivery time
+        const minTime = parseInt(restaurant.deliveryTimeMin, 10);
+        const maxTime = parseInt(restaurant.deliveryTimeMax, 10);
+        
+        if (isNaN(minTime) || isNaN(maxTime) || minTime < 0 || maxTime < 0) {
+            setError('Время доставки должно быть положительным числом');
+            setSaving(false);
+            return;
+        }
 
-            const [min, max] = restaurant.deliveryTime.split('-').map(Number);
-            if (min >= max) {
-                setError('Минимальное время доставки должно быть меньше максимального');
-                setSaving(false);
-                return;
-            }
+        if (minTime >= maxTime) {
+            setError('Минимальное время доставки должно быть меньше максимального');
+            setSaving(false);
+            return;
         }
 
         // Validate working hours
@@ -227,8 +220,8 @@ const RestaurantEditor = ({ user }) => {
                 slug: slug,
                 category: restaurant.category,
                 price_range: restaurant.priceRange,
-                min_price: restaurant.minPrice,
-                delivery_time: restaurant.deliveryTime,
+                min_price: parseInt(restaurant.minPrice, 10) || 0,
+                delivery_time: `${minTime}-${maxTime}`,
                 hours: `${restaurant.workingHours.openTime}-${restaurant.workingHours.closeTime}`
             };
             
@@ -239,12 +232,36 @@ const RestaurantEditor = ({ user }) => {
             
             if (isNew) {
                 response = await api.post('/restaurants', formData);
+                // Очищаем форму после успешного создания
+                setRestaurant({
+                    name: '',
+                    address: '',
+                    description: '',
+                    imageUrl: '',
+                    website: '',
+                    contactPhone: '',
+                    isActive: true,
+                    slug: '',
+                    autoGenerateLink: true,
+                    category: '',
+                    priceRange: '₽₽',
+                    minPrice: '',
+                    deliveryTimeMin: '',
+                    deliveryTimeMax: '',
+                    workingHours: {
+                        openTime: '10:00',
+                        closeTime: '22:00'
+                    }
+                });
+                // Показываем сообщение об успехе
+                setError(null);
+                alert('Ресторан успешно создан!');
             } else {
                 response = await api.put(`/restaurants/${id}`, formData);
+                navigate('/admin');
             }
 
             console.log("Ответ сервера:", response);
-            navigate('/admin');
         } catch (error) {
             console.error('Error saving restaurant:', error);
             console.error('Error response:', error.response?.data);
@@ -482,7 +499,7 @@ const RestaurantEditor = ({ user }) => {
                             >
                                 <option value="">Выберите категорию</option>
                                 {categories.map(category => (
-                                    <option key={category.id} value={category.id}>
+                                    <option key={category.id} value={category.name}>
                                         {category.name}
                                     </option>
                                 ))}
@@ -517,23 +534,51 @@ const RestaurantEditor = ({ user }) => {
                                 value={restaurant.minPrice}
                                 onChange={handleChange}
                                 placeholder="Например: 500"
+                                min="0"
+                                step="1"
+                                required
                                 className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                             />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Введите целое положительное число
+                            </p>
                         </div>
                         <div>
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Время доставки (мин)
                             </label>
-                            <input
-                                type="text"
-                                name="deliveryTime"
-                                value={restaurant.deliveryTime}
-                                onChange={handleChange}
-                                placeholder="Например: 30-55"
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
-                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <input
+                                        type="number"
+                                        name="deliveryTimeMin"
+                                        value={restaurant.deliveryTimeMin}
+                                        onChange={handleChange}
+                                        placeholder="Минимум"
+                                        min="1"
+                                        max="999"
+                                        step="1"
+                                        required
+                                        className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="number"
+                                        name="deliveryTimeMax"
+                                        value={restaurant.deliveryTimeMax}
+                                        onChange={handleChange}
+                                        placeholder="Максимум"
+                                        min="1"
+                                        max="999"
+                                        step="1"
+                                        required
+                                        className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+                            </div>
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Формат: минимальное-максимальное время (например: 30-55)
+                                Укажите минимальное и максимальное время доставки в минутах
                             </p>
                         </div>
                     </div>

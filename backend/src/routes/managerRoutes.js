@@ -12,7 +12,7 @@ router.use(authenticateToken);
 router.use(checkRole(['manager', 'admin', 'head_admin']));
 
 // Управление отзывами
-router.get('/reviews', managerController.getReviews);
+router.get('/reviews', managerController.getManagerReviews);
 router.post('/reviews/respond', managerController.respondToReview);
 router.post('/reviews/:id/response', managerController.respondToReview);
 

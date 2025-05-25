@@ -37,7 +37,7 @@ class RestaurantModel {
             
             // Проверяем каждый столбец и добавляем его в список, если он отсутствует
             if (!existingColumns.includes('category')) {
-                columnsToAdd.push('ADD COLUMN category VARCHAR(100)');
+                columnsToAdd.push('ADD COLUMN category ENUM("italian", "asian", "russian", "seafood", "french", "georgian", "mexican", "american") NOT NULL DEFAULT "russian"');
             }
             
             if (!existingColumns.includes('price_range')) {
@@ -101,7 +101,7 @@ class RestaurantModel {
                 contactPhone,
                 criteria = {},
                 slug,
-                category,
+                category = 'russian', // Default to Russian cuisine if not specified
                 price_range,
                 min_price,
                 delivery_time,
@@ -123,6 +123,12 @@ class RestaurantModel {
 
             if (missingFields.length > 0) {
                 throw new Error(`Пожалуйста, заполните следующие поля: ${missingFields.join(', ')}`);
+            }
+
+            // Validate category
+            const validCategories = ['italian', 'asian', 'russian', 'seafood', 'french', 'georgian', 'mexican', 'american'];
+            if (!validCategories.includes(category)) {
+                throw new Error(`Неверная категория. Допустимые категории: ${validCategories.join(', ')}`);
             }
 
             // Дополнительная валидация
@@ -205,7 +211,7 @@ class RestaurantModel {
                     contactPhone || null,
                     JSON.stringify(criteria),
                     finalSlug,
-                    category || null,
+                    category,
                     price_range || null,
                     min_price || null,
                     delivery_time || null,
@@ -281,38 +287,58 @@ class RestaurantModel {
     
     /**
      * Получить все рестораны
-     * @param {Object} options - Параметры фильтрации и пагинации
+     * @param {Object} options - Опции запроса
+     * @param {boolean} options.isActive - Фильтр по активным ресторанам
+     * @param {string} options.category - Фильтр по категории
      * @returns {Promise<Array>} - Список ресторанов
      */
     async getAll(options = {}) {
-        await this.ensureColumnsExistBeforeOperation();
-        
-        const { page, limit, name, isActive } = options;
-        let query = 'SELECT * FROM restaurants WHERE 1=1';
-        const queryParams = [];
-        
-        if (name) {
-            query += ' AND name LIKE ?';
-            queryParams.push(`%${name}%`);
+        try {
+            await this.ensureColumnsExistBeforeOperation();
+            
+            let query = `
+                SELECT 
+                    r.*,
+                    COALESCE(AVG(rv.rating), 0) as avg_rating,
+                    COUNT(DISTINCT rv.id) as review_count
+                FROM restaurants r
+                LEFT JOIN reviews rv ON r.id = rv.restaurant_id
+                WHERE 1=1
+            `;
+            
+            const params = [];
+            
+            // Фильтр по активности
+            if (options.isActive !== undefined) {
+                query += ' AND r.is_active = ?';
+                params.push(options.isActive);
+            }
+            
+            // Фильтр по категории
+            if (options.category && options.category !== 'all') {
+                query += ' AND r.category = ?';
+                params.push(options.category);
+                console.log('Filtering by category:', options.category);
+            }
+            
+            query += ' GROUP BY r.id ORDER BY avg_rating DESC';
+            
+            console.log('SQL Query:', query);
+            console.log('Params:', params);
+            
+            const [restaurants] = await pool.execute(query, params);
+            
+            console.log('Found restaurants:', restaurants.length);
+            
+            return restaurants.map(restaurant => ({
+                ...restaurant,
+                avg_rating: parseFloat(restaurant.avg_rating) || 0,
+                review_count: parseInt(restaurant.review_count) || 0
+            }));
+        } catch (error) {
+            console.error('Error getting restaurants:', error);
+            throw error;
         }
-        
-        if (isActive !== undefined) {
-            query += ' AND is_active = ?';
-            queryParams.push(isActive);
-        }
-        
-        if (page !== undefined && limit !== undefined) {
-            const pageNum = parseInt(page);
-            const limitNum = parseInt(limit);
-            const offset = (pageNum - 1) * limitNum;
-            query += ` ORDER BY name LIMIT ${limitNum} OFFSET ${offset}`;
-        } else {
-            query += ' ORDER BY name';
-        }
-        
-        const [rows] = await pool.execute(query, queryParams);
-        
-        return rows;
     }
     
     /**
@@ -547,31 +573,85 @@ class RestaurantModel {
     /**
      * Поиск ресторанов
      * @param {string} query - Поисковый запрос
+     * @param {string} category - Категория для фильтрации (опционально)
      * @returns {Promise<Array>} - Результаты поиска
      */
-    async search(query) {
+    async search(query, category = null) {
         await this.ensureColumnsExistBeforeOperation();
         
         // Подготовка поискового запроса с подстановочными знаками для операции LIKE
         const searchParam = `%${query}%`;
         
-        const [rows] = await pool.execute(
-            `SELECT * FROM restaurants 
-             WHERE name LIKE ? 
-             OR address LIKE ? 
-             OR description LIKE ? 
-             ORDER BY 
-                CASE 
-                    WHEN name LIKE ? THEN 0 
-                    WHEN name LIKE ? THEN 1
-                    WHEN address LIKE ? THEN 2
-                    ELSE 3 
-                END,
-                name`,
-            [searchParam, searchParam, searchParam, `${query}%`, `%${query}%`, `%${query}%`]
-        );
+        let sql = `
+            SELECT 
+                r.*,
+                COALESCE(AVG(rv.rating), 0) as avg_rating,
+                COUNT(DISTINCT rv.id) as review_count
+            FROM restaurants r
+            LEFT JOIN reviews rv ON r.id = rv.restaurant_id
+            WHERE (
+                r.name LIKE ? 
+                OR r.address LIKE ? 
+                OR r.description LIKE ?
+            )
+            AND r.is_active = true
+        `;
         
-        return rows;
+        const params = [searchParam, searchParam, searchParam];
+        
+        // Добавляем фильтр по категории, если она указана
+        if (category && category !== 'all') {
+            sql += ' AND r.category = ?';
+            params.push(category);
+        }
+        
+        sql += `
+            GROUP BY r.id
+            ORDER BY 
+                CASE 
+                    WHEN r.name LIKE ? THEN 0 
+                    WHEN r.name LIKE ? THEN 1
+                    ELSE 2 
+                END,
+                avg_rating DESC,
+                r.name
+        `;
+        
+        params.push(`${query}%`, `%${query}%`);
+        
+        const [rows] = await pool.execute(sql, params);
+        
+        return rows.map(restaurant => ({
+            ...restaurant,
+            avg_rating: parseFloat(restaurant.avg_rating) || 0,
+            review_count: parseInt(restaurant.review_count) || 0
+        }));
+    }
+
+    /**
+     * Обновить категорию ресторана
+     * @param {number} id - ID ресторана
+     * @param {string} category - Новая категория
+     * @returns {Promise<boolean>} - Результат обновления
+     */
+    async updateCategory(id, category) {
+        try {
+            await this.ensureColumnsExistBeforeOperation();
+            
+            console.log('Updating category for restaurant:', id, 'to:', category);
+            
+            const [result] = await pool.execute(
+                'UPDATE restaurants SET category = ? WHERE id = ?',
+                [category, id]
+            );
+            
+            console.log('Update result:', result);
+            
+            return result.affectedRows > 0;
+        } catch (error) {
+            console.error('Error updating restaurant category:', error);
+            throw error;
+        }
     }
 }
 

@@ -3,6 +3,7 @@
  * 
  * This script creates the necessary database tables for manager functionality:
  * - manager_responses: for storing manager responses to user reviews
+ * - manager_analytics: for storing analytics data
  */
 
 const pool = require('../config/database');
@@ -25,6 +26,59 @@ async function setupManagerTables() {
                 UNIQUE KEY unique_review (review_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
+
+        // Check and add columns to reviews table
+        const [reviewColumns] = await pool.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = 'reviews' 
+            AND TABLE_SCHEMA = DATABASE()
+        `);
+        
+        const reviewColumnNames = reviewColumns.map(col => col.COLUMN_NAME);
+        
+        if (!reviewColumnNames.includes('deleted')) {
+            await pool.query(`ALTER TABLE reviews ADD COLUMN deleted BOOLEAN DEFAULT FALSE`);
+        }
+        
+        if (!reviewColumnNames.includes('type')) {
+            await pool.query(`
+                ALTER TABLE reviews 
+                ADD COLUMN type ENUM('inRestaurant', 'delivery') DEFAULT 'inRestaurant'
+            `);
+        }
+
+        // Check and add columns to restaurants table
+        const [restaurantColumns] = await pool.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = 'restaurants' 
+            AND TABLE_SCHEMA = DATABASE()
+        `);
+        
+        const restaurantColumnNames = restaurantColumns.map(col => col.COLUMN_NAME);
+        
+        if (!restaurantColumnNames.includes('deleted')) {
+            await pool.query(`ALTER TABLE restaurants ADD COLUMN deleted BOOLEAN DEFAULT FALSE`);
+        }
+        
+        if (!restaurantColumnNames.includes('image_url')) {
+            await pool.query(`ALTER TABLE restaurants ADD COLUMN image_url VARCHAR(255)`);
+        }
+
+        // Check and add columns to users table
+        const [userColumns] = await pool.query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = 'users' 
+            AND TABLE_SCHEMA = DATABASE()
+        `);
+        
+        const userColumnNames = userColumns.map(col => col.COLUMN_NAME);
+        
+        if (!userColumnNames.includes('is_active')) {
+            await pool.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE`);
+        }
         
         console.log('Manager tables set up successfully');
         return true;

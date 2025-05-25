@@ -8,6 +8,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { Container } from '../../common/components/ui';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { RESTAURANT_CATEGORIES } from './constants/categories';
 
 // Define API base URL
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -88,69 +89,47 @@ const imageVariants = {
     }
 };
 
-// Демо-данные для отображения, в реальном приложении это должно приходить с API
-const sampleReviews = [
+// Mock data for restaurants when API fails
+const mockRestaurants = [
     {
-        restaurantName: 'Итальянский дворик',
-        ratings: { food: 4.8, service: 4.6, atmosphere: 4.9 },
-        likes: 156,
-        timestamp: Date.now() - 1000000
+        id: 1,
+        name: 'Итальянский дворик',
+        cuisine: 'Итальянская кухня',
+        avgRating: 4.8,
+        reviewCount: 42,
+        address: 'ул. Гастрономическая, 12',
+        image_url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4'
     },
     {
-        restaurantName: 'Азиатский бриз',
-        ratings: { food: 4.7, service: 4.3, atmosphere: 4.5 },
-        likes: 132,
-        timestamp: Date.now() - 2000000
+        id: 2,
+        name: 'Азиатский бриз',
+        cuisine: 'Азиатская кухня',
+        avgRating: 4.7,
+        reviewCount: 38,
+        address: 'пр. Кулинаров, 45',
+        image_url: 'https://images.unsplash.com/photo-1552566626-52f8b828add9'
     },
     {
-        restaurantName: 'У Михалыча',
-        ratings: { food: 4.9, service: 4.8, atmosphere: 4.2 },
-        likes: 201,
-        timestamp: Date.now() - 500000
-    },
-    {
-        restaurantName: 'Морской причал',
-        ratings: { food: 4.4, service: 4.7, atmosphere: 4.8 },
-        likes: 175,
-        timestamp: Date.now() - 1500000
-    },
-    {
-        restaurantName: 'Французская лавка',
-        ratings: { food: 4.6, service: 4.5, atmosphere: 4.7 },
-        likes: 145,
-        timestamp: Date.now() - 800000
-    },
-    {
-        restaurantName: 'Грузинская кухня',
-        ratings: { food: 4.9, service: 4.4, atmosphere: 4.6 },
-        likes: 188,
-        timestamp: Date.now() - 300000
-    },
-    {
-        restaurantName: 'Мексиканский уголок',
-        ratings: { food: 4.5, service: 4.2, atmosphere: 4.4 },
-        likes: 120,
-        timestamp: Date.now() - 2500000
-    },
-    {
-        restaurantName: 'Американский бургер',
-        ratings: { food: 4.6, service: 4.1, atmosphere: 4.0 },
-        likes: 167,
-        timestamp: Date.now() - 1800000
+        id: 3,
+        name: 'У Михалыча',
+        cuisine: 'Русская кухня',
+        avgRating: 4.9,
+        reviewCount: 56,
+        address: 'ул. Домашняя, 8',
+        image_url: 'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d'
     }
 ];
 
-// Категории ресторанов для фильтрации
+// Categories for filtering
 const categories = [
     { id: 'all', name: 'Все рестораны' },
-    { id: 'italian', name: 'Итальянская кухня' },
-    { id: 'asian', name: 'Азиатская кухня' },
-    { id: 'russian', name: 'Русская кухня' },
-    { id: 'seafood', name: 'Морепродукты' },
-    { id: 'french', name: 'Французская кухня' },
-    { id: 'georgian', name: 'Грузинская кухня' },
-    { id: 'mexican', name: 'Мексиканская кухня' },
-    { id: 'american', name: 'Американская кухня' }
+    ...Object.entries(RESTAURANT_CATEGORIES)
+        .filter(([id]) => id !== 'all') // Remove 'all' from RESTAURANT_CATEGORIES since we add it manually
+        .map(([id, name]) => ({
+            id,
+            name,
+            cuisine: name.replace(' кухня', '')
+        }))
 ];
 
 /**
@@ -276,165 +255,133 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredRestaurants.slice(indexOfFirstItem, indexOfLastItem);
 
+    // Function to normalize cuisine name to category ID
+    const normalizeCuisineToCategory = (cuisine) => {
+        if (!cuisine) return null;
+        
+        // Remove "кухня" from name and convert to lowercase
+        const normalizedCuisine = cuisine.toLowerCase().replace(' кухня', '').trim();
+        
+        // Find matching category
+        const category = Object.entries(RESTAURANT_CATEGORIES).find(([id, name]) => 
+            name.toLowerCase().replace(' кухня', '').trim() === normalizedCuisine
+        );
+        
+        return category ? category[0] : null;
+    };
+
     useEffect(() => {
         const fetchRestaurants = async () => {
-            setLoading(true);
-            setError(null);
             try {
-                // First fetch all reviews to have them available
-                let allReviews = [];
-                try {
-                    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-                    const reviewsResponse = await axios.get(`${API_BASE_URL}/reviews`, {
-                        headers: token ? { Authorization: `Bearer ${token}` } : {}
-                    });
-                    console.log("All reviews response:", reviewsResponse.data);
-                    
-                    // Нормализуем данные отзывов
-                    if (reviewsResponse.data && Array.isArray(reviewsResponse.data.reviews)) {
-                        allReviews = reviewsResponse.data.reviews.map(review => ({
-                            ...review,
-                            date: review.created_at || review.date || new Date().toISOString(),
-                            rating: Number(review.rating) || 0,
-                            comment: review.comment || review.text || '',
-                            user_name: review.user_name || review.userName || 'Пользователь',
-                            restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан'
-                        }));
-                    } else if (Array.isArray(reviewsResponse.data)) {
-                        allReviews = reviewsResponse.data.map(review => ({
-                            ...review,
-                            date: review.created_at || review.date || new Date().toISOString(),
-                            rating: Number(review.rating) || 0,
-                            comment: review.comment || review.text || '',
-                            user_name: review.user_name || review.userName || 'Пользователь',
-                            restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан'
-                        }));
+                setLoading(true);
+                const response = await api.get('/restaurants', {
+                    params: {
+                        category: activeCategory !== 'all' ? activeCategory : undefined
                     }
-                    
-                    // Группируем отзывы по ресторанам
-                    const reviewsByRestaurant = {};
-                    allReviews.forEach(review => {
-                        const restaurantName = review.restaurant_name;
-                        if (!reviewsByRestaurant[restaurantName]) {
-                            reviewsByRestaurant[restaurantName] = [];
-                        }
-                        reviewsByRestaurant[restaurantName].push(review);
-                    });
-                    
-                    setRestaurantReviews(reviewsByRestaurant);
-                    console.log(`Successfully loaded and processed ${allReviews.length} reviews`);
-                } catch (reviewsErr) {
-                    console.error("Error fetching all reviews:", reviewsErr);
-                    setError("Не удалось загрузить отзывы");
-                }
+                });
                 
-                if (singleRestaurant && slug) {
-                    // Fetch single restaurant by slug
-                    const response = await api.get(`/restaurants/by-slug/${slug}`);
-                    if (response.data.restaurant) {
-                        const restaurant = response.data.restaurant;
-                        
-                        // Filter reviews for this restaurant
-                        const restaurantReviews = allReviews.filter(
-                            review => review.restaurant_id === restaurant.id || 
-                                     review.restaurantId === restaurant.id ||
-                                     review.restaurant_name === restaurant.name ||
-                                     review.restaurantName === restaurant.name
-                        );
-                        
-                        // Update restaurant with reviews
-                        const updatedRestaurant = {
-                            ...restaurant,
-                            reviews: restaurantReviews,
-                            hasReviews: restaurantReviews.length > 0
-                        };
-                        
-                        // Update state
-                        setRestaurants([updatedRestaurant]);
-                        setFilteredRestaurants([updatedRestaurant]);
-                        setSelectedRestaurant(updatedRestaurant);
-                        
-                        // Also update reviews state
-                        setRestaurantReviews(prev => ({
-                            ...prev,
-                            [restaurant.id]: restaurantReviews
-                        }));
-                        
-                        console.log(`Found ${restaurantReviews.length} reviews for restaurant ${restaurant.id}`);
-                    } else {
-                        setError('Ресторан не найден');
-                    }
-                } else {
-                    // Fetch all restaurants
-                    const response = await api.get('/restaurants');
-                    const activeRestaurants = response.data.restaurants.filter(r => r.is_active);
-                    
-                    // Prepare restaurant data with reviews
-                    const restaurantsWithReviews = activeRestaurants.map(restaurant => {
-                        // Filter reviews for this restaurant
-                        const restaurantReviews = allReviews.filter(
-                            review => review.restaurant_id === restaurant.id || 
-                                     review.restaurantId === restaurant.id ||
-                                     review.restaurant_name === restaurant.name ||
-                                     review.restaurantName === restaurant.name
-                        );
-                        
-                        // Update reviews state
-                        setRestaurantReviews(prev => ({
-                            ...prev,
-                            [restaurant.id]: restaurantReviews
-                        }));
-                        
-                        // Return updated restaurant
-                        return {
-                            ...restaurant,
-                            reviews: restaurantReviews,
-                            hasReviews: restaurantReviews.length > 0
-                        };
-                    });
-                    
-                    // Update state with restaurants that now have review data
-                    setRestaurants(restaurantsWithReviews);
-                    setFilteredRestaurants(restaurantsWithReviews);
-                }
+                // Ensure we're working with an array of restaurants
+                const restaurantsData = Array.isArray(response.data) ? response.data : 
+                                      (response.data.data || response.data.restaurants || []);
+                
+                const restaurantsWithValidRatings = restaurantsData.map(restaurant => ({
+                    ...restaurant,
+                    avgRating: typeof restaurant.avg_rating === 'number' ? restaurant.avg_rating : 0,
+                    reviewCount: typeof restaurant.review_count === 'number' ? restaurant.review_count : 0,
+                    // Ensure category is properly set
+                    category: restaurant.category || normalizeCuisineToCategory(restaurant.cuisine_type || restaurant.cuisineType)
+                }));
+                
+                setRestaurants(restaurantsWithValidRatings);
+                setFilteredRestaurants(restaurantsWithValidRatings);
             } catch (err) {
-                console.error('Error fetching restaurants:', err);
-                setError('Не удалось загрузить данные ресторанов');
+                console.error('Failed to fetch restaurants:', err);
+                setError('Не удалось загрузить рестораны. Пожалуйста, попробуйте позже.');
+                
+                // For demo purposes, use mock data if API fails
+                const mocksWithValidRatings = mockRestaurants.map(restaurant => ({
+                    ...restaurant,
+                    avgRating: typeof restaurant.avgRating === 'number' ? restaurant.avgRating : 0,
+                    reviewCount: typeof restaurant.reviewCount === 'number' ? restaurant.reviewCount : 0,
+                    // Normalize category for mock data
+                    category: normalizeCuisineToCategory(restaurant.cuisine)
+                }));
+                setRestaurants(mocksWithValidRatings);
+                setFilteredRestaurants(mocksWithValidRatings);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchRestaurants();
-    }, [singleRestaurant, slug]);
+        
+        // Update page title
+        document.title = "Рейтинги ресторанов | FeedbackDelivery";
+        
+        // Cleanup on unmount
+        return () => {
+            document.title = "FeedbackDelivery";
+        };
+    }, [activeCategory]); // Add activeCategory as dependency
 
     const handleSearch = (e) => {
-        const term = e.target.value;
+        const term = e.target.value.toLowerCase().trim();
         setSearchTerm(term);
-        setCurrentPage(1);
+        setCurrentPage(1); // Reset to first page when searching
         
-        // Filter restaurants based on search term
-        if (term.trim() === '') {
-            setFilteredRestaurants(restaurants);
-        } else {
-            const filtered = restaurants.filter(restaurant => 
-                restaurant.name.toLowerCase().includes(term.toLowerCase()) ||
-                (restaurant.address && restaurant.address.toLowerCase().includes(term.toLowerCase()))
+        // Apply both category and search filters
+        let filtered = restaurants;
+        
+        // First apply category filter if not "all"
+        if (activeCategory !== 'all') {
+            filtered = filtered.filter(restaurant => 
+                restaurant.category === activeCategory || 
+                restaurant.cuisine_type === RESTAURANT_CATEGORIES[activeCategory] ||
+                (restaurant.cuisine && restaurant.cuisine.toLowerCase().includes(RESTAURANT_CATEGORIES[activeCategory].toLowerCase().replace(' кухня', '')))
             );
-            setFilteredRestaurants(filtered);
         }
+        
+        // Then apply search filter if there's a search term
+        if (term) {
+            filtered = filtered.filter(restaurant => {
+                const restaurantName = (restaurant.name || '').toLowerCase();
+                const restaurantAddress = (restaurant.address || '').toLowerCase();
+                const restaurantCategory = RESTAURANT_CATEGORIES[restaurant.category] || '';
+                
+                return restaurantName.includes(term) || 
+                       restaurantAddress.includes(term) || 
+                       restaurantCategory.toLowerCase().includes(term);
+            });
+        }
+        
+        setFilteredRestaurants(filtered);
     };
     
     const handleCategoryChange = (categoryId) => {
         setActiveCategory(categoryId);
-        setCurrentPage(1);
+        setCurrentPage(1); // Reset to first page when changing category
         
         if (categoryId === 'all') {
+            // Show all restaurants when "All" is selected
             setFilteredRestaurants(restaurants);
         } else {
-            const filtered = restaurants.filter(restaurant => 
-                restaurant.category === categoryId
-            );
+            // Filter restaurants by selected category
+            const filtered = restaurants.filter(restaurant => {
+                // Check both category and cuisine_type fields
+                const matchesCategory = 
+                    restaurant.category === categoryId || 
+                    restaurant.cuisine_type === RESTAURANT_CATEGORIES[categoryId] ||
+                    (restaurant.cuisine && restaurant.cuisine.toLowerCase().includes(RESTAURANT_CATEGORIES[categoryId].toLowerCase().replace(' кухня', '')));
+                
+                return matchesCategory;
+            });
+            
+            console.log(`Filtering for category ${categoryId}:`, {
+                totalRestaurants: restaurants.length,
+                filteredCount: filtered.length,
+                categoryName: RESTAURANT_CATEGORIES[categoryId]
+            });
+            
             setFilteredRestaurants(filtered);
         }
     };

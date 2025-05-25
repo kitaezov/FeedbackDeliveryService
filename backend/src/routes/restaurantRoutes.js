@@ -9,6 +9,7 @@ const { authenticateToken, checkRole } = require('../middleware/authMiddleware')
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const upload = require('../middleware/upload');
 
 // Путь для хранения изображений ресторанов
 const uploadDir = path.join(__dirname, '../../public/uploads/restaurants');
@@ -48,7 +49,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 // Настроить загрузчик
-const upload = multer({ 
+const uploadMulter = multer({ 
     storage: storage,
     fileFilter: fileFilter,
     limits: {
@@ -64,10 +65,11 @@ router.get('/by-slug/:slug', restaurantController.getRestaurantBySlug);
 
 // Маршруты администратора (защищенные)
 router.post('/', authenticateToken, checkRole('admin'), restaurantController.createRestaurant);
-router.post('/:id/image', authenticateToken, checkRole('admin'), upload.single('image'), restaurantController.uploadRestaurantImage);
+router.post('/:id/image', authenticateToken, checkRole('admin'), uploadMulter.single('image'), restaurantController.uploadRestaurantImage);
 router.put('/:id', authenticateToken, checkRole('admin'), restaurantController.updateRestaurant);
 router.put('/:id/slug', authenticateToken, checkRole('admin'), restaurantController.updateRestaurantSlug);
 router.delete('/:id', authenticateToken, checkRole('admin'), restaurantController.deleteRestaurant);
 router.put('/:id/criteria', authenticateToken, checkRole('admin'), restaurantController.updateRestaurantCriteria);
+router.put('/:id/category', authenticateToken, restaurantController.updateRestaurantCategory);
 
 module.exports = router; 

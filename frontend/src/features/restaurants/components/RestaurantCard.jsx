@@ -2,9 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../../common/components/ui';
 import { StarRating } from './StarRating';
-import { MapPin, Star, ArrowUpRight, Clock } from 'lucide-react';
+import { MapPin, Star, ArrowUpRight, Clock, Coffee } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getCategoryName } from '../constants/categories';
+import { RESTAURANT_CATEGORIES } from '../constants/categories';
+import { restaurantPlaceholder } from '../../../utils/placeholders';
+import PropTypes from 'prop-types';
 
 // Animation variants
 const cardVariants = {
@@ -73,89 +76,83 @@ export const RestaurantCard = ({
     category
 }) => {
     // Используем функцию getCategoryName для отображения категории
-    const displayCategory = category ? getCategoryName(category) : cuisine;
+    const displayCategory = category ? RESTAURANT_CATEGORIES[category] || cuisine : cuisine;
 
     return (
         <motion.div
             variants={cardVariants}
-            custom={index}
             initial="hidden"
             animate="visible"
             whileHover="hover"
-            layout
+            custom={index}
+            className="relative bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700"
         >
-            <Link to={`/restaurants/${id}`} className="block h-full">
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden flex flex-col md:flex-row h-full w-full border border-gray-200 dark:border-gray-700">
-                    {/* Изображение ресторана */}
-                    <div className="relative overflow-hidden md:w-2/5 pt-[56.25%] md:pt-0">
-                        <motion.div className="absolute inset-0" variants={imageVariants}>
-                            {image ? (
-                                <img 
-                                    src={image.startsWith('http') ? image : `${process.env.REACT_APP_API_URL || ''}${image}`} 
-                                    alt={name} 
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.parentNode.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700"><span class="text-gray-400 dark:text-gray-500">Нет изображения</span></div>';
-                                    }}
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-                                    <span className="text-gray-400 dark:text-gray-500">Нет изображения</span>
-                                </div>
-                            )}
-                        </motion.div>
-                        
-                        {/* Указатель кухни */}
-                        {displayCategory && (
-                            <div className="absolute top-3 left-3 bg-white dark:bg-gray-800 px-3 py-1 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300 shadow-sm">
-                                {displayCategory}
-                            </div>
-                        )}
+            <Link to={`/restaurant/${id}`} className="block">
+                <motion.div 
+                    className="relative h-48 overflow-hidden"
+                    variants={imageVariants}
+                >
+                    <img
+                        src={image || restaurantPlaceholder}
+                        alt={name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.target.src = restaurantPlaceholder;
+                        }}
+                    />
+                </motion.div>
+
+                <div className="p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                        {name}
+                    </h3>
+
+                    <div className="flex items-center mb-2 text-sm text-gray-600 dark:text-gray-300">
+                        <Coffee className="w-4 h-4 mr-1" />
+                        <span>{displayCategory}</span>
                     </div>
-                    
-                    {/* Информация о ресторане */}
-                    <div className="p-5 flex-grow flex flex-col w-full md:w-3/5 justify-between">
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                {name}
-                            </h3>
-                            
-                            {/* Рейтинг и отзывы */}
-                            <div className="flex items-center mb-4">
-                                <div className="flex items-center">
-                                    <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        {rating ? rating.toFixed(1) : '0.0'}
-                                    </span>
-                                </div>
-                                {reviewCount !== undefined && (
-                                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                                        ({reviewCount} {reviewCount === 1 ? 'отзыв' : reviewCount > 1 && reviewCount < 5 ? 'отзыва' : 'отзывов'})
-                                    </span>
-                                )}
-                            </div>
-                            
-                            {/* Адрес */}
-                            {address && (
-                                <div className="flex items-start text-sm text-gray-500 dark:text-gray-400">
-                                    <MapPin className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
-                                    <span>{address}</span>
-                                </div>
+
+                    {address && (
+                        <div className="flex items-center mb-2 text-sm text-gray-500 dark:text-gray-400">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            <span>{address}</span>
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center">
+                            <Star className={`w-5 h-5 ${rating >= 4.5 ? 'text-yellow-400' : 'text-gray-400'}`} />
+                            <span className="ml-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {rating?.toFixed(1) || 'Нет оценок'}
+                            </span>
+                            {reviewCount > 0 && (
+                                <span className="ml-1 text-sm text-gray-500 dark:text-gray-400">
+                                    ({reviewCount})
+                                </span>
                             )}
                         </div>
-                        
                         <motion.div
-                            className="inline-flex items-center mt-4 self-end px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm"
                             variants={buttonVariants}
-                            whileHover="hover"
+                            className="text-blue-600 dark:text-blue-400 flex items-center text-sm"
                         >
-                            <span>Подробнее</span>
-                            <ArrowUpRight size={14} className="ml-1" />
+                            Подробнее
+                            <ArrowUpRight className="w-4 h-4 ml-1" />
                         </motion.div>
                     </div>
                 </div>
             </Link>
         </motion.div>
     );
+};
+
+RestaurantCard.propTypes = {
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    name: PropTypes.string.isRequired,
+    image: PropTypes.string,
+    cuisine: PropTypes.string,
+    address: PropTypes.string,
+    rating: PropTypes.number,
+    reviewCount: PropTypes.number,
+    index: PropTypes.number,
+    category: PropTypes.string
 }; 

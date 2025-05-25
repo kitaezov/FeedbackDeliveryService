@@ -6,6 +6,11 @@ const restaurantSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    category: {
+        type: String,
+        enum: ['italian', 'asian', 'russian', 'seafood', 'french', 'georgian', 'mexican', 'american'],
+        required: true
+    },
     cuisine: {
         type: String,
         default: 'Разная'

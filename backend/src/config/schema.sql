@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS restaurants (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category ENUM('italian', 'asian', 'russian', 'seafood', 'french', 'georgian', 'mexican', 'american') NOT NULL,
+    cuisine_type VARCHAR(100),
+    address VARCHAR(255),
+    description TEXT,
+    image_url VARCHAR(255),
+    website VARCHAR(255),
+    contact_phone VARCHAR(50),
+    hours VARCHAR(100),
+    price_range VARCHAR(10),
+    min_price DECIMAL(10,2),
+    delivery_time VARCHAR(20),
+    rating DECIMAL(3,2) DEFAULT 0,
+    criteria JSON,
+    slug VARCHAR(255) UNIQUE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+); 

@@ -28,10 +28,18 @@ const createRestaurant = async (req, res) => {
  */
 const getAllRestaurants = async (req, res) => {
     try {
-        const restaurants = await restaurantModel.getAll({ isActive: true });
-        res.json({ restaurants });
+        const { category } = req.query;
+        const restaurants = await restaurantModel.getAll({ 
+            isActive: true,
+            category: category
+        });
+        res.json(restaurants);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error getting restaurants:', error);
+        res.status(500).json({ 
+            message: 'Ошибка при получении списка ресторанов',
+            error: error.message 
+        });
     }
 };
 
@@ -154,7 +162,7 @@ const updateRestaurantCriteria = async (req, res) => {
  */
 const searchRestaurants = async (req, res) => {
     try {
-        const { q: query } = req.query;
+        const { q: query, category } = req.query;
         
         if (!query || query.trim() === '') {
             return res.status(400).json({
@@ -163,12 +171,17 @@ const searchRestaurants = async (req, res) => {
             });
         }
         
-        // Поиск ресторанов в модели
-        const restaurants = await restaurantModel.search(query);
+        // Поиск ресторанов в модели с учетом категории
+        const restaurants = await restaurantModel.search(query, category);
         
         res.json({
             message: 'Поиск выполнен успешно',
-            restaurants
+            restaurants,
+            meta: {
+                total: restaurants.length,
+                query,
+                category: category || 'all'
+            }
         });
     } catch (error) {
         console.error('Ошибка при поиске ресторанов:', error);
@@ -289,6 +302,56 @@ const uploadRestaurantImage = async (req, res) => {
     }
 };
 
+/**
+ * Обновить категорию ресторана
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const updateRestaurantCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { category } = req.body;
+        
+        if (!category) {
+            return res.status(400).json({
+                message: 'Категория не указана',
+                details: 'Необходимо указать категорию ресторана'
+            });
+        }
+        
+        // Проверяем, существует ли ресторан
+        const restaurant = await restaurantModel.getById(id);
+        if (!restaurant) {
+            return res.status(404).json({
+                message: 'Ресторан не найден',
+                details: 'Ресторан с указанным ID не существует'
+            });
+        }
+        
+        // Обновляем категорию
+        const success = await restaurantModel.updateCategory(id, category);
+        
+        if (success) {
+            const updatedRestaurant = await restaurantModel.getById(id);
+            res.json({
+                message: 'Категория ресторана успешно обновлена',
+                restaurant: updatedRestaurant
+            });
+        } else {
+            res.status(500).json({
+                message: 'Ошибка обновления категории',
+                details: 'Не удалось обновить категорию ресторана'
+            });
+        }
+    } catch (error) {
+        console.error('Ошибка обновления категории ресторана:', error);
+        res.status(500).json({
+            message: 'Ошибка обновления категории ресторана',
+            details: error.message
+        });
+    }
+};
+
 // Экспортируем все функции контроллера
 module.exports = {
     createRestaurant,
@@ -300,5 +363,6 @@ module.exports = {
     updateRestaurantCriteria,
     searchRestaurants,
     updateRestaurantSlug,
-    uploadRestaurantImage
+    uploadRestaurantImage,
+    updateRestaurantCategory
 }; 

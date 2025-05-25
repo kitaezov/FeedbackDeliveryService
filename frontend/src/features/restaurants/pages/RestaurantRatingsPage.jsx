@@ -7,6 +7,7 @@ import BackgroundParticles from '../../../components/BackgroundParticles';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import AnimatedButton from '../../../components/AnimatedButton';
 import api from '../../../utils/api';
+import { RESTAURANT_CATEGORIES } from '../constants/categories';
 
 const RestaurantRatingsPage = () => {
     const { isDarkMode } = useTheme();
@@ -18,77 +19,111 @@ const RestaurantRatingsPage = () => {
     const [sortBy, setSortBy] = useState('rating');
     const [showSortOptions, setShowSortOptions] = useState(false);
     const [error, setError] = useState(null);
+    const [activeCategory, setActiveCategory] = useState('all');
 
-    useEffect(() => {
-        const fetchRestaurants = async () => {
-            try {
-                setLoading(true);
-                // Replace with your actual API endpoint
-                const response = await api.get('/restaurants');
-                const restaurantsWithValidRatings = response.data.map(restaurant => ({
-                    ...restaurant,
-                    avgRating: typeof restaurant.avgRating === 'number' ? restaurant.avgRating : 0,
-                    reviewCount: typeof restaurant.reviewCount === 'number' ? restaurant.reviewCount : 0
-                }));
-                setRestaurants(restaurantsWithValidRatings);
-                setFilteredRestaurants(restaurantsWithValidRatings);
-            } catch (err) {
-                console.error('Failed to fetch restaurants:', err);
-                setError('Не удалось загрузить рестораны. Пожалуйста, попробуйте позже.');
-                // For demo purposes, use mock data if API fails
-                const mocksWithValidRatings = mockRestaurants.map(restaurant => ({
-                    ...restaurant,
-                    avgRating: typeof restaurant.avgRating === 'number' ? restaurant.avgRating : 0,
-                    reviewCount: typeof restaurant.reviewCount === 'number' ? restaurant.reviewCount : 0
-                }));
-                setRestaurants(mocksWithValidRatings);
-                setFilteredRestaurants(mocksWithValidRatings);
-            } finally {
-                setLoading(false);
+    // Получаем список категорий из констант
+    const categories = [
+        { id: 'all', name: 'Все рестораны' },
+        ...Object.entries(RESTAURANT_CATEGORIES)
+            .filter(([id]) => id !== 'all')
+            .map(([id, name]) => ({
+                id,
+                name,
+                cuisine: name.replace(' кухня', '')
+            }))
+    ];
+
+    // Функция для загрузки ресторанов с учетом поиска и категории
+    const fetchRestaurants = async (searchQuery = '', categoryId = 'all') => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            console.log('Fetching restaurants with:', { searchQuery, categoryId });
+
+            let endpoint = '/restaurants';
+            const params = {};
+
+            // Если есть поисковый запрос, используем эндпоинт поиска
+            if (searchQuery.trim()) {
+                endpoint = '/restaurants/search';
+                params.q = searchQuery.trim();
             }
-        };
 
-        fetchRestaurants();
-        
-        // Обновляем заголовок страницы
-        document.title = "Рейтинги ресторанов | FeedbackDelivery";
-        
-        // Очистка при размонтировании компонента
-        return () => {
-            document.title = "FeedbackDelivery";
-        };
-    }, []);
+            // Добавляем категорию в параметры, если она не "все"
+            if (categoryId !== 'all') {
+                params.category = categoryId;
+            }
 
-    const handleSearch = (e) => {
-        const term = e.target.value;
-        setSearchTerm(term);
-        
-        if (term.trim() === '') {
-            setFilteredRestaurants(restaurants);
-        } else {
-            const filtered = restaurants.filter(restaurant => 
-                restaurant.name.toLowerCase().includes(term.toLowerCase()) ||
-                restaurant.cuisine.toLowerCase().includes(term.toLowerCase())
-            );
-            setFilteredRestaurants(filtered);
+            console.log('Making request to:', endpoint, 'with params:', params);
+
+            const response = await api.get(endpoint, { params });
+
+            console.log('Response from server:', response.data);
+
+            // Обработка данных в зависимости от эндпоинта
+            const restaurantsData = endpoint === '/restaurants/search' 
+                ? response.data.restaurants 
+                : response.data;
+
+            const processedRestaurants = (Array.isArray(restaurantsData) ? restaurantsData : [])
+                .map(restaurant => ({
+                    ...restaurant,
+                    avgRating: typeof restaurant.avg_rating === 'number' ? restaurant.avg_rating : 0,
+                    reviewCount: typeof restaurant.review_count === 'number' ? restaurant.review_count : 0,
+                    category: restaurant.category || 'all'
+                }));
+
+            console.log('Processed restaurants:', processedRestaurants);
+
+            setRestaurants(processedRestaurants);
+            setFilteredRestaurants(processedRestaurants);
+        } catch (err) {
+            console.error('Failed to fetch restaurants:', err);
+            setError('Не удалось загрузить рестораны. Пожалуйста, попробуйте позже.');
+            setRestaurants([]);
+            setFilteredRestaurants([]);
+        } finally {
+            setLoading(false);
         }
     };
 
+    // Загрузка ресторанов при монтировании компонента
+    useEffect(() => {
+        fetchRestaurants();
+    }, []);
+
+    // Обработчик изменения категории
+    const handleCategoryChange = async (categoryId) => {
+        setActiveCategory(categoryId);
+        await fetchRestaurants(searchTerm, categoryId);
+    };
+
+    // Обработчик поиска с debounce
+    const handleSearch = async (e) => {
+        const term = e.target.value;
+        setSearchTerm(term);
+        await fetchRestaurants(term, activeCategory);
+    };
+
+    // Обработчик сортировки
     const handleSort = (sortType) => {
         setSortBy(sortType);
         setShowSortOptions(false);
         
         const sorted = [...filteredRestaurants].sort((a, b) => {
-            if (sortType === 'rating') {
-                return b.avgRating - a.avgRating;
-            } else if (sortType === 'price') {
-                return a.priceLevel - b.priceLevel;
-            } else if (sortType === 'popular') {
-                return b.reviewCount - a.reviewCount;
-            } else if (sortType === 'newest') {
-                return new Date(b.createdAt) - new Date(a.createdAt);
+            switch (sortType) {
+                case 'rating':
+                    return b.avgRating - a.avgRating;
+                case 'price':
+                    return (a.min_price || 0) - (b.min_price || 0);
+                case 'popular':
+                    return b.reviewCount - a.reviewCount;
+                case 'newest':
+                    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                default:
+                    return 0;
             }
-            return 0;
         });
         
         setFilteredRestaurants(sorted);
@@ -173,6 +208,25 @@ const RestaurantRatingsPage = () => {
                     </AnimatedButton>
                     
                     <h1 className="text-2xl md:text-3xl font-bold">Рейтинги ресторанов</h1>
+                </div>
+
+                {/* Categories */}
+                <div className="mb-6 overflow-x-auto">
+                    <div className="flex space-x-2 pb-2">
+                        {categories.map(category => (
+                            <button
+                                key={category.id}
+                                onClick={() => handleCategoryChange(category.id)}
+                                className={`px-4 py-2 rounded-lg transition-all whitespace-nowrap
+                                    ${activeCategory === category.id 
+                                        ? 'bg-blue-500 text-white' 
+                                        : `${themeClasses.button}`
+                                    }`}
+                            >
+                                {category.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
                 
                 {/* Search and Filter Bar */}

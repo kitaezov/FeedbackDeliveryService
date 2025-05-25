@@ -199,292 +199,171 @@ const respondToReview = async (req, res) => {
  */
 const getStats = async (req, res) => {
     try {
-        // Получение общего количества отзывов
-        const [totalReviews] = await pool.query('SELECT COUNT(*) as count FROM reviews');
+        // Получение всех отзывов
+        const [reviews] = await pool.query(`
+            SELECT * FROM reviews 
+            WHERE deleted = 0 
+            ORDER BY created_at DESC
+        `);
         
-        // Получение количества отвеченных отзывов
-        const [respondedReviews] = await pool.query('SELECT COUNT(*) as count FROM manager_responses');
+        // Получение всех ресторанов
+        const [restaurants] = await pool.query(`
+            SELECT * FROM restaurants 
+            WHERE deleted = 0
+        `);
         
-        // Получение среднего рейтинга
-        const [avgRating] = await pool.query('SELECT AVG(rating) as avg FROM reviews');
+        // Расчет основных статистических данных
+        const totalReviews = reviews.length;
+        const averageRating = totalReviews > 0 
+            ? reviews.reduce((acc, review) => acc + review.rating, 0) / totalReviews 
+            : 0;
+        const totalRestaurants = restaurants.length;
         
-        // Получение общего количества ресторанов
-        const [totalRestaurants] = await pool.query('SELECT COUNT(*) as count FROM restaurants');
-
-        // Убедимся, что обрабатываем значения null или undefined
-        const stats = {
-            totalReviews: totalReviews[0]?.count || 0,
-            respondedReviews: respondedReviews[0]?.count || 0,
-            pendingReviews: (totalReviews[0]?.count || 0) - (respondedReviews[0]?.count || 0),
-            averageRating: avgRating[0]?.avg || 0,
-            totalRestaurants: totalRestaurants[0]?.count || 0
-        };
-
-        // Убедимся, что формат ответа согласован
+        // Расчет отзывов по типу
+        const reviewsByType = reviews.reduce((acc, review) => {
+            acc[review.type] = (acc[review.type] || 0) + 1;
+            return acc;
+        }, { inRestaurant: 0, delivery: 0 });
+        
+        // Получение количества активных пользователей
+        const [activeUsers] = await pool.query(`
+            SELECT COUNT(*) as count 
+            FROM users 
+            WHERE is_active = 1
+        `);
+        
+        // Расчет коэффициента ответов
+        const [respondedReviews] = await pool.query(`
+            SELECT COUNT(*) as count 
+            FROM manager_responses
+        `);
+        
+        const responseRate = totalReviews > 0 
+            ? (respondedReviews[0].count / totalReviews) * 100 
+            : 0;
+        
         res.json({
-            status: 'success',
-            data: stats
+            totalReviews,
+            averageRating,
+            totalRestaurants,
+            reviewsByType,
+            activeUsers: activeUsers[0].count,
+            responseRate
         });
+        
     } catch (error) {
-        console.error('Error fetching stats:', error);
-        return errorHandler(res, 'Failed to fetch statistics', 500, error);
+        console.error('Ошибка при получении статистики:', error);
+        res.status(500).json({ 
+            error: 'Внутренняя ошибка сервера',
+            details: error.message 
+        });
     }
 };
 
 /**
- * Получение данных для графика для панели управления менеджером
+ * Получение данных для графиков
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const getChartData = async (req, res) => {
     try {
-        const period = req.query.period || 'week';
+        // Получение отзывов за последние 30 дней
+        const [reviews] = await pool.query(`
+            SELECT rating, type, created_at 
+            FROM reviews 
+            WHERE deleted = 0 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        `);
         
-        // Определяем диапазон дат на основе периода
-        const now = new Date();
-        let startDate;
+        // Подготовка данных для графика рейтингов
+        const ratings = [1, 2, 3, 4, 5].map(rating => ({
+            rating,
+            count: reviews.filter(r => r.rating === rating).length
+        }));
         
-        switch (period) {
-            case 'month':
-                startDate = new Date(now);
-                startDate.setMonth(now.getMonth() - 1);
-                break;
-            case 'year':
-                startDate = new Date(now);
-                startDate.setFullYear(now.getFullYear() - 1);
-                break;
-            case 'week':
-            default:
-                startDate = new Date(now);
-                startDate.setDate(now.getDate() - 7);
-                break;
-        }
-        
-        // Форматируем startDate для SQL запроса
-        const formattedStartDate = startDate.toISOString().split('T')[0];
-        
-        try {
-            // Получение рейтингов по дням
-            const [ratingsByDay] = await pool.query(`
-                SELECT 
-                    DAYOFWEEK(date) as day_of_week,
-                    AVG(rating) as avg_rating,
-                    COUNT(*) as count
-                FROM 
-                    reviews
-                WHERE 
-                    date >= ?
-                GROUP BY 
-                    day_of_week
-                ORDER BY 
-                    day_of_week
-            `, [formattedStartDate]);
-            
-            // Получение количества отзывов по дням
-            const [countByDay] = await pool.query(`
-                SELECT 
-                    DAYOFWEEK(date) as day_of_week,
-                    COUNT(*) as count
-                FROM 
-                    reviews
-                WHERE 
-                    date >= ?
-                GROUP BY 
-                    day_of_week
-                ORDER BY 
-                    day_of_week
-            `, [formattedStartDate]);
-            
-            // Получение распределения ресторанов
-            const [restaurantDistribution] = await pool.query(`
-                SELECT 
-                    r.name as restaurant_name,
-                    COUNT(rv.id) as review_count
-                FROM 
-                    restaurants r
-                    LEFT JOIN reviews rv ON r.id = rv.restaurant_id
-                WHERE 
-                    rv.date >= ?
-                GROUP BY 
-                    r.id
-                ORDER BY 
-                    review_count DESC
-                LIMIT 10
-            `, [formattedStartDate]);
-            
-            // Подготовка данных для графиков
-            // Преобразование SQL результатов в формат для графиков
-            
-            // Инициализация данных для всех дней недели
-            const ratingData = Array(7).fill(0);
-            const countData = Array(7).fill(0);
-            
-            // Заполнение фактическими данными из базы данных
-            ratingsByDay.forEach(row => {
-                // MySQL DAYOFWEEK: 1 = Sunday, 2 = Monday, ..., 7 = Saturday
-                // Мы корректируем индекс: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-                const index = row.day_of_week - 1;
-                ratingData[index] = parseFloat(row.avg_rating) || 0;
-            });
-            
-            countByDay.forEach(row => {
-                const index = row.day_of_week - 1;
-                countData[index] = parseInt(row.count) || 0;
-            });
-            
-            // Переупорядочиваем, чтобы начать с понедельника: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
-            const sortedRatings = [
-                ratingData[1], // Понедельник
-                ratingData[2], // Вторник
-                ratingData[3], // Среда
-                ratingData[4], // Четверг
-                ratingData[5], // Пятница
-                ratingData[6], // Суббота
-                ratingData[0]  // Воскресенье
-            ];
-            
-            const sortedCounts = [
-                countData[1], // Понедельник
-                countData[2], // Вторник
-                countData[3], // Среда
-                countData[4], // Четверг
-                countData[5], // Пятница
-                countData[6], // Суббота
-                countData[0]  // Воскресенье
-            ];
-            
-            // Подготовка данных для распределения ресторанов
-            const restaurantLabels = restaurantDistribution.map(r => r.restaurant_name || 'Неизвестный ресторан');
-            const restaurantCounts = restaurantDistribution.map(r => parseInt(r.review_count) || 0);
-            
-            // Генерация цветов для ресторанов
-            const restaurantColors = [
-                'rgba(255, 99, 132, 0.6)',
-                'rgba(54, 162, 235, 0.6)',
-                'rgba(255, 206, 86, 0.6)',
-                'rgba(75, 192, 192, 0.6)',
-                'rgba(153, 102, 255, 0.6)',
-                'rgba(255, 159, 64, 0.6)',
-                'rgba(199, 199, 199, 0.6)',
-                'rgba(83, 102, 255, 0.6)',
-                'rgba(255, 99, 255, 0.6)',
-                'rgba(99, 255, 132, 0.6)'
-            ];
-            
-            // Убедимся, что у нас достаточно цветов
-            while (restaurantColors.length < restaurantLabels.length) {
-                restaurantColors.push(...restaurantColors);
+        // Подготовка данных для графика типов отзывов
+        const reviewTypes = [
+            { 
+                name: 'В ресторане', 
+                value: reviews.filter(r => r.type === 'inRestaurant').length 
+            },
+            { 
+                name: 'Доставка', 
+                value: reviews.filter(r => r.type === 'delivery').length 
             }
-            
-            // Форматирование данных для фронтенда
-            const chartData = {
-                ratings: {
-                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                    datasets: [{
-                        label: 'Средний рейтинг',
-                        data: sortedRatings,
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                    }]
-                },
-                volumeByDay: {
-                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                    datasets: [{
-                        label: 'Количество отзывов',
-                        data: sortedCounts,
-                        backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                    }]
-                },
-                categoryDistribution: {
-                    labels: restaurantLabels,
-                    datasets: [{
-                        label: 'Количество отзывов',
-                        data: restaurantCounts,
-                        backgroundColor: restaurantColors.slice(0, restaurantLabels.length),
-                    }]
-                }
-            };
-            
-            // Отправляем отформатированные данные на фронт
-            res.json({
-                status: 'success',
-                data: chartData
-            });
-        } catch (dbError) {
-            console.error('Database error while fetching chart data:', dbError);
-            
-            // Возвращаем данные по умолчанию, чтобы предотвратить разрыв фронтенда
-            const defaultData = {
-                ratings: {
-                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                    datasets: [{
-                        label: 'Средний рейтинг',
-                        data: [0, 0, 0, 0, 0, 0, 0],
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                    }]
-                },
-                volumeByDay: {
-                    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                    datasets: [{
-                        label: 'Количество отзывов',
-                        data: [0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                    }]
-                },
-                categoryDistribution: {
-                    labels: ['Нет данных'],
-                    datasets: [{
-                        label: 'Количество отзывов',
-                        data: [0],
-                        backgroundColor: ['rgba(200, 200, 200, 0.6)'],
-                    }]
-                }
-            };
-            
-            res.json({
-                status: 'error',
-                message: 'Ошибка при получении данных из базы данных',
-                data: defaultData
-            });
-        }
+        ];
+        
+        // Подготовка данных для графика ответов по дням
+        const last7Days = [...Array(7)].map((_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            return date.toISOString().split('T')[0];
+        }).reverse();
+        
+        const [responses] = await pool.query(`
+            SELECT DATE(created_at) as date, COUNT(*) as count 
+            FROM manager_responses 
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
+            GROUP BY DATE(created_at)
+        `);
+        
+        const dailyResponses = last7Days.map(date => ({
+            date,
+            count: responses.find(r => r.date.toISOString().split('T')[0] === date)?.count || 0
+        }));
+        
+        res.json({
+            ratings,
+            reviewTypes,
+            dailyResponses
+        });
+        
     } catch (error) {
-        console.error('Ошибка в getChartData:', error);
-        return errorHandler(res, 'Не удалось получить данные для графика', 500, error);
+        console.error('Ошибка при получении данных для графиков:', error);
+        res.status(500).json({ 
+            error: 'Внутренняя ошибка сервера',
+            details: error.message 
+        });
     }
 };
 
 /**
- * Получение ресторанов для панели управления менеджером
+ * Получение списка ресторанов для менеджера
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 const getRestaurants = async (req, res) => {
     try {
-        const [rows] = await pool.query(`
+        const [restaurants] = await pool.query(`
             SELECT 
-                r.id,
-                r.name,
-                r.address,
-                r.category,
-                r.is_active as status,
-                r.price_range,
-                COALESCE(AVG(rv.rating), 0) as rating,
-                COUNT(rv.id) as reviews
-            FROM 
-                restaurants r
-            LEFT JOIN 
-                reviews rv ON r.id = rv.restaurant_id
-            GROUP BY 
-                r.id
-            ORDER BY 
-                reviews DESC
+                r.*,
+                COUNT(rv.id) as review_count,
+                AVG(rv.rating) as average_rating
+            FROM restaurants r
+            LEFT JOIN reviews rv ON r.id = rv.restaurant_id AND rv.deleted = 0
+            WHERE r.deleted = 0
+            GROUP BY r.id
+            ORDER BY r.name ASC
         `);
-
-        res.json(rows);
+        
+        const formattedRestaurants = restaurants.map(restaurant => ({
+            id: restaurant.id,
+            name: restaurant.name,
+            address: restaurant.address,
+            category: restaurant.category,
+            rating: parseFloat(restaurant.average_rating) || 0,
+            reviewCount: parseInt(restaurant.review_count) || 0,
+            image: restaurant.image_url
+        }));
+        
+        res.json(formattedRestaurants);
+        
     } catch (error) {
-        console.error('Ошибка при получении ресторанов:', error);
-        return errorHandler(res, 'Не удалось получить рестораны', 500, error);
+        console.error('Ошибка при получении списка ресторанов:', error);
+        res.status(500).json({ 
+            error: 'Внутренняя ошибка сервера',
+            details: error.message 
+        });
     }
 };
 

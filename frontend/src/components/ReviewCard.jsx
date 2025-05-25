@@ -135,160 +135,144 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
     const [showDetails, setShowDetails] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Проверяем наличие отзыва
+    if (!review) {
+        console.warn('ReviewCard: получен пустой объект отзыва');
+        return null;
+    }
+
     // Нормализация полей отзыва для обработки разных форматов данных
     const reviewData = {
         id: review.id,
         userId: review.userId || review.user_id,
         userName: review.user_name || review.userName || 'Пользователь',
         restaurantName: review.restaurant_name || review.restaurantName || 'Ресторан',
-        rating: review.rating || 0,
-        comment: review.comment || '',
-        date: review.date || new Date().toISOString(),
+        rating: Number(review.rating) || 0,
+        comment: review.comment || review.text || '',
+        date: review.created_at || review.date || new Date().toISOString(),
         avatar: review.avatar ? getImageUrl(review.avatar) : null,
-        photos: processPhotosArray(review.photos || []),
-        receiptPhoto: review.receiptPhoto ? getImageUrl(review.receiptPhoto) : null,
-        hasReceipt: review.hasReceipt || Boolean(review.receiptPhoto) || (review.photos && review.photos.some(p => p.isReceipt)) || false,
-        ratings: review.ratings || {
-            food: review.foodRating || review.food_rating || 0,
-            service: review.serviceRating || review.service_rating || 0,
-            atmosphere: review.atmosphereRating || review.atmosphere_rating || 0,
-            price: review.priceRating || review.price_rating || 0,
-            cleanliness: review.cleanlinessRating || review.cleanliness_rating || 0
+        photos: Array.isArray(review.photos) ? review.photos.map(photo => 
+            typeof photo === 'string' ? { url: getImageUrl(photo) } : photo
+        ) : [],
+        receiptPhoto: review.receipt_photo ? getImageUrl(review.receipt_photo) : null,
+        hasReceipt: review.has_receipt || Boolean(review.receipt_photo) || (Array.isArray(review.photos) && review.photos.some(p => p.isReceipt)) || false,
+        ratings: {
+            food: Number(review.food_rating || review.ratings?.food || 0),
+            service: Number(review.service_rating || review.ratings?.service || 0),
+            atmosphere: Number(review.atmosphere_rating || review.ratings?.atmosphere || 0),
+            price: Number(review.price_rating || review.ratings?.price || 0),
+            cleanliness: Number(review.cleanliness_rating || review.ratings?.cleanliness || 0)
         },
-        // Добавляем данные ответа менеджера
-        responded: review.responded || Boolean(review.response) || false,
+        responded: Boolean(review.responded || review.response),
         response: review.response || '',
-        responseDate: review.responseDate || null
+        responseDate: review.response_date || review.responseDate || null
     };
-
-    // Функция для обработки массива фотографий и обеспечения правильного формата
-    function processPhotosArray(photos) {
-        if (!Array.isArray(photos)) {
-            return [];
-        }
-        
-        return photos.map(photo => {
-            // Если это строка, которая может быть JSON, пробуем её разобрать
-            if (typeof photo === 'string' && (photo.startsWith('{') || photo.startsWith('['))) {
-                try {
-                    return JSON.parse(photo);
-                } catch (e) {
-                    return photo;
-                }
-            }
-            return photo;
-        });
-    }
 
     // Проверяем, принадлежит ли отзыв текущему пользователю
-    const isCurrentUserReview = user && (reviewData.userId === user.id);
-    const restaurantSlug = reviewData.restaurantName ? reviewData.restaurantName.toLowerCase().replace(/\s+/g, '-') : '';
+    const isCurrentUserReview = user && (user.id === reviewData.userId);
 
-    const getCategoryName = (categoryId) => {
-        const categories = {
-            food: 'Качество блюд',
-            service: 'Уровень сервиса',
-            atmosphere: 'Атмосфера заведения',
-            price: 'Соотношение цена/качество',
-            cleanliness: 'Чистота помещения',
-            deliverySpeed: 'Скорость доставки',
-            deliveryQuality: 'Качество доставки'
-        };
-        return categories[categoryId] || categoryId;
-    };
-
+    // Обработчик удаления отзыва
     const handleDelete = async () => {
         if (window.confirm('Вы уверены, что хотите удалить этот отзыв?')) {
             setIsDeleting(true);
             try {
                 await onDelete(reviewData.id);
+            } catch (error) {
+                console.error('Ошибка при удалении отзыва:', error);
             } finally {
                 setIsDeleting(false);
             }
         }
     };
 
-    return (
-        <motion.div 
-            className="group relative w-full"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -5 }}
-            transition={{ duration: 0.3 }}
-        >
-            <Card
-                className={`overflow-hidden transition-all duration-300 w-full
-                           ${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800 border-none'} 
-                           shadow-md hover:shadow-xl
-                           rounded-2xl border border-gray-200 dark:border-gray-700`}
-            >
-                <CardContent className="p-6">
-                    {/* Профиль и базовая информация */}
-                    <div className="flex flex-wrap md:flex-nowrap items-center mb-6 gap-4">
-                        <div className="relative">
-                            {reviewData.avatar ? (
-                                <img
-                                    src={reviewData.avatar}
-                                    alt={reviewData.userName}
-                                    className="w-14 h-14 rounded-full object-cover
-                                            ring-2 ring-offset-2 ring-blue-50
-                                            transition-transform group-hover:scale-105"
-                                />
-                            ) : (
-                                <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700
-                                            ring-2 ring-offset-2 ring-blue-50
-                                            transition-transform group-hover:scale-105">
-                                    <User size={24} className="text-gray-500 dark:text-gray-400" />
-                                </div>
-                            )}
-                        </div>
+    // Форматирование даты
+    const formatDate = (dateString) => {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Ошибка форматирования даты:', error);
+            return dateString;
+        }
+    };
 
-                        <div className="flex-grow">
-                            <h3 className={`font-semibold text-lg
-                                           transition-colors group-hover:text-blue-600
-                                           ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                                {reviewData.userName}
-                            </h3>
-                            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {formatDate(reviewData.date)}
-                                <span className="ml-1">
-                                    
-                                </span>
+    // Анимация для кнопок
+    const buttonVariants = {
+        hover: { scale: 1.05 },
+        tap: { scale: 0.95 }
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="w-full"
+        >
+            <Card className={`w-full overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 
+                                ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                {reviewData.avatar ? (
+                                    <img 
+                                        src={reviewData.avatar} 
+                                        alt={reviewData.userName}
+                                        className="w-full h-full rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <User className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                                )}
+                            </div>
+                            <div>
+                                <h3 className={`font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                                    {reviewData.userName}
+                                </h3>
+                                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    {formatDate(reviewData.date)}
+                                </p>
                             </div>
                         </div>
-
+                        
                         {/* Рейтинг */}
-                        <div className="flex items-center text-gray-400">
-                            {[1, 2, 3, 4, 5].map(star => (
-                                <span
-                                    key={star}
-                                    className={`text-xl transition-colors ${
-                                        star <= Math.round(reviewData.rating)
-                                            ? "text-yellow-400"
-                                            : isDarkMode ? "text-gray-600" : "text-gray-200"
-                                    }`}
-                                >
-                                    ★
+                        <div className="flex items-center">
+                            <div className="flex">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <span
+                                        key={star}
+                                        className={`text-lg ${
+                                            star <= reviewData.rating
+                                                ? "text-yellow-400"
+                                                : isDarkMode ? "text-gray-600" : "text-gray-200"
+                                        }`}
+                                    >
+                                        ★
+                                    </span>
+                                ))}
+                                <span className={`ml-2 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    {reviewData.rating}
                                 </span>
-                            ))}
-                            <span className={`ml-2 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                {reviewData.rating}
-                            </span>
+                            </div>
                         </div>
                     </div>
 
                     {/* Текст отзыва */}
                     <p className={`mb-6 leading-relaxed
-                                  border-l-4 border-gray-200 pl-4
-                                  italic font-light
-                                  ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                border-l-4 border-gray-200 pl-4
+                                italic font-light
+                                ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                         "{reviewData.comment}"
                     </p>
 
                     {/* Ответ менеджера */}
                     {reviewData.responded && reviewData.response && (
                         <div className={`mb-6 mt-6 pt-4 pb-4 px-4 rounded-lg
-                                      ${isDarkMode ? 'bg-gray-700 border-l-4 border-blue-600' : 'bg-blue-50 border-l-4 border-blue-500'}`}>
+                                    ${isDarkMode ? 'bg-gray-700 border-l-4 border-blue-600' : 'bg-blue-50 border-l-4 border-blue-500'}`}>
                             <div className="flex items-center mb-2">
                                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center mr-2">
                                     <MessageCircle size={16} className="text-blue-600 dark:text-blue-400" />

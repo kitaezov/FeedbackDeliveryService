@@ -290,15 +290,42 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                     });
                     console.log("All reviews response:", reviewsResponse.data);
                     
+                    // Нормализуем данные отзывов
                     if (reviewsResponse.data && Array.isArray(reviewsResponse.data.reviews)) {
-                        allReviews = reviewsResponse.data.reviews;
+                        allReviews = reviewsResponse.data.reviews.map(review => ({
+                            ...review,
+                            date: review.created_at || review.date || new Date().toISOString(),
+                            rating: Number(review.rating) || 0,
+                            comment: review.comment || review.text || '',
+                            user_name: review.user_name || review.userName || 'Пользователь',
+                            restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан'
+                        }));
                     } else if (Array.isArray(reviewsResponse.data)) {
-                        allReviews = reviewsResponse.data;
+                        allReviews = reviewsResponse.data.map(review => ({
+                            ...review,
+                            date: review.created_at || review.date || new Date().toISOString(),
+                            rating: Number(review.rating) || 0,
+                            comment: review.comment || review.text || '',
+                            user_name: review.user_name || review.userName || 'Пользователь',
+                            restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан'
+                        }));
                     }
                     
-                    console.log(`Successfully loaded ${allReviews.length} reviews`);
+                    // Группируем отзывы по ресторанам
+                    const reviewsByRestaurant = {};
+                    allReviews.forEach(review => {
+                        const restaurantName = review.restaurant_name;
+                        if (!reviewsByRestaurant[restaurantName]) {
+                            reviewsByRestaurant[restaurantName] = [];
+                        }
+                        reviewsByRestaurant[restaurantName].push(review);
+                    });
+                    
+                    setRestaurantReviews(reviewsByRestaurant);
+                    console.log(`Successfully loaded and processed ${allReviews.length} reviews`);
                 } catch (reviewsErr) {
                     console.error("Error fetching all reviews:", reviewsErr);
+                    setError("Не удалось загрузить отзывы");
                 }
                 
                 if (singleRestaurant && slug) {

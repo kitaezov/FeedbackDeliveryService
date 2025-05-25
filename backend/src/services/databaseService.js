@@ -20,7 +20,8 @@ async function initializeUserTables() {
                 password VARCHAR(255) NOT NULL,
                 role ENUM('user', 'manager', 'moderator', 'admin', 'head_admin') DEFAULT 'user',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                total_likes INT DEFAULT 0
+                total_likes INT DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )
         `);
         
@@ -30,170 +31,38 @@ async function initializeUserTables() {
         `);
         
         if (roleColumns.length === 0) {
-            console.log('Добавление столбца role в таблицу пользователей...');
             await pool.query(`
                 ALTER TABLE users 
                 ADD COLUMN role ENUM('user', 'manager', 'moderator', 'admin', 'head_admin') DEFAULT 'user'
             `);
-            console.log('Столбец role успешно добавлен');
-        } else {
-            // Make sure the role column includes all required roles
-            const [roleEnum] = await pool.query(`
-                SHOW COLUMNS FROM users WHERE Field = 'role'
-            `);
-            
-            const roleType = roleEnum[0].Type;
-            console.log(`Current role enum type: ${roleType}`);
-            
-            // Check if all needed roles are included
-            if (!roleType.includes('manager') || !roleType.includes('head_admin')) {
-                console.log('Обновление перечисления role для добавления всех ролей...');
-                await pool.query(`
-                    ALTER TABLE users 
-                    MODIFY COLUMN role ENUM('user', 'manager', 'moderator', 'admin', 'head_admin') DEFAULT 'user'
-                `);
-                console.log('Перечисление role успешно обновлено');
-            }
         }
 
-        // Check if total_likes column exists, add if it doesn't
-        const [likesColumns] = await pool.query(`
-            SHOW COLUMNS FROM users LIKE 'total_likes'
+        // Get current role enum type
+        const [roleTypeResult] = await pool.query(`
+            SHOW COLUMNS FROM users WHERE Field = 'role'
         `);
         
-        if (likesColumns.length === 0) {
-            console.log('Добавление столбца total_likes в таблицу пользователей...');
-            await pool.query(`
-                ALTER TABLE users 
-                ADD COLUMN total_likes INT DEFAULT 0
-            `);
-            console.log('Столбец total_likes успешно добавлен');
+        if (roleTypeResult.length > 0) {
+            console.log('Current role enum type:', roleTypeResult[0].Type);
         }
-        
-        // Check if updated_at column exists, add if it doesn't
+
+        // Check if updated_at column exists
         const [updatedAtColumns] = await pool.query(`
             SHOW COLUMNS FROM users LIKE 'updated_at'
         `);
-        
+
         if (updatedAtColumns.length === 0) {
             console.log('Добавление столбца updated_at в таблицу пользователей...');
             await pool.query(`
                 ALTER TABLE users 
-                ADD COLUMN updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+                ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             `);
             console.log('Столбец updated_at успешно добавлен');
         }
-        
+
         console.log('Таблица пользователей создана или уже существует');
     } catch (error) {
-        console.error('Ошибка инициализации таблицы пользователей:', error);
-        throw error;
-    }
-}
-
-/**
- * Initialize reviews table
- */
-async function initializeReviewsTable() {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS reviews (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                restaurant_name VARCHAR(100) NOT NULL,
-                rating DECIMAL(2,1) NOT NULL,
-                comment TEXT NOT NULL,
-                date DATE NOT NULL,
-                food_rating DECIMAL(2,1) DEFAULT 0,
-                service_rating DECIMAL(2,1) DEFAULT 0,
-                atmosphere_rating DECIMAL(2,1) DEFAULT 0,
-                price_rating DECIMAL(2,1) DEFAULT 0,
-                cleanliness_rating DECIMAL(2,1) DEFAULT 0,
-                likes INT DEFAULT 0,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        `);
-        
-        // Check if likes column exists, add if it doesn't
-        const [columns] = await pool.query(`
-            SHOW COLUMNS FROM reviews LIKE 'likes'
-        `);
-        
-        if (columns.length === 0) {
-            console.log('Добавление столбца likes в таблицу отзывов...');
-            await pool.query(`
-                ALTER TABLE reviews 
-                ADD COLUMN likes INT DEFAULT 0
-            `);
-            console.log('Столбец likes успешно добавлен');
-        }
-        
-        console.log('Таблица отзывов создана или уже существует');
-    } catch (error) {
-        console.error('Ошибка инициализации таблицы отзывов:', error);
-        throw error;
-    }
-}
-
-/**
- * Initialize deleted reviews table
- */
-async function initializeDeletedReviewsTable() {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS deleted_reviews (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                review_id INT NOT NULL,
-                user_id INT NOT NULL,
-                restaurant_name VARCHAR(100) NOT NULL,
-                rating DECIMAL(2,1) NOT NULL,
-                comment TEXT,
-                date DATE,
-                food_rating DECIMAL(2,1),
-                service_rating DECIMAL(2,1),
-                atmosphere_rating DECIMAL(2,1),
-                price_rating DECIMAL(2,1),
-                cleanliness_rating DECIMAL(2,1),
-                deleted_by INT NOT NULL,
-                deletion_reason TEXT NOT NULL,
-                deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                user_name VARCHAR(100),
-                admin_name VARCHAR(100),
-                INDEX (review_id),
-                INDEX (user_id),
-                INDEX (deleted_by)
-            )
-        `);
-        
-        console.log('Таблица удаленных отзывов создана или уже существует');
-    } catch (error) {
-        console.error('Ошибка инициализации таблицы удаленных отзывов:', error);
-        throw error;
-    }
-}
-
-/**
- * Initialize error reports table
- */
-async function initializeErrorReportTables() {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS error_reports (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                review_id INT NOT NULL,
-                reason ENUM('spam', 'offensive', 'irrelevant', 'other') NOT NULL,
-                description TEXT,
-                status ENUM('pending', 'resolved', 'rejected') DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
-            )
-        `);
-        
-        console.log('Таблица отчетов об ошибках создана или уже существует');
-    } catch (error) {
-        console.error('Ошибка инициализации таблицы отчетов об ошибках:', error);
+        console.error('Error initializing user tables:', error);
         throw error;
     }
 }
@@ -203,6 +72,7 @@ async function initializeErrorReportTables() {
  */
 async function initializeRestaurantsTable() {
     try {
+        // Сначала создаем базовую структуру таблицы
         await pool.query(`
             CREATE TABLE IF NOT EXISTS restaurants (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -215,20 +85,126 @@ async function initializeRestaurantsTable() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 is_active BOOLEAN DEFAULT TRUE,
-                criteria JSON,
-                slug VARCHAR(100)
+                criteria JSON
             )
         `);
-        
+
+        // Проверяем наличие столбца slug
+        const [slugColumn] = await pool.query(`
+            SHOW COLUMNS FROM restaurants LIKE 'slug'
+        `);
+
+        // Если столбец slug не существует, добавляем его
+        if (slugColumn.length === 0) {
+            await pool.query(`
+                ALTER TABLE restaurants 
+                ADD COLUMN slug VARCHAR(100)
+            `);
+        }
+
+        // Добавляем уникальные индексы
+        try {
+            await pool.query(`
+                ALTER TABLE restaurants 
+                ADD UNIQUE KEY restaurants_name_unique (name),
+                ADD UNIQUE KEY restaurants_slug_unique (slug)
+            `);
+        } catch (error) {
+            if (error.code !== 'ER_DUP_KEYNAME') {
+                throw error;
+            }
+        }
+
         console.log('Таблица ресторанов создана или уже существует');
     } catch (error) {
-        console.error('Ошибка инициализации таблицы ресторанов:', error);
+        console.error('Error initializing restaurants table:', error);
         throw error;
     }
 }
 
 /**
- * Run SQL migrations from files
+ * Initialize reviews table
+ */
+async function initializeReviewsTable() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS reviews (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                restaurant_id INT,
+                content TEXT NOT NULL,
+                rating INT CHECK (rating >= 1 AND rating <= 5),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+            )
+        `);
+        console.log('Таблица отзывов создана или уже существует');
+    } catch (error) {
+        console.error('Error initializing reviews table:', error);
+        throw error;
+    }
+}
+
+/**
+ * Initialize deleted reviews table
+ */
+async function initializeDeletedReviewsTable() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS deleted_reviews (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                original_id INT,
+                user_id INT,
+                restaurant_id INT,
+                content TEXT NOT NULL,
+                rating INT,
+                created_at TIMESTAMP,
+                deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                deleted_by INT,
+                deletion_reason TEXT,
+                FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE SET NULL
+            )
+        `);
+        console.log('Таблица удаленных отзывов создана или уже существует');
+    } catch (error) {
+        console.error('Error initializing deleted reviews table:', error);
+        throw error;
+    }
+}
+
+/**
+ * Initialize error report tables
+ */
+async function initializeErrorReportTables() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS error_reports (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                review_id INT,
+                reporter_id INT,
+                reason TEXT NOT NULL,
+                status ENUM('pending', 'resolved', 'rejected') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                resolved_at TIMESTAMP,
+                resolved_by INT,
+                resolution_notes TEXT,
+                FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+                FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+        `);
+        console.log('Таблица отчетов об ошибках создана или уже существует');
+    } catch (error) {
+        console.error('Error initializing error report tables:', error);
+        throw error;
+    }
+}
+
+/**
+ * Run SQL migrations from files in a specific order
  */
 async function runMigrations() {
     try {
@@ -236,12 +212,26 @@ async function runMigrations() {
         const migrationsDir = path.join(__dirname, '../db/migrations');
         
         if (fs.existsSync(migrationsDir)) {
-            const files = fs.readdirSync(migrationsDir);
-            const sqlFiles = files.filter(file => file.endsWith('.sql'));
+            // Определяем порядок выполнения миграций
+            const migrationOrder = [
+                'users.sql',
+                'add_profile_columns.sql',
+                'restaurants.sql',
+                'add_restaurant_columns.sql',
+                'add_likes_columns.sql',
+                'deleted_reviews.sql',
+                'notifications.sql'
+            ];
             
-            for (const file of sqlFiles) {
-                console.log(`Применение миграции: ${file}`);
-                const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+            for (const filename of migrationOrder) {
+                const filePath = path.join(migrationsDir, filename);
+                if (!fs.existsSync(filePath)) {
+                    console.log(`Миграция ${filename} не найдена, пропускаем`);
+                    continue;
+                }
+
+                console.log(`Применение миграции: ${filename}`);
+                const sql = fs.readFileSync(filePath, 'utf8');
                 const statements = sql.split(';').filter(statement => statement.trim() !== '');
                 
                 for (const statement of statements) {
@@ -253,6 +243,8 @@ async function runMigrations() {
                         // Игнорируем ошибки о дублировании столбцов (код 1060)
                         if (error.errno === 1060) {
                             console.log(`Внимание: Столбец уже существует, пропускаем: ${error.message}`);
+                        } else if (error.code === 'ER_DUP_KEYNAME') {
+                            console.log(`Внимание: Индекс уже существует, пропускаем: ${error.message}`);
                         } else {
                             throw error;
                         }
@@ -277,17 +269,20 @@ async function initializeDatabase() {
     try {
         console.log('Начало инициализации базы данных...');
         
+        // Создаем таблицы в правильном порядке
         await initializeUserTables();
+        await initializeRestaurantsTable();
         await initializeReviewsTable();
         await initializeDeletedReviewsTable();
         await initializeErrorReportTables();
-        await initializeRestaurantsTable();
+        
+        // Запускаем миграции после создания всех таблиц
         await runMigrations();
         
         console.log('Инициализация базы данных завершена успешно');
     } catch (error) {
         console.error('Критическая ошибка инициализации базы данных:', error);
-        process.exit(1);
+        throw error;
     }
 }
 

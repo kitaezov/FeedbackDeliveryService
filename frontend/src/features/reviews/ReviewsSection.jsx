@@ -36,9 +36,9 @@ const EmptyReviews = ({ sortMode, themeClasses }) => (
         </motion.div>
         <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-2">Нет отзывов</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-            {sortMode === 'recent'
+            {sortMode === 'new'
                 ? 'Пока никто не оставил отзыв'
-                : 'Нет популярных отзывов'}
+                : 'Нет старых отзывов'}
         </p>
     </motion.div>
 );
@@ -51,11 +51,11 @@ const SortButtons = ({ sortMode, setSortMode, setCurrentPage, handleRefresh, isR
             whileHover="hover"
             whileTap="tap"
             onClick={() => {
-                setSortMode('recent');
+                setSortMode('new');
                 setCurrentPage(1);
             }}
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                sortMode === 'recent' ? themeClasses.activeButton : themeClasses.button
+                sortMode === 'new' ? themeClasses.activeButton : themeClasses.button
             }`}
         >
             Новые
@@ -66,14 +66,14 @@ const SortButtons = ({ sortMode, setSortMode, setCurrentPage, handleRefresh, isR
             whileHover="hover"
             whileTap="tap"
             onClick={() => {
-                setSortMode('popular');
+                setSortMode('old');
                 setCurrentPage(1);
             }}
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                sortMode === 'popular' ? themeClasses.activeButton : themeClasses.button
+                sortMode === 'old' ? themeClasses.activeButton : themeClasses.button
             }`}
         >
-            Популярные
+            Старые
         </motion.button>
 
         {handleRefresh && (
@@ -160,10 +160,15 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
     const [reviews, setReviews] = useState(initialReviews);
     const [isRotating, setIsRotating] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const [sortMode, setSortMode] = useState('recent');
+    const [sortMode, setSortMode] = useState('new');
     const [deletingReviewId, setDeletingReviewId] = useState(null);
     const reviewsPerPage = 4; // Показываем меньше отзывов для компактности
     const notifications = useNotification();
+
+    // Обновляем состояние reviews при изменении initialReviews
+    React.useEffect(() => {
+        setReviews(initialReviews);
+    }, [initialReviews]);
 
     // Функция для добавления нового отзыва
     const addNewReview = useCallback((newReview) => {
@@ -172,7 +177,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
             isLikedByUser: false,
             likes: 0
         }, ...prevReviews]);
-        setSortMode('recent');
+        setSortMode('new');
         setCurrentPage(1);
     }, []);
 
@@ -186,10 +191,10 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
     // Обработка сортировки отзывов
     const processedReviews = useMemo(() => {
         let sorted = [...reviews];
-        if (sortMode === 'recent') {
+        if (sortMode === 'new') {
             sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
-        } else if (sortMode === 'popular') {
-            sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+        } else if (sortMode === 'old') {
+            sorted.sort((a, b) => new Date(a.date) - new Date(b.date));
         }
         return sorted;
     }, [reviews, sortMode]);
@@ -259,7 +264,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
                 <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                            {sortMode === 'recent' ? 'Последние отзывы' : 'Популярные отзывы'}
+                            Последние отзывы
                         </h3>
                         
                         <SortButtons 

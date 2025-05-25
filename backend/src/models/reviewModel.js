@@ -57,8 +57,7 @@ class ReviewModel {
                     FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
                 )
             `);
-
-            return true;
+            console.log('Review photos table initialized');
         } catch (error) {
             console.error('Error initializing tables:', error);
             throw error;
@@ -85,10 +84,10 @@ class ReviewModel {
         
         const [result] = await pool.execute(
             `INSERT INTO reviews 
-            (user_id, restaurant_name, rating, comment, date, 
+            (user_id, restaurant_name, rating, comment, 
             food_rating, service_rating, atmosphere_rating, 
             price_rating, cleanliness_rating) 
-            VALUES (?, ?, ?, ?, CURDATE(), ?, ?, ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 userId,
                 restaurantName,
@@ -132,10 +131,10 @@ class ReviewModel {
             // Сначала вставляем отзыв
             const [reviewResult] = await connection.execute(
                 `INSERT INTO reviews 
-                (user_id, restaurant_name, rating, comment, date, 
+                (user_id, restaurant_name, rating, comment, 
                 food_rating, service_rating, atmosphere_rating, 
                 price_rating, cleanliness_rating) 
-                VALUES (?, ?, ?, ?, CURDATE(), ?, ?, ?, ?, ?)`,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     userId,
                     restaurantName,
@@ -203,7 +202,7 @@ class ReviewModel {
      * @param {Object} options - Параметры фильтрации и пагинации
      * @returns {Promise<Array>} - Список отзывов
      */
-    async getAll({ page = 1, limit = 10, userId, restaurantName, currentUserId } = {}) {
+    async getAll({ page = 1, limit = 10, userId, restaurantName, currentUserId, sortBy = 'latest' } = {}) {
         try {
             // Преобразуем параметры пагинации в числа
             const limitNum = Math.max(1, parseInt(limit) || 10);
@@ -220,10 +219,12 @@ class ReviewModel {
                         WHEN rv.vote_type IS NOT NULL THEN TRUE 
                         ELSE FALSE 
                     END as isLikedByUser,
-                    rv.vote_type as userVoteType
+                    rv.vote_type as userVoteType,
+                    COUNT(DISTINCT rv2.id) as total_votes
                 FROM reviews r
                 LEFT JOIN users u ON r.user_id = u.id
-                LEFT JOIN review_votes rv ON r.id = rv.review_id AND rv.user_id = ?`;
+                LEFT JOIN review_votes rv ON r.id = rv.review_id AND rv.user_id = ?
+                LEFT JOIN review_votes rv2 ON r.id = rv2.review_id`;
             
             const params = [currentUserId || null];
             
@@ -242,11 +243,35 @@ class ReviewModel {
             if (conditions.length > 0) {
                 query += ' WHERE ' + conditions.join(' AND ');
             }
-            
-            query += ` ORDER BY r.date DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
+
+            // Группировка для подсчета голосов
+            query += ' GROUP BY r.id, r.user_id, r.restaurant_name, r.rating, r.comment, r.created_at, r.updated_at, ' +
+                    'r.likes, r.food_rating, r.service_rating, r.atmosphere_rating, r.price_rating, r.cleanliness_rating, ' +
+                    'r.has_receipt, r.receipt_photo, u.name, u.avatar, rv.vote_type';
+
+            // Добавляем сортировку в зависимости от параметра sortBy
+            switch (sortBy) {
+                case 'popular':
+                    query += ' ORDER BY total_votes DESC, r.created_at DESC';
+                    break;
+                case 'new':
+                    query += ' ORDER BY r.created_at DESC';
+                    break;
+                case 'latest':
+                default:
+                    query += ' ORDER BY r.created_at DESC';
+                    break;
+            }
+
+            query += ` LIMIT ${limitNum} OFFSET ${offsetNum}`;
             
             const [rows] = await pool.execute(query, params);
             
+            if (!rows || rows.length === 0) {
+                console.log('No reviews found with params:', { userId, restaurantName, sortBy });
+                return [];
+            }
+
             const reviewsWithDetails = await Promise.all(rows.map(async (review) => {
                 try {
                     const photos = await this.getReviewPhotos(review.id);
@@ -255,7 +280,8 @@ class ReviewModel {
                         ...review,
                         photos: photos || [],
                         isLikedByUser: Boolean(review.isLikedByUser),
-                        userVoteType: review.userVoteType
+                        userVoteType: review.userVoteType,
+                        total_votes: parseInt(review.total_votes) || 0
                     };
                 } catch (error) {
                     console.error(`Error getting review details for review ${review.id}:`, error);
@@ -263,7 +289,8 @@ class ReviewModel {
                         ...review,
                         photos: [],
                         isLikedByUser: Boolean(review.isLikedByUser),
-                        userVoteType: review.userVoteType
+                        userVoteType: review.userVoteType,
+                        total_votes: parseInt(review.total_votes) || 0
                     };
                 }
             }));

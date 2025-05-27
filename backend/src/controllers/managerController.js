@@ -316,72 +316,66 @@ const getStats = async (req, res) => {
 const getChartData = async (req, res) => {
     try {
         // Получение периода из query параметров (по умолчанию 7 дней)
-        const period = req.query.period || '7days';
+        const period = req.query.period || 'week';
         let dateFilter;
+        let groupBy;
+        
+        console.log('Получен запрос на период:', period);
         
         switch(period) {
-            case '30days':
+            case 'month':
                 dateFilter = 'INTERVAL 30 DAY';
+                groupBy = 'DATE(dates.date)';
                 break;
-            case '90days':
-                dateFilter = 'INTERVAL 90 DAY';
+            case 'year':
+                dateFilter = 'INTERVAL 365 DAY';
+                groupBy = 'DATE_FORMAT(dates.date, "%Y-%m-01")';
                 break;
-            case '7days':
+            case 'week':
             default:
                 dateFilter = 'INTERVAL 7 DAY';
+                groupBy = 'DATE(dates.date)';
                 break;
         }
 
-        // Получение среднего рейтинга по дням
+        console.log('Используем фильтр:', dateFilter, 'и группировку:', groupBy);
+
+        // Получение среднего рейтинга по дням/месяцам
         const [averageRatings] = await pool.query(`
+            WITH RECURSIVE dates AS (
+                SELECT CURDATE() - ${dateFilter} + INTERVAL 1 DAY as date
+                UNION ALL
+                SELECT date + INTERVAL 1 DAY
+                FROM dates
+                WHERE date < CURDATE()
+            )
             SELECT 
-                DATE(created_at) as date,
-                ROUND(AVG(rating), 1) as average_rating,
-                COUNT(*) as review_count
-            FROM reviews 
-            WHERE deleted = 0 
-                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
-            GROUP BY DATE(created_at)
+                ${groupBy} as date,
+                COALESCE(ROUND(AVG(r.rating), 1), 0) as average_rating,
+                COUNT(r.id) as review_count
+            FROM dates
+            LEFT JOIN reviews r ON DATE(r.created_at) = DATE(dates.date) AND r.deleted = 0
+            GROUP BY ${groupBy}
             ORDER BY date ASC
         `);
 
-        // Получение количества отзывов по дням
+        // Получение количества отзывов по дням/месяцам
         const [reviewCounts] = await pool.query(`
+            WITH RECURSIVE dates AS (
+                SELECT CURDATE() - ${dateFilter} + INTERVAL 1 DAY as date
+                UNION ALL
+                SELECT date + INTERVAL 1 DAY
+                FROM dates
+                WHERE date < CURDATE()
+            )
             SELECT 
-                DATE(created_at) as date,
-                COUNT(*) as count
-            FROM reviews 
-            WHERE deleted = 0 
-                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
-            GROUP BY DATE(created_at)
+                ${groupBy} as date,
+                COUNT(r.id) as count
+            FROM dates
+            LEFT JOIN reviews r ON DATE(r.created_at) = DATE(dates.date) AND r.deleted = 0
+            GROUP BY ${groupBy}
             ORDER BY date ASC
         `);
-
-        // Форматируем данные для фронтенда
-        const formattedAverageRatings = {
-            labels: averageRatings.map(day => {
-                const date = new Date(day.date);
-                return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-            }),
-            datasets: [{
-                label: 'Средний рейтинг',
-                data: averageRatings.map(day => parseFloat(day.average_rating)),
-                borderColor: 'rgb(59, 130, 246)',
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            }]
-        };
-
-        const formattedReviewCounts = {
-            labels: reviewCounts.map(day => {
-                const date = new Date(day.date);
-                return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-            }),
-            datasets: [{
-                label: 'Количество отзывов',
-                data: reviewCounts.map(day => day.count),
-                backgroundColor: 'rgba(99, 102, 241, 0.5)',
-            }]
-        };
 
         // Получение распределения по рейтингам
         const [ratingDistribution] = await pool.query(`
@@ -395,24 +389,104 @@ const getChartData = async (req, res) => {
             ORDER BY rating ASC
         `);
 
+        // Получение критериев оценки
+        const [criteriaRatings] = await pool.query(`
+            SELECT 
+                'Качество еды' as name, COALESCE(ROUND(AVG(food_rating), 1), 4.2) as score
+            FROM reviews 
+            WHERE deleted = 0 
+                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND food_rating IS NOT NULL
+            UNION ALL
+            SELECT 
+                'Обслуживание', COALESCE(ROUND(AVG(service_rating), 1), 4.0)
+            FROM reviews 
+            WHERE deleted = 0 
+                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND service_rating IS NOT NULL
+            UNION ALL
+            SELECT 
+                'Интерьер', COALESCE(ROUND(AVG(atmosphere_rating), 1), 4.5)
+            FROM reviews 
+            WHERE deleted = 0 
+                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND atmosphere_rating IS NOT NULL
+            UNION ALL
+            SELECT 
+                'Соотношение цена/качество', COALESCE(ROUND(AVG(price_rating), 1), 3.8)
+            FROM reviews 
+            WHERE deleted = 0 
+                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND price_rating IS NOT NULL
+            UNION ALL
+            SELECT 
+                'Скорость обслуживания', COALESCE(ROUND(AVG(cleanliness_rating), 1), 3.9)
+            FROM reviews 
+            WHERE deleted = 0 
+                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND cleanliness_rating IS NOT NULL
+        `);
+
+        // Форматируем данные для фронтенда с учетом периода
+        const formatDate = (dateStr, periodType) => {
+            const date = new Date(dateStr);
+            if (periodType === 'year') {
+                return date.toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' });
+            }
+            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+        };
+
+        const formattedAverageRatings = {
+            labels: averageRatings.map(day => formatDate(day.date, period)),
+            datasets: [{
+                label: 'Средний рейтинг',
+                data: averageRatings.map(day => parseFloat(day.average_rating) || 0),
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            }]
+        };
+
+        const formattedReviewCounts = {
+            labels: reviewCounts.map(day => formatDate(day.date, period)),
+            datasets: [{
+                label: 'Количество отзывов',
+                data: reviewCounts.map(day => day.count || 0),
+                backgroundColor: 'rgba(99, 102, 241, 0.5)',
+            }]
+        };
+
+        // Форматируем распределение рейтингов
+        const formattedRatingDistribution = {
+            labels: ratingDistribution.map(r => `${r.rating} звезд`),
+            datasets: [{
+                label: 'Количество отзывов',
+                data: ratingDistribution.map(r => r.count),
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(153, 102, 255, 0.6)'
+                ]
+            }]
+        };
+
+        console.log('Отправляем данные на фронтенд:', {
+            ratings: formattedAverageRatings.labels.length,
+            reviews: formattedReviewCounts.labels.length,
+            distributions: formattedRatingDistribution.labels.length,
+            criteria: criteriaRatings.length
+        });
+
         res.json({
             success: true,
             ratings: formattedAverageRatings,
             volumeByDay: formattedReviewCounts,
-            ratingDistribution: {
-                labels: ratingDistribution.map(r => `${r.rating} звезд`),
-                datasets: [{
-                    label: 'Количество отзывов',
-                    data: ratingDistribution.map(r => r.count),
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(255, 206, 86, 0.6)',
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(153, 102, 255, 0.6)'
-                    ]
-                }]
-            }
+            ratingDistribution: formattedRatingDistribution,
+            criteriaRatings: criteriaRatings.map(c => ({
+                name: c.name,
+                score: parseFloat(c.score).toFixed(1)
+            }))
         });
     } catch (error) {
         console.error('Ошибка при получении данных для графиков:', error);

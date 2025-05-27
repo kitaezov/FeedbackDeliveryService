@@ -280,68 +280,49 @@ const SimplePieChart = ({ data }) => {
         return <div className="h-full flex items-center justify-center text-gray-500">Нет данных</div>;
     }
 
-    // Получаем данные о ресторанах
-    const restaurants = data.labels.map((label, index) => ({
+    // Получаем данные о распределении рейтингов
+    const ratings = data.labels.map((label, index) => ({
         name: label,
-        reviews: data.datasets[0].data[index],
+        count: data.datasets[0].data[index],
         color: data.datasets[0].backgroundColor[index]
-    })).sort((a, b) => b.reviews - a.reviews); // Сортируем по убыванию количества отзывов
-
-    // Используем динамически рассчитанные критерии оценок из данных, если они доступны
-    // Или используем заглушку, если данных нет
-    const reviewCriteria = data.criteriasRatings || [
-        { name: 'Качество еды', score: 4.2 },
-        { name: 'Обслуживание', score: 4.0 },
-        { name: 'Интерьер', score: 4.5 }, 
-        { name: 'Соотношение цена/качество', score: 3.8 },
-        { name: 'Скорость обслуживания', score: 3.9 }
-    ];
+    })).filter(rating => rating.count > 0).sort((a, b) => b.count - a.count);
 
     return (
         <div className="h-full flex flex-col">
-            {/* Распределение по ресторанам */}
+            {/* Распределение по рейтингам */}
             <div className="mb-5">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">По количеству отзывов:</h4>
                 <div className="grid grid-cols-2 gap-3 w-full">
-                    {restaurants.map((restaurant, index) => (
+                    {ratings.map((rating, index) => (
                         <div key={index} className="flex items-center">
                             <div 
                                 className="w-4 h-4 mr-2 rounded-full" 
-                                style={{ backgroundColor: restaurant.color }}
+                                style={{ backgroundColor: rating.color }}
                             ></div>
-                            <div className="text-sm truncate">{restaurant.name}: {restaurant.reviews}</div>
+                            <div className="text-sm truncate">{rating.name}: {rating.count}</div>
                         </div>
                     ))}
                 </div>
-                
-                {/* Если данных мало, показываем сообщение */}
-                {restaurants.length === 0 && (
-                    <div className="text-center text-gray-500 dark:text-gray-400 mt-4">
-                        Нет данных о ресторанах. Добавьте рестораны и отзывы, чтобы увидеть статистику.
-                    </div>
-                )}
             </div>
             
-            {/* Критерии оценок в отзывах */}
-            {restaurants.length > 0 && (
-                <div>
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Основные критерии оценки:</h4>
-                    <div className="space-y-2">
-                        {reviewCriteria.map((criterion, index) => (
-                            <div key={index} className="flex items-center">
-                                <div className="text-sm min-w-20 truncate">{criterion.name}:</div>
-                                <div className="flex-grow h-2 bg-gray-200 dark:bg-gray-700 rounded-full mx-2">
-                                    <div 
-                                        className="h-full bg-blue-500 rounded-full"
-                                        style={{ width: `${(criterion.score / 5) * 100}%` }}
-                                    ></div>
-                                </div>
-                                <div className="text-sm font-medium">{criterion.score}</div>
+            {/* Критерии оценок */}
+            <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Основные критерии оценки:</h4>
+                <div className="space-y-2">
+                    {data.criteriaRatings && data.criteriaRatings.map((criterion, index) => (
+                        <div key={index} className="flex items-center">
+                            <div className="text-sm min-w-[180px] truncate">{criterion.name}:</div>
+                            <div className="flex-grow h-2 bg-gray-200 dark:bg-gray-700 rounded-full mx-2">
+                                <div 
+                                    className="h-full bg-blue-500 rounded-full"
+                                    style={{ width: `${(criterion.score / 5) * 100}%` }}
+                                ></div>
                             </div>
-                        ))}
-                    </div>
+                            <div className="text-sm font-medium">{criterion.score}</div>
+                        </div>
+                    ))}
                 </div>
-            )}
+            </div>
         </div>
     );
 };
@@ -377,7 +358,7 @@ const ReviewCountChart = ({ data }) => (
         }))}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
-            <YAxis />
+            <YAxis allowDecimals={false} />
             <Tooltip />
             <Legend />
             <Bar 
@@ -603,14 +584,18 @@ const ManagerDashboard = () => {
 
     const fetchChartDataFromDatabase = async () => {
         try {
-            const data = await fetchData('manager/analytics/charts', { period: chartPeriod });
+            console.log('Запрашиваем данные для периода:', chartPeriod);
+            const data = await fetchData(`manager/analytics/charts?period=${chartPeriod}`);
             console.log('Получены данные для графиков:', data);
             
             if (data.success) {
                 setChartData({
                     ratings: data.ratings,
                     volumeByDay: data.volumeByDay,
-                    categoryDistribution: data.ratingDistribution
+                    categoryDistribution: {
+                        ...data.ratingDistribution,
+                        criteriaRatings: data.criteriaRatings
+                    }
                 });
             }
             
@@ -838,12 +823,6 @@ const ManagerDashboard = () => {
                     color="text-yellow-500"
                  />
                 <StatCard
-                    title="Ожидают ответа"
-                    value={stats.pendingReviews}
-                    icon={Clock}
-                    color="text-orange-500"
-                 />
-                <StatCard
                     title="Рестораны"
                     value={stats.totalRestaurants}
                     icon={MapPin}
@@ -860,6 +839,7 @@ const ManagerDashboard = () => {
                         <select
                             value={chartPeriod}
                             onChange={(e) => {
+                                console.log('Выбран новый период:', e.target.value);
                                 setChartPeriod(e.target.value);
                             }}
                             className="border border-gray-300 dark:border-gray-600 rounded py-1 px-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"

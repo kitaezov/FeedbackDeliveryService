@@ -252,11 +252,25 @@ const ManagerPanel = () => {
                                         </td>
                                         <td className="py-4">
                                             <span className={`px-2 py-1 rounded-full text-xs ${
-                                                restaurant.status === 'active' || restaurant.status === 'открыт' || restaurant.status === 1
+                                                restaurant.status === 'active' || 
+                                                restaurant.status === 'открыт' || 
+                                                restaurant.status === 1 ||
+                                                restaurant.status === '1' ||
+                                                restaurant.status === true ||
+                                                restaurant.status === 'true' ||
+                                                restaurant.status === null // Если статус не указан, считаем ресторан активным
                                                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                     : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                                             }`}>
-                                                {restaurant.status === 1 ? 'активен' : restaurant.status || 'неактивен'}
+                                                {restaurant.status === 1 || 
+                                                 restaurant.status === '1' || 
+                                                 restaurant.status === true || 
+                                                 restaurant.status === 'true' || 
+                                                 restaurant.status === 'active' || 
+                                                 restaurant.status === 'открыт' ||
+                                                 restaurant.status === null
+                                                    ? 'активен' 
+                                                    : 'неактивен'}
                                             </span>
                                         </td>
                                     </tr>

@@ -509,7 +509,8 @@ const getRestaurants = async (req, res) => {
             SELECT 
                 r.*,
                 COUNT(rv.id) as review_count,
-                AVG(rv.rating) as average_rating
+                AVG(rv.rating) as average_rating,
+                COALESCE(r.is_active, 1) as is_active
             FROM restaurants r
             LEFT JOIN reviews rv ON r.id = rv.restaurant_id AND rv.deleted = 0
             WHERE r.deleted = 0
@@ -524,7 +525,8 @@ const getRestaurants = async (req, res) => {
             category: restaurant.category,
             rating: parseFloat(restaurant.average_rating) || 0,
             reviewCount: parseInt(restaurant.review_count) || 0,
-            image: restaurant.image_url
+            image: restaurant.image_url,
+            status: restaurant.is_active === 0 ? 0 : 1 // Используем is_active вместо status
         }));
         
         res.json(formattedRestaurants);

@@ -6,6 +6,7 @@ import api from '../../utils/api';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../../../config';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const ManagerDashboard = () => {
     const [reviews, setReviews] = useState([]);
@@ -105,86 +106,24 @@ const ManagerDashboard = () => {
         setIsChartLoading(true);
         try {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const response = await axios.get(`${API_URL}/api/manager/chart-data`, {
+            const response = await axios.get(`${API_URL}/api/manager/analytics/charts`, {
                 params: { period: chartPeriod },
                 headers: { Authorization: `Bearer ${token}` }
             });
-            console.log('Данные диаграммы получены:', response.data);
             
-            // Обработка данных для графиков
-            const chartDataResponse = response.data;
+            const { averageRatings, reviewCounts, ratingDistribution } = response.data;
             
-            // Распределение по ресторанам вместо категорий
-            const restaurantCounts = {};
-            
-            // Подсчитываем количество отзывов для каждого ресторана
-            if (chartDataResponse.reviews && chartDataResponse.reviews.length > 0) {
-                chartDataResponse.reviews.forEach(review => {
-                    if (review.restaurant && review.restaurant.name) {
-                        const restaurantName = review.restaurant.name;
-                        restaurantCounts[restaurantName] = (restaurantCounts[restaurantName] || 0) + 1;
-                    }
-                });
-            }
-            
-            // Если нет данных о ресторанах, используем демо-данные
-            if (Object.keys(restaurantCounts).length === 0) {
-                restaurantCounts['Итальянский Ресторан'] = 3;
-                restaurantCounts['Азиатский Фьюжн'] = 2;
-                restaurantCounts['Кафе У Дома'] = 1;
-            }
-            
-            console.log('Распределение отзывов по ресторанам:', restaurantCounts);
-            
-            // Создаем массивы для названий ресторанов и количества отзывов
-            const restaurantNames = Object.keys(restaurantCounts);
-            const reviewCountsByRestaurant = Object.values(restaurantCounts);
-            
-            // Создаем цвета для каждого ресторана на диаграмме
-            const restaurantColors = [
-                'rgba(255, 99, 132, 0.6)',
-                'rgba(54, 162, 235, 0.6)',
-                'rgba(255, 206, 86, 0.6)',
-                'rgba(75, 192, 192, 0.6)',
-                'rgba(153, 102, 255, 0.6)',
-                'rgba(255, 159, 64, 0.6)',
-                'rgba(75, 192, 80, 0.6)',
-                'rgba(153, 81, 255, 0.6)',
-                'rgba(255, 150, 132, 0.6)',
-                'rgba(54, 100, 235, 0.6)',
-            ];
-            
-            // Обрезаем массив цветов до количества ресторанов
-            const backgroundColors = restaurantColors.slice(0, restaurantNames.length);
-            
-            setChartData(prevData => ({
-                ...prevData,
+            setChartData({
                 ratings: {
-                    labels: chartDataResponse.dayLabels || ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                    datasets: [{
-                        label: 'Средний рейтинг',
-                        data: chartDataResponse.averageRatings || [0, 0, 0, 0, 0, 0, 0],
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                    }]
+                    data: averageRatings
                 },
                 volumeByDay: {
-                    labels: chartDataResponse.dayLabels || ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                    datasets: [{
-                        label: 'Количество отзывов',
-                        data: chartDataResponse.reviewCounts || [0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                    }]
+                    data: reviewCounts
                 },
-                categoryDistribution: {
-                    labels: restaurantNames,
-                    datasets: [{
-                        label: 'Количество отзывов',
-                        data: reviewCountsByRestaurant,
-                        backgroundColor: backgroundColors,
-                    }]
+                ratingDistribution: {
+                    data: ratingDistribution
                 }
-            }));
+            });
 
             setIsChartLoading(false);
         } catch (error) {
@@ -223,6 +162,43 @@ const ManagerDashboard = () => {
 
         return matchesStatus && matchesRating && matchesSearch;
     });
+
+    // Chart components
+    const RatingChart = ({ data }) => (
+        <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis domain={[0, 5]} />
+                <Tooltip />
+                <Legend />
+                <Line 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#3b82f6" 
+                    name="Средний рейтинг"
+                    strokeWidth={2}
+                />
+            </LineChart>
+        </ResponsiveContainer>
+    );
+
+    const ReviewCountChart = ({ data }) => (
+        <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar 
+                    dataKey="count" 
+                    fill="#6366f1" 
+                    name="Количество отзывов"
+                />
+            </BarChart>
+        </ResponsiveContainer>
+    );
 
     if (loading) {
         return (
@@ -304,38 +280,45 @@ const ManagerDashboard = () => {
                                 onChange={(e) => setChartPeriod(e.target.value)}
                                 className="bg-white/5 border border-white/20 rounded-lg text-white px-4 py-2 text-sm"
                             >
-                                <option value="week">Последние 7 дней</option>
-                                <option value="month">Последние 30 дней</option>
-                                <option value="year">Последние 12 месяцев</option>
+                                <option value="7days">Последние 7 дней</option>
+                                <option value="30days">Последние 30 дней</option>
+                                <option value="90days">Последние 90 дней</option>
                             </select>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
                             <CardContent className="p-4">
                                 <h3 className="text-white font-medium mb-4">Средний рейтинг за период</h3>
-                                <div className="h-64 flex items-center justify-center">
-                                    <p className="text-white/60">График среднего рейтинга</p>
-                                </div>
+                                {isChartLoading ? (
+                                    <div className="h-64 flex items-center justify-center">
+                                        <p className="text-white/60">Загрузка...</p>
+                                    </div>
+                                ) : chartData.ratings?.data ? (
+                                    <RatingChart data={chartData.ratings.data} />
+                                ) : (
+                                    <div className="h-64 flex items-center justify-center">
+                                        <p className="text-white/60">Нет данных</p>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                         
                         <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
                             <CardContent className="p-4">
                                 <h3 className="text-white font-medium mb-4">Количество отзывов по дням</h3>
-                                <div className="h-64 flex items-center justify-center">
-                                    <p className="text-white/60">График количества отзывов</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        
-                        <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-                            <CardContent className="p-4">
-                                <h3 className="text-white font-medium mb-4">Распределение по категориям</h3>
-                                <div className="h-64 flex items-center justify-center">
-                                    <p className="text-white/60">Диаграмма распределения</p>
-                                </div>
+                                {isChartLoading ? (
+                                    <div className="h-64 flex items-center justify-center">
+                                        <p className="text-white/60">Загрузка...</p>
+                                    </div>
+                                ) : chartData.volumeByDay?.data ? (
+                                    <ReviewCountChart data={chartData.volumeByDay.data} />
+                                ) : (
+                                    <div className="h-64 flex items-center justify-center">
+                                        <p className="text-white/60">Нет данных</p>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

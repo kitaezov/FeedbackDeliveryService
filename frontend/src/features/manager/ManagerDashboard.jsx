@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import useBackendApi from '../../hooks/useBackendApi';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, BarChart, Bar } from 'recharts';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -345,6 +346,49 @@ const SimplePieChart = ({ data }) => {
     );
 };
 
+// Chart components
+const RatingChart = ({ data }) => (
+    <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={data.datasets[0].data.map((value, index) => ({
+            name: data.labels[index],
+            value: value
+        }))}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis domain={[0, 5]} />
+            <Tooltip />
+            <Legend />
+            <Line 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#3b82f6" 
+                name="Средний рейтинг"
+                strokeWidth={2}
+            />
+        </LineChart>
+    </ResponsiveContainer>
+);
+
+const ReviewCountChart = ({ data }) => (
+    <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data.datasets[0].data.map((value, index) => ({
+            name: data.labels[index],
+            value: value
+        }))}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar 
+                dataKey="value" 
+                fill="#6366f1" 
+                name="Количество отзывов"
+            />
+        </BarChart>
+    </ResponsiveContainer>
+);
+
 const ManagerDashboard = () => {
     const [restaurants, setRestaurants] = useState([]);
     const [reviews, setReviews] = useState([]);
@@ -420,7 +464,8 @@ const ManagerDashboard = () => {
             console.log('Получены данные о ресторанах:', data);
             
             // Получаем отзывы для расчета рейтингов и количества отзывов
-            const reviewsData = await fetchData('manager/reviews');
+            const reviewsResponse = await fetchData('manager/reviews');
+            const reviewsData = reviewsResponse.reviews || []; // Extract reviews array from response
             console.log(`Получено ${reviewsData.length} отзывов для обработки рейтингов ресторанов`);
             
             // Обрабатываем данные ресторанов с учетом отзывов
@@ -561,126 +606,13 @@ const ManagerDashboard = () => {
             const data = await fetchData('manager/analytics/charts', { period: chartPeriod });
             console.log('Получены данные для графиков:', data);
             
-            // Если данных нет или нет распределения по ресторанам, создаем его из текущих данных
-            if (!data.categoryDistribution || !data.categoryDistribution.labels || data.categoryDistribution.labels.length === 0) {
-                console.log('Генерируем данные распределения по ресторанам из имеющихся ресторанов и отзывов');
-                
-                // Подсчитываем количество отзывов для каждого ресторана
-                const restaurantCounts = {};
-                
-                if (reviews && reviews.length > 0) {
-                    reviews.forEach(review => {
-                        // Получаем название ресторана из отзыва
-                        const restaurantName = review.restaurant?.name || 
-                                              review.restaurantName || 
-                                              (typeof review.restaurant === 'string' ? review.restaurant : null);
-                        
-                        if (restaurantName) {
-                            restaurantCounts[restaurantName] = (restaurantCounts[restaurantName] || 0) + 1;
-                        }
-                    });
-                }
-                
-                // Если до сих пор нет данных, используем данные из списка ресторанов
-                if (Object.keys(restaurantCounts).length === 0 && restaurants && restaurants.length > 0) {
-                    restaurants.forEach(restaurant => {
-                        if (restaurant.name) {
-                            restaurantCounts[restaurant.name] = restaurant.reviewCount || restaurant.reviews || 0;
-                        }
-                    });
-                }
-                
-                // Сортируем рестораны по количеству отзывов (по убыванию)
-                const sortedRestaurants = Object.entries(restaurantCounts)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 10); // Берем топ-10 ресторанов
-                
-                // Формируем данные для графика
-                const restaurantLabels = sortedRestaurants.map(([name]) => name);
-                const restaurantData = sortedRestaurants.map(([_, count]) => count);
-                
-                // Генерируем цвета для ресторанов
-                const restaurantColors = [
-                    'rgba(255, 99, 132, 0.6)',
-                    'rgba(54, 162, 235, 0.6)',
-                    'rgba(255, 206, 86, 0.6)',
-                    'rgba(75, 192, 192, 0.6)',
-                    'rgba(153, 102, 255, 0.6)',
-                    'rgba(255, 159, 64, 0.6)',
-                    'rgba(75, 192, 80, 0.6)',
-                    'rgba(153, 81, 255, 0.6)',
-                    'rgba(255, 150, 132, 0.6)',
-                    'rgba(54, 100, 235, 0.6)'
-                ].slice(0, restaurantLabels.length);
-                
-                // Создаем объект с данными для диаграммы
-                data.categoryDistribution = {
-                    labels: restaurantLabels,
-                    datasets: [{
-                        label: 'Количество отзывов',
-                        data: restaurantData,
-                        backgroundColor: restaurantColors
-                    }]
-                };
-                
-                console.log('Сгенерированы данные для распределения по ресторанам:', data.categoryDistribution);
-            }
-            
-            // Рассчитываем оценки по критериям из реальных отзывов
-            if (!data.criteriasRatings) {
-                // Список критериев, которые мы ищем в отзывах
-                const criterias = [
-                    { name: 'Качество еды', keywords: ['еда', 'блюдо', 'вкус', 'кухня', 'приготовлен'], totalRating: 0, count: 0 },
-                    { name: 'Обслуживание', keywords: ['персонал', 'официант', 'обслуживание', 'сервис', 'внимание'], totalRating: 0, count: 0 },
-                    { name: 'Интерьер', keywords: ['интерьер', 'атмосфера', 'дизайн', 'комфорт', 'чисто'], totalRating: 0, count: 0 },
-                    { name: 'Соотношение цена/качество', keywords: ['цена', 'стоимость', 'деньги', 'дорого', 'дешево'], totalRating: 0, count: 0 },
-                    { name: 'Скорость обслуживания', keywords: ['скорость', 'быстро', 'ожидание', 'долго', 'ждать'], totalRating: 0, count: 0 }
-                ];
-
-                // Проходим по всем отзывам и подсчитываем упоминания критериев
-                if (reviews && reviews.length > 0) {
-                    reviews.forEach(review => {
-                        if (!review.text || !review.rating) return;
-                        
-                        // Текст отзыва в нижнем регистре для поиска ключевых слов
-                        const lowerText = review.text.toLowerCase();
-                        
-                        criterias.forEach(criteria => {
-                            // Проверяем, есть ли в отзыве упоминание критерия по ключевым словам
-                            const mentionedKeyword = criteria.keywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
-                            
-                            if (mentionedKeyword) {
-                                criteria.totalRating += Number(review.rating);
-                                criteria.count += 1;
-                            }
-                        });
-                    });
-                }
-
-                // Вычисляем средний рейтинг для каждого критерия
-                const criteriasRatings = criterias.map(criteria => {
-                    return {
-                        name: criteria.name,
-                        score: criteria.count > 0 ? parseFloat((criteria.totalRating / criteria.count).toFixed(1)) : 0
-                    };
-                }).sort((a, b) => b.count - a.count); // Сортируем по количеству упоминаний
-                
-                // Если не хватает данных, заполняем средними значениями от общего рейтинга
-                const avgRating = stats.averageRating || 4.0;
-                criteriasRatings.forEach(criteria => {
-                    if (criteria.score === 0) {
-                        criteria.score = avgRating;
-                    }
+            if (data.success) {
+                setChartData({
+                    ratings: data.ratings,
+                    volumeByDay: data.volumeByDay,
+                    categoryDistribution: data.ratingDistribution
                 });
-                
-                // Добавляем данные о критериях в общий объект данных
-                data.criteriasRatings = criteriasRatings;
-                
-                console.log('Рассчитаны оценки по критериям:', data.criteriasRatings);
             }
-            
-            // Устанавливаем данные для графиков
-            setChartData(data);
             
             return data;
         } catch (error) {
@@ -942,13 +874,13 @@ const ManagerDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <ChartCard title="Средний рейтинг за период" className="col-span-1 lg:col-span-1">
                         {chartData.ratings && (
-                            <SimpleLineChart data={chartData.ratings} />
+                            <RatingChart data={chartData.ratings} />
                         )}
                     </ChartCard>
                     
                     <ChartCard title="Количество отзывов по дням" className="col-span-1 lg:col-span-1">
                         {chartData.volumeByDay && (
-                            <SimpleBarChart data={chartData.volumeByDay} />
+                            <ReviewCountChart data={chartData.volumeByDay} />
                         )}
                     </ChartCard>
                     

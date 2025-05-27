@@ -16,17 +16,17 @@ class UserModel {
      * @returns {Promise<Object>} - Информация о созданном пользователе
      */
     async create(userData) {
-        const { name, email, password } = userData;
+        const { name, email, password, restaurant_id } = userData;
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const [result] = await pool.execute(
-            'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-            [name, email, hashedPassword, 'user']
+            'INSERT INTO users (name, email, password, role, restaurant_id) VALUES (?, ?, ?, ?, ?)',
+            [name, email, hashedPassword, 'user', restaurant_id || null]
         );
         
         // Получаем пользователя с датой создания
         const [userRows] = await pool.execute(
-            'SELECT id, name, email, role, created_at FROM users WHERE id = ?',
+            'SELECT id, name, email, role, restaurant_id, created_at FROM users WHERE id = ?',
             [result.insertId]
         );
         
@@ -35,6 +35,7 @@ class UserModel {
             name,
             email,
             role: 'user',
+            restaurant_id: restaurant_id || null,
             created_at: new Date()
         };
     }
@@ -178,51 +179,37 @@ class UserModel {
      * Обновить роль пользователя
      * @param {number} id - ID пользователя
      * @param {string} role - Новая роль ('user', 'manager', 'admin', 'head_admin')
+     * @param {number|null} restaurant_id - ID ресторана (только для менеджеров)
      * @returns {Promise<boolean>} - Результат обновления
      */
-    async updateRole(id, role) {
+    async updateRole(id, role, restaurant_id = null) {
         try {
-            console.log(`UserModel: Updating user ${id} role to "${role}"`);
+            console.log(`UserModel: Updating user ${id} role to "${role}" with restaurant_id: ${restaurant_id}`);
             
             // Преобразование полных названий ролей в короткие для хранения в базе данных
             const roleMapping = {
                 'user': 'user',
-                'manager': 'manager',  // Изменено с 'mgr' на 'manager'
+                'manager': 'manager',
                 'admin': 'admin',
-                'head_admin': 'head_admin'  // Изменено с 'head' на 'head_admin'
+                'head_admin': 'head_admin'
             };
             
             const dbRole = roleMapping[role] || 'user';
-            console.log(`UserModel: Mapped role "${role}" to database value "${dbRole}"`);
             
-            // Проверяем существование пользователя перед обновлением
-            const [userCheck] = await pool.execute(
-                'SELECT id FROM users WHERE id = ?',
-                [id]
-            );
-            
-            if (userCheck.length === 0) {
-                console.error(`UserModel: User with ID ${id} not found`);
-                throw new Error(`User with ID ${id} not found`);
+            // Если роль менеджер, требуется restaurant_id
+            if (dbRole === 'manager' && !restaurant_id) {
+                throw new Error('Restaurant ID is required for manager role');
             }
             
-            console.log(`UserModel: Executing SQL to update role`);
-            const [result] = await pool.execute(
-                'UPDATE users SET role = ? WHERE id = ?',
-                [dbRole, id]
+            // Обновляем роль и restaurant_id
+            await pool.execute(
+                'UPDATE users SET role = ?, restaurant_id = ? WHERE id = ?',
+                [dbRole, restaurant_id, id]
             );
             
-            console.log(`UserModel: Role update result:`, result);
-            
-            if (result.affectedRows === 0) {
-                console.error(`UserModel: No rows were affected`);
-                throw new Error('Role update failed, no rows affected');
-            }
-            
-            console.log(`UserModel: Role successfully updated`);
             return true;
         } catch (error) {
-            console.error(`UserModel: Error in updateRole:`, error);
+            console.error('Error updating user role:', error);
             throw error;
         }
     }
@@ -593,6 +580,37 @@ class UserModel {
             console.error('Error decreasing user likes count:', error);
             throw error;
         }
+    }
+
+    /**
+     * Получить информацию о ресторане менеджера
+     * @param {number} userId - ID пользователя
+     * @returns {Promise<Object|null>} - Информация о ресторане или null
+     */
+    async getManagerRestaurant(userId) {
+        const [rows] = await pool.execute(`
+            SELECT r.* 
+            FROM users u 
+            JOIN restaurants r ON u.restaurant_id = r.id 
+            WHERE u.id = ? AND u.role = 'manager'
+        `, [userId]);
+        
+        return rows.length > 0 ? rows[0] : null;
+    }
+
+    /**
+     * Получить всех менеджеров ресторана
+     * @param {number} restaurantId - ID ресторана
+     * @returns {Promise<Array>} - Список менеджеров
+     */
+    async getRestaurantManagers(restaurantId) {
+        const [rows] = await pool.execute(`
+            SELECT id, name, email, created_at 
+            FROM users 
+            WHERE role = 'manager' AND restaurant_id = ?
+        `, [restaurantId]);
+        
+        return rows;
     }
 }
 

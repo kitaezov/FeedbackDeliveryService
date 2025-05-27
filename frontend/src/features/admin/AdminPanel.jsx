@@ -298,7 +298,7 @@ const AdminPanel = ({ user }) => {
     };
 
     // Update user role with proper role hierarchy
-    const handleUpdateRole = async (userId, newRole) => {
+    const handleUpdateRole = async (userId, newRole, restaurant_id = null) => {
         // Don't allow role changes to same or higher level roles
         const roleHierarchy = {
             'head_admin': 100,
@@ -318,7 +318,10 @@ const AdminPanel = ({ user }) => {
         if (window.confirm(`Вы уверены, что хотите назначить пользователю роль "${newRole}"?`)) {
             try {
                 console.log(`Отправка запроса на изменение роли пользователя ${userId} на ${newRole}`);
-                const response = await api.put(`/admin/users/${userId}/role`, { role: newRole });
+                const response = await api.put(`/admin/users/${userId}/role`, { 
+                    role: newRole,
+                    restaurant_id: restaurant_id
+                });
                 console.log('Успешный ответ:', response.data);
                 fetchUsers();
             } catch (error) {

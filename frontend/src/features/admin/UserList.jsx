@@ -3,6 +3,7 @@ import { Lock, Unlock, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../../utils/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import RestaurantSelector from '../../components/RestaurantSelector';
 
 // Animation variants
 const containerVariants = {
@@ -57,41 +58,39 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortField, setSortField] = useState('id');
     const [sortDirection, setSortDirection] = useState('asc');
+    const [showRestaurantSelector, setShowRestaurantSelector] = useState(false);
+    const [selectedUserId, setSelectedUserId] = useState(null);
+    const [pendingRole, setPendingRole] = useState(null);
+    const [restaurants, setRestaurants] = useState({});
 
     // Fetch users data
     const fetchUsers = async () => {
-        setLoading(true);
+        setLoading(prev => ({ ...prev, users: true }));
         try {
             const response = await api.get('/admin/users');
+            setUsers(response.data.users || []);
+
+            // Fetch restaurant details for managers
+            const managerUsers = response.data.users.filter(u => u.role === 'manager' && u.restaurant_id);
+            const restaurantIds = [...new Set(managerUsers.map(u => u.restaurant_id))];
             
-            if (response.data && response.data.users) {
-                console.log('Получено пользователей:', response.data.users.length);
+            if (restaurantIds.length > 0) {
+                const restaurantPromises = restaurantIds.map(id => 
+                    api.get(`/restaurants/${id}`)
+                        .then(res => [id, res.data])
+                        .catch(() => [id, null])
+                );
                 
-                // Add default values for missing fields to ensure compatibility
-                const processedUsers = response.data.users.map(user => ({
-                    id: user.id || 0,
-                    name: user.name || 'Unknown',
-                    email: user.email || 'no-email',
-                    role: user.role || 'user',
-                    is_blocked: user.is_blocked || 0,
-                    blocked_reason: user.blocked_reason || null,
-                    created_at: user.created_at || null
-                }));
-                
-                setUsers(processedUsers);
-            } else {
-                console.error('Недопустимый формат ответа:', response.data);
-                setUsers([]);
+                const restaurantResults = await Promise.all(restaurantPromises);
+                const restaurantMap = Object.fromEntries(
+                    restaurantResults.filter(([, data]) => data !== null)
+                );
+                setRestaurants(restaurantMap);
             }
         } catch (error) {
-            console.error('Ошибка при получении списка пользователей:', error);
-            if (error.response) {
-                console.error('Ошибка ответа:', error.response.data);
-                console.error('Код состояния:', error.response.status);
-            }
-            setUsers([]);
+            console.error('Error fetching users:', error);
         } finally {
-            setLoading(false);
+            setLoading(prev => ({ ...prev, users: false }));
         }
     };
 
@@ -138,6 +137,31 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         }
     };
 
+    const handleRoleChange = (userId, newRole) => {
+        if (newRole === 'manager') {
+            setSelectedUserId(userId);
+            setPendingRole(newRole);
+            setShowRestaurantSelector(true);
+        } else {
+            onUpdateRole(userId, newRole);
+        }
+    };
+
+    const handleRestaurantSelect = (restaurant) => {
+        if (selectedUserId && pendingRole) {
+            onUpdateRole(selectedUserId, pendingRole, restaurant.id);
+            setShowRestaurantSelector(false);
+            setSelectedUserId(null);
+            setPendingRole(null);
+        }
+    };
+
+    const getRestaurantName = (restaurantId) => {
+        if (!restaurantId || !restaurants[restaurantId]) return '';
+        const restaurant = restaurants[restaurantId];
+        return restaurant.name.split(' ').map(word => word[0]).join('');
+    };
+
     return (
         <motion.div 
             variants={containerVariants}
@@ -161,7 +185,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                 </motion.button>
             </div>
             
-            {loading ? (
+            {loading.users ? (
                 <div className="flex justify-center py-6 sm:py-8">
                     <LoadingSpinner />
                 </div>
@@ -248,16 +272,23 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                                             {userItem.email}
                                         </td>
                                         <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm">
-                                            <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                                ${userItem.role === 'head_admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
-                                                userItem.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
-                                                userItem.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
-                                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
-                                            >
-                                                {userItem.role === 'head_admin' ? 'Главный админ' : 
-                                                userItem.role === 'admin' ? 'Админ' : 
-                                                userItem.role === 'manager' ? 'Менеджер' : 'Пользователь'}
-                                            </span>
+                                            <div className="flex flex-col items-start gap-1">
+                                                <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                    ${userItem.role === 'head_admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
+                                                    userItem.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
+                                                    userItem.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
+                                                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
+                                                >
+                                                    {userItem.role === 'head_admin' ? 'Главный админ' : 
+                                                    userItem.role === 'admin' ? 'Админ' : 
+                                                    userItem.role === 'manager' ? 'Менеджер' : 'Пользователь'}
+                                                </span>
+                                                {userItem.role === 'manager' && userItem.restaurant_id && (
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {getRestaurantName(userItem.restaurant_id)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-xs sm:text-sm">
                                             {userItem.is_blocked === 1 ? (
@@ -279,7 +310,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                                                 <div className="inline-block">
                                                     <select 
                                                         value={userItem.role}
-                                                        onChange={(e) => onUpdateRole(userItem.id, e.target.value)}
+                                                        onChange={(e) => handleRoleChange(userItem.id, e.target.value)}
                                                         className="border-gray-300 dark:border-gray-700 focus:ring-blue-500 focus:border-blue-500 block w-20 sm:w-24 text-xs sm:text-sm rounded-md dark:bg-gray-700 dark:text-white"
                                                     >
                                                         <option value="user">Пользователь</option>
@@ -347,6 +378,18 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                     </table>
                 </div>
             )}
+
+            {/* Restaurant selector modal */}
+            <RestaurantSelector
+                isOpen={showRestaurantSelector}
+                onClose={() => {
+                    setShowRestaurantSelector(false);
+                    setSelectedUserId(null);
+                    setPendingRole(null);
+                }}
+                onSelect={handleRestaurantSelect}
+                selectedRestaurantId={null}
+            />
         </motion.div>
     );
 };

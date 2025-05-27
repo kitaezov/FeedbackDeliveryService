@@ -6,6 +6,7 @@
 const userModel = require('../models/userModel');
 const reviewModel = require('../models/reviewModel');
 const restaurantModel = require('../models/restaurantModel');
+const pool = require('../config/database');
 
 /**
  * Получить всех пользователей
@@ -55,8 +56,8 @@ const getUsers = async (req, res) => {
         }
         
         res.json({
-            message: 'Список пользователей получен',
-            users: mappedUsers
+            users: mappedUsers,
+            message: 'Список пользователей получен'
         });
     } catch (error) {
         console.error('Ошибка получения пользователей:', error);
@@ -82,7 +83,7 @@ const updateUserRole = async (req, res) => {
         });
         
         const { id } = req.params;
-        const { role } = req.body;
+        const { role, restaurant_id } = req.body;
         
         // Validate role
         if (!['user', 'manager', 'admin', 'head_admin'].includes(role)) {
@@ -90,6 +91,29 @@ const updateUserRole = async (req, res) => {
                 message: 'Некорректная роль',
                 details: 'Роль должна быть user, manager, admin или head_admin'
             });
+        }
+
+        // Validate restaurant_id for manager role
+        if (role === 'manager') {
+            if (!restaurant_id) {
+                return res.status(400).json({
+                    message: 'Не указан ресторан',
+                    details: 'Для роли менеджера необходимо указать ресторан'
+                });
+            }
+
+            // Check if restaurant exists
+            const [restaurantExists] = await pool.execute(
+                'SELECT id FROM restaurants WHERE id = ?',
+                [restaurant_id]
+            );
+
+            if (restaurantExists.length === 0) {
+                return res.status(404).json({
+                    message: 'Ресторан не найден',
+                    details: 'Указанный ресторан не существует'
+                });
+            }
         }
         
         // Проверьте, существует ли пользователь
@@ -114,15 +138,6 @@ const updateUserRole = async (req, res) => {
         const currentUserRoleLevel = roleHierarchy[req.user.role] || 0;
         const targetUserRoleLevel = roleHierarchy[user.role] || 0;
         const newRoleLevel = roleHierarchy[role] || 0;
-        
-        console.log('Role levels:', {
-            currentUserRole: req.user.role,
-            currentUserLevel: currentUserRoleLevel,
-            targetUserRole: user.role,
-            targetUserLevel: targetUserRoleLevel,
-            newRole: role,
-            newRoleLevel: newRoleLevel
-        });
         
         // Предотвратить изменение ролей пользователей с более высоким или равным уровнем роли
         if (targetUserRoleLevel >= currentUserRoleLevel) {
@@ -164,8 +179,8 @@ const updateUserRole = async (req, res) => {
         }
         
         // Обновление роли пользователя
-        console.log(`Обновление роли пользователя ${id} до ${role}`);
-        await userModel.updateRole(id, role);
+        console.log(`Обновление роли пользователя ${id} до ${role} ${restaurant_id ? `с привязкой к ресторану ${restaurant_id}` : ''}`);
+        await userModel.updateRole(id, role, role === 'manager' ? restaurant_id : null);
         
         console.log('Роль пользователя успешно обновлена');
         
@@ -175,7 +190,8 @@ const updateUserRole = async (req, res) => {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: role
+                role: role,
+                restaurant_id: role === 'manager' ? restaurant_id : null
             }
         });
     } catch (error) {

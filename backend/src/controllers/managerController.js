@@ -107,21 +107,63 @@ const getManagerReviews = async (req, res) => {
                 r.*,
                 u.name as user_name,
                 u.avatar as user_avatar,
-                mr.response,
-                mr.created_at as response_date
+                ru.name as responder_name,
+                rest.name as restaurant_name
             FROM reviews r
             LEFT JOIN users u ON r.user_id = u.id
-            LEFT JOIN manager_responses mr ON r.id = mr.review_id
+            LEFT JOIN users ru ON r.responded_by = ru.id
+            LEFT JOIN restaurants rest ON r.restaurant_id = rest.id
+            WHERE r.deleted = 0
             ORDER BY r.created_at DESC
         `);
 
         // Записываем в лог количество найденных отзывов
         console.log(`Найдено ${reviews.length} отзывов для панели управления менеджером`);
         
-        res.json(reviews);
+        // Форматируем ответы для фронтенда
+        const formattedReviews = reviews.map(review => ({
+            id: review.id,
+            user_id: review.user_id,
+            restaurant_id: review.restaurant_id,
+            restaurant_name: review.restaurant_name,
+            rating: review.rating,
+            comment: review.comment,
+            created_at: review.created_at,
+            updated_at: review.updated_at,
+            user_name: review.user_name,
+            user_avatar: review.user_avatar,
+            response: review.response,
+            response_date: review.response_date,
+            responded_by: review.responded_by,
+            responder_name: review.responder_name,
+            has_response: Boolean(review.response),
+            food_rating: review.food_rating,
+            service_rating: review.service_rating,
+            atmosphere_rating: review.atmosphere_rating,
+            price_rating: review.price_rating,
+            cleanliness_rating: review.cleanliness_rating
+        }));
+        
+        // Получаем все рестораны для статистики
+        const [restaurants] = await pool.query(`
+            SELECT * FROM restaurants 
+            WHERE deleted = 0
+        `);
+
+        res.json({
+            success: true,
+            message: 'Отзывы успешно получены',
+            reviews: formattedReviews,
+            restaurants: restaurants,
+            reviewsData: formattedReviews // Adding this for the frontend
+        });
     } catch (error) {
         console.error('Ошибка получения отзывов:', error);
-        return errorHandler(res, 'Не удалось получить отзывы', 500, error);
+        res.status(500).json({
+            success: false,
+            message: 'Не удалось получить отзывы',
+            details: error.message
+        });
     }
 };
 
@@ -135,19 +177,28 @@ const respondToReview = async (req, res) => {
         // Обрабатываем оба формата: /reviews/:id/response и /reviews/respond
         const reviewId = req.params.id || req.body.reviewId;
         const responseText = req.body.text || req.body.responseText;
-        const managerId = req.user?.id || 1; // Используем ID менеджера по умолчанию, если он недоступен
+        const managerId = req.user?.id;
         
-        console.log('Ответ на отзыв:', { reviewId, responseText });
+        console.log('Ответ на отзыв:', { reviewId, responseText, managerId });
 
         if (!reviewId) {
             return res.status(400).json({
+                success: false,
                 message: 'ID отзыва является обязательным'
             });
         }
 
         if (!responseText) {
             return res.status(400).json({
+                success: false,
                 message: 'Текст ответа является обязательным'
+            });
+        }
+
+        if (!managerId) {
+            return res.status(400).json({
+                success: false,
+                message: 'ID менеджера является обязательным'
             });
         }
 
@@ -155,40 +206,38 @@ const respondToReview = async (req, res) => {
         const [reviewCheck] = await pool.query('SELECT id FROM reviews WHERE id = ?', [reviewId]);
         if (reviewCheck.length === 0) {
             return res.status(404).json({
+                success: false,
                 message: 'Отзыв не найден'
             });
         }
 
-        // Проверяем, существует ли уже ответ
-        const [responseCheck] = await pool.query('SELECT id FROM manager_responses WHERE review_id = ?', [reviewId]);
-        if (responseCheck.length > 0) {
-            // Обновляем существующий ответ
-            await pool.query(
-                'UPDATE manager_responses SET response = ?, updated_at = CURRENT_TIMESTAMP WHERE review_id = ?',
-                [responseText, reviewId]
-            );
-        } else {
-            // Создаем новый ответ
-            await pool.query(
-                'INSERT INTO manager_responses (review_id, manager_id, response) VALUES (?, ?, ?)',
-                [reviewId, managerId, responseText]
-            );
-        }
-
-        // Обновляем статус отзыва
-        await pool.query(
-            'UPDATE reviews SET responded = true WHERE id = ?',
-            [reviewId]
+        // Обновляем или создаем ответ на отзыв
+        await pool.query(`
+            UPDATE reviews 
+            SET response = ?, 
+                response_date = CURRENT_TIMESTAMP,
+                responded_by = ?
+            WHERE id = ?`,
+            [responseText, managerId, reviewId]
         );
 
         res.json({
+            success: true,
             message: 'Ответ успешно сохранен',
-            reviewId,
-            response: responseText
+            data: {
+                reviewId,
+                response: responseText,
+                respondedBy: managerId,
+                responseDate: new Date()
+            }
         });
     } catch (error) {
         console.error('Ошибка при сохранении ответа:', error);
-        return errorHandler(res, 'Не удалось сохранить ответ', 500, error);
+        res.status(500).json({
+            success: false,
+            message: 'Не удалось сохранить ответ',
+            details: error.message
+        });
     }
 };
 
@@ -221,7 +270,8 @@ const getStats = async (req, res) => {
         
         // Расчет отзывов по типу
         const reviewsByType = reviews.reduce((acc, review) => {
-            acc[review.type] = (acc[review.type] || 0) + 1;
+            const type = review.type || 'inRestaurant';
+            acc[type] = (acc[type] || 0) + 1;
             return acc;
         }, { inRestaurant: 0, delivery: 0 });
         
@@ -233,28 +283,26 @@ const getStats = async (req, res) => {
         `);
         
         // Расчет коэффициента ответов
-        const [respondedReviews] = await pool.query(`
-            SELECT COUNT(*) as count 
-            FROM manager_responses
-        `);
-        
+        const respondedReviews = reviews.filter(review => review.response !== null).length;
         const responseRate = totalReviews > 0 
-            ? (respondedReviews[0].count / totalReviews) * 100 
+            ? (respondedReviews / totalReviews) * 100 
             : 0;
         
         res.json({
+            success: true,
             totalReviews,
-            averageRating,
+            averageRating: parseFloat(averageRating.toFixed(1)),
             totalRestaurants,
             reviewsByType,
             activeUsers: activeUsers[0].count,
-            responseRate
+            responseRate: parseFloat(responseRate.toFixed(1))
         });
         
     } catch (error) {
         console.error('Ошибка при получении статистики:', error);
         res.status(500).json({ 
-            error: 'Внутренняя ошибка сервера',
+            success: false,
+            message: 'Внутренняя ошибка сервера',
             details: error.message 
         });
     }
@@ -267,61 +315,110 @@ const getStats = async (req, res) => {
  */
 const getChartData = async (req, res) => {
     try {
-        // Получение отзывов за последние 30 дней
-        const [reviews] = await pool.query(`
-            SELECT rating, type, created_at 
+        // Получение периода из query параметров (по умолчанию 7 дней)
+        const period = req.query.period || '7days';
+        let dateFilter;
+        
+        switch(period) {
+            case '30days':
+                dateFilter = 'INTERVAL 30 DAY';
+                break;
+            case '90days':
+                dateFilter = 'INTERVAL 90 DAY';
+                break;
+            case '7days':
+            default:
+                dateFilter = 'INTERVAL 7 DAY';
+                break;
+        }
+
+        // Получение среднего рейтинга по дням
+        const [averageRatings] = await pool.query(`
+            SELECT 
+                DATE(created_at) as date,
+                ROUND(AVG(rating), 1) as average_rating,
+                COUNT(*) as review_count
             FROM reviews 
             WHERE deleted = 0 
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        `);
-        
-        // Подготовка данных для графика рейтингов
-        const ratings = [1, 2, 3, 4, 5].map(rating => ({
-            rating,
-            count: reviews.filter(r => r.rating === rating).length
-        }));
-        
-        // Подготовка данных для графика типов отзывов
-        const reviewTypes = [
-            { 
-                name: 'В ресторане', 
-                value: reviews.filter(r => r.type === 'inRestaurant').length 
-            },
-            { 
-                name: 'Доставка', 
-                value: reviews.filter(r => r.type === 'delivery').length 
-            }
-        ];
-        
-        // Подготовка данных для графика ответов по дням
-        const last7Days = [...Array(7)].map((_, i) => {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            return date.toISOString().split('T')[0];
-        }).reverse();
-        
-        const [responses] = await pool.query(`
-            SELECT DATE(created_at) as date, COUNT(*) as count 
-            FROM manager_responses 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
+                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
             GROUP BY DATE(created_at)
+            ORDER BY date ASC
         `);
-        
-        const dailyResponses = last7Days.map(date => ({
-            date,
-            count: responses.find(r => r.date.toISOString().split('T')[0] === date)?.count || 0
-        }));
-        
+
+        // Получение количества отзывов по дням
+        const [reviewCounts] = await pool.query(`
+            SELECT 
+                DATE(created_at) as date,
+                COUNT(*) as count
+            FROM reviews 
+            WHERE deleted = 0 
+                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+            GROUP BY DATE(created_at)
+            ORDER BY date ASC
+        `);
+
+        // Форматируем данные для фронтенда
+        const formattedAverageRatings = {
+            labels: averageRatings.map(day => {
+                const date = new Date(day.date);
+                return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            }),
+            datasets: [{
+                label: 'Средний рейтинг',
+                data: averageRatings.map(day => parseFloat(day.average_rating)),
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            }]
+        };
+
+        const formattedReviewCounts = {
+            labels: reviewCounts.map(day => {
+                const date = new Date(day.date);
+                return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            }),
+            datasets: [{
+                label: 'Количество отзывов',
+                data: reviewCounts.map(day => day.count),
+                backgroundColor: 'rgba(99, 102, 241, 0.5)',
+            }]
+        };
+
+        // Получение распределения по рейтингам
+        const [ratingDistribution] = await pool.query(`
+            SELECT 
+                rating,
+                COUNT(*) as count
+            FROM reviews 
+            WHERE deleted = 0 
+                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+            GROUP BY rating
+            ORDER BY rating ASC
+        `);
+
         res.json({
-            ratings,
-            reviewTypes,
-            dailyResponses
+            success: true,
+            ratings: formattedAverageRatings,
+            volumeByDay: formattedReviewCounts,
+            ratingDistribution: {
+                labels: ratingDistribution.map(r => `${r.rating} звезд`),
+                datasets: [{
+                    label: 'Количество отзывов',
+                    data: ratingDistribution.map(r => r.count),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ]
+                }]
+            }
         });
-        
     } catch (error) {
         console.error('Ошибка при получении данных для графиков:', error);
         res.status(500).json({ 
-            error: 'Внутренняя ошибка сервера',
+            success: false,
+            message: 'Внутренняя ошибка сервера',
             details: error.message 
         });
     }

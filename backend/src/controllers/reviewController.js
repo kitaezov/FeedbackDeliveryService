@@ -210,69 +210,7 @@ const getAllReviews = async (req, res) => {
         // Проверяем, что все отзывы не удалены
         const nonDeletedReviews = reviewsData.reviews.filter(review => !review.deleted);
         console.log(`Возвращаем ${nonDeletedReviews.length} отзывов из ${reviewsData.reviews.length} полученных`);
-        
-        // Если отзывов нет, возвращаем тестовые данные
-        if (nonDeletedReviews.length === 0) {
-            console.log('Отзывы не найдены, возвращаем тестовые данные');
-            const testReviews = [
-                {
-                    id: 1,
-                    user_id: 1,
-                    restaurant_name: 'Тестовый ресторан',
-                    rating: 4,
-                    comment: 'Это тестовый отзыв для демонстрации функционала.',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    likes: 5,
-                    deleted: false,
-                    author: {
-                        id: 1,
-                        name: 'Тестовый пользователь',
-                        avatar: null
-                    },
-                    ratings: {
-                        food: 4,
-                        service: 5,
-                        atmosphere: 4,
-                        price: 3,
-                        cleanliness: 5
-                    },
-                    date: new Date().toISOString(),
-                    photos: [],
-                    isLikedByUser: false,
-                    userVoteType: null
-                },
-                {
-                    id: 2,
-                    user_id: 2,
-                    restaurant_name: 'Другой ресторан',
-                    rating: 5,
-                    comment: 'Второй тестовый отзыв с максимальной оценкой.',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                    likes: 10,
-                    deleted: false,
-                    author: {
-                        id: 2,
-                        name: 'Другой пользователь',
-                        avatar: null
-                    },
-                    ratings: {
-                        food: 5,
-                        service: 5,
-                        atmosphere: 5,
-                        price: 4,
-                        cleanliness: 5
-                    },
-                    date: new Date().toISOString(),
-                    photos: [],
-                    isLikedByUser: false,
-                    userVoteType: null
-                }
-            ];
-            return res.json(testReviews);
-        }
-        
+    
         // Возвращаем массив отзывов напрямую, без вложенности
         res.json(nonDeletedReviews);
     } catch (error) {

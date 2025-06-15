@@ -85,6 +85,54 @@ EXECUTE stmt_slug;
 DEALLOCATE PREPARE stmt_slug;
 
 -- Add column comments
+-- First, add any missing columns
+SET @hours_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurants' AND COLUMN_NAME = 'hours');
+SET @cuisine_type_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurants' AND COLUMN_NAME = 'cuisine_type');
+SET @rating_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurants' AND COLUMN_NAME = 'rating');
+SET @deleted_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurants' AND COLUMN_NAME = 'deleted');
+SET @price_range_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurants' AND COLUMN_NAME = 'price_range');
+SET @min_price_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurants' AND COLUMN_NAME = 'min_price');
+SET @delivery_time_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurants' AND COLUMN_NAME = 'delivery_time');
+SET @category_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'restaurants' AND COLUMN_NAME = 'category');
+
+-- Add missing columns if they don't exist
+SET @add_hours = IF(@hours_exists = 0, 'ALTER TABLE restaurants ADD COLUMN hours VARCHAR(100)', 'SELECT 1');
+SET @add_cuisine_type = IF(@cuisine_type_exists = 0, 'ALTER TABLE restaurants ADD COLUMN cuisine_type VARCHAR(100)', 'SELECT 1');
+SET @add_rating = IF(@rating_exists = 0, 'ALTER TABLE restaurants ADD COLUMN rating DECIMAL(3,2) DEFAULT 0', 'SELECT 1');
+SET @add_deleted = IF(@deleted_exists = 0, 'ALTER TABLE restaurants ADD COLUMN deleted BOOLEAN DEFAULT false', 'SELECT 1');
+SET @add_price_range = IF(@price_range_exists = 0, 'ALTER TABLE restaurants ADD COLUMN price_range VARCHAR(10)', 'SELECT 1');
+SET @add_min_price = IF(@min_price_exists = 0, 'ALTER TABLE restaurants ADD COLUMN min_price DECIMAL(10,2)', 'SELECT 1');
+SET @add_delivery_time = IF(@delivery_time_exists = 0, 'ALTER TABLE restaurants ADD COLUMN delivery_time VARCHAR(20)', 'SELECT 1');
+SET @add_category = IF(@category_exists = 0, "ALTER TABLE restaurants ADD COLUMN category ENUM('italian', 'asian', 'russian', 'seafood', 'french', 'georgian', 'mexican', 'american') NOT NULL DEFAULT 'russian'", 'SELECT 1');
+
+PREPARE stmt_add_hours FROM @add_hours;
+PREPARE stmt_add_cuisine_type FROM @add_cuisine_type;
+PREPARE stmt_add_rating FROM @add_rating;
+PREPARE stmt_add_deleted FROM @add_deleted;
+PREPARE stmt_add_price_range FROM @add_price_range;
+PREPARE stmt_add_min_price FROM @add_min_price;
+PREPARE stmt_add_delivery_time FROM @add_delivery_time;
+PREPARE stmt_add_category FROM @add_category;
+
+EXECUTE stmt_add_hours;
+EXECUTE stmt_add_cuisine_type;
+EXECUTE stmt_add_rating;
+EXECUTE stmt_add_deleted;
+EXECUTE stmt_add_price_range;
+EXECUTE stmt_add_min_price;
+EXECUTE stmt_add_delivery_time;
+EXECUTE stmt_add_category;
+
+DEALLOCATE PREPARE stmt_add_hours;
+DEALLOCATE PREPARE stmt_add_cuisine_type;
+DEALLOCATE PREPARE stmt_add_rating;
+DEALLOCATE PREPARE stmt_add_deleted;
+DEALLOCATE PREPARE stmt_add_price_range;
+DEALLOCATE PREPARE stmt_add_min_price;
+DEALLOCATE PREPARE stmt_add_delivery_time;
+DEALLOCATE PREPARE stmt_add_category;
+
+-- Now proceed with the ALTER TABLE to add comments
 ALTER TABLE restaurants
 MODIFY COLUMN id INT AUTO_INCREMENT COMMENT 'Уникальный идентификатор ресторана',
 MODIFY COLUMN name VARCHAR(100) NOT NULL COMMENT 'Название ресторана',

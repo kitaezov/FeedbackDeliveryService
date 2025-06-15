@@ -492,9 +492,33 @@ const getRestaurants = async (req, res) => {
         console.log('Извлечение ресторанов из базы данных...');
         const restaurants = await restaurantModel.getAll();
         console.log('Рестораны извлечены:', restaurants);
+
+        // Получаем информацию о менеджерах для каждого ресторана
+        const restaurantsWithManagers = await Promise.all(restaurants.map(async (restaurant) => {
+            try {
+                // Получаем менеджеров ресторана
+                const [managers] = await pool.execute(`
+                    SELECT id, name, email 
+                    FROM users 
+                    WHERE role = 'manager' AND restaurant_id = ?
+                `, [restaurant.id]);
+
+                return {
+                    ...restaurant,
+                    managers: managers || []
+                };
+            } catch (error) {
+                console.error(`Ошибка получения менеджеров для ресторана ${restaurant.id}:`, error);
+                return {
+                    ...restaurant,
+                    managers: []
+                };
+            }
+        }));
+
         res.json({
             message: 'Список ресторанов получен',
-            restaurants
+            restaurants: restaurantsWithManagers
         });
     } catch (error) {
         console.error('Ошибка получения ресторанов:', error);

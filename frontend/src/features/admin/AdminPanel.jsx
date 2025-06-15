@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Trash2, Edit, Plus, User, Shield, UserCheck, Settings, Link as LinkIcon, AlertTriangle, UserCog, BookOpen, RefreshCw, XCircle, Info, Lock, Unlock } from 'lucide-react';
+import { Trash2, Edit, Plus, User, Shield, UserCheck, Settings, Link as LinkIcon, AlertTriangle, UserCog, BookOpen, RefreshCw, XCircle, Info, Lock, Unlock, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../utils/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -612,13 +612,14 @@ const AdminPanel = ({ user }) => {
                                         <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Название</th>
                                         <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Статус</th>
                                         <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">URL</th>
+                                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Менеджеры</th>
                                         <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     {restaurants.length === 0 ? (
                                         <tr>
-                                            <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                                            <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                                                 Нет ресторанов для отображения
                                             </td>
                                         </tr>
@@ -656,6 +657,20 @@ const AdminPanel = ({ user }) => {
                                                         </div>
                                                     ) : (
                                                         <span className="text-gray-400 dark:text-gray-600">Не задан</span>
+                                                    )}
+                                                </td>
+                                                <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                    {restaurant.managers && restaurant.managers.length > 0 ? (
+                                                        <div className="flex flex-col gap-1">
+                                                            {restaurant.managers.map((manager) => (
+                                                                <div key={manager.id} className="flex items-center">
+                                                                    <UserCircle size={14} className="mr-1 text-blue-500" />
+                                                                    <span>{manager.name}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 dark:text-gray-600">Не назначен</span>
                                                     )}
                                                 </td>
                                                 <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm font-medium">

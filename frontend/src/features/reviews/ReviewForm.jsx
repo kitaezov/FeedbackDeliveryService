@@ -218,7 +218,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                 const formattedReviews = response.data.reviews.map(review => ({
                     id: review.id,
                     user_id: review.user_id,
-                    user_name: review.user_name || review.userName || 'Пользователь',
+                    user_name: review.author?.name || review.user_name || review.userName || review.name || 'Аноним',
                     rating: review.rating,
                     text: review.comment || review.text,
                     created_at: review.created_at || review.date,

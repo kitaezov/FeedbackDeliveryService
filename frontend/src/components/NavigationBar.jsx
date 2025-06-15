@@ -587,7 +587,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                                     </div>
                                                     <div>
                                                         <div className="font-medium text-sm text-gray-900 dark:text-white">
-                                                            {user.name || 'Пользователь'}
+                                                            {user.name || 'Аноним'}
                                                         </div>
                                                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center">
                                                             {user.role && (

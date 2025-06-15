@@ -160,7 +160,7 @@ export const useAuth = () => {
             
             showToast({
                 title: 'Успешная авторизация',
-                description: `Добро пожаловать, ${user.name || 'пользователь'}!`,
+                description: `Добро пожаловать, ${user.name || 'гость'}!`,
                 type: 'success'
             });
             

@@ -104,7 +104,7 @@ export const Header = () => {
                                 
                                 <div className="relative group">
                                     <button className="flex items-center space-x-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">
-                                        <span>{user?.name || 'Пользователь'}</span>
+                                        <span>{user?.name || 'Аноним'}</span>
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                         </svg>

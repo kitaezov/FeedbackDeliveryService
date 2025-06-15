@@ -601,7 +601,7 @@ const ManagerDashboard = () => {
                     responseDate: review.responseDate || review.response_date || null,
                     manager_name: review.manager_name || review.managerName || '',
                     user: {
-                        name: review.user_name || review.userName || review.username || 'Пользователь'
+                        name: review.author?.name || review.user_name || review.userName || review.username || review.name || 'Аноним'
                     },
                     restaurant: {
                         name: review.restaurant_name || review.restaurantName || 'Ресторан'

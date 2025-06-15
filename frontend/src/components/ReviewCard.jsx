@@ -147,7 +147,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
     const reviewData = {
         id: review.id,
         userId: review.userId || review.user_id,
-        userName: review.user_name || review.userName || 'Пользователь',
+        userName: review.author?.name || review.user_name || review.userName || review.name || 'Аноним',
         restaurantName: review.restaurant_name || review.restaurantName || 'Ресторан',
         restaurantCategory: review.restaurant_category || review.restaurantCategory,
         rating: Number(review.rating) || 0,

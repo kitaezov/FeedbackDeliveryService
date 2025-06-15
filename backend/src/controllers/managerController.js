@@ -102,6 +102,35 @@ const getManagerStatistics = async (req, res) => {
  */
 const getManagerReviews = async (req, res) => {
     try {
+        // Получаем ID пользователя из токена аутентификации
+        const userId = req.user.id;
+        
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Необходима авторизация',
+                details: 'Пользователь не авторизован'
+            });
+        }
+        
+        console.log(`Получение отзывов для менеджера (ID: ${userId})`);
+        
+        // Сначала получаем ресторан, к которому прикреплен менеджер
+        const [managerRestaurants] = await pool.query(`
+            SELECT restaurant_id 
+            FROM users 
+            WHERE id = ? AND role = 'manager'
+        `, [userId]);
+        
+        if (managerRestaurants.length === 0) {
+            console.log(`Менеджер (ID: ${userId}) не прикреплен ни к одному ресторану`);
+            return res.json([]);
+        }
+        
+        const restaurantId = managerRestaurants[0].restaurant_id;
+        console.log(`Менеджер (ID: ${userId}) прикреплен к ресторану ID: ${restaurantId}`);
+        
+        // Получаем отзывы только для ресторана этого менеджера
         const [reviews] = await pool.query(`
             SELECT 
                 r.*,
@@ -111,12 +140,13 @@ const getManagerReviews = async (req, res) => {
             FROM reviews r
             LEFT JOIN users u ON r.user_id = u.id
             LEFT JOIN restaurants rest ON r.restaurant_id = rest.id
-            WHERE r.deleted = 0
+            WHERE r.deleted = 0 
+            AND (r.restaurant_id = ? OR rest.id = ?)
             ORDER BY r.created_at DESC
-        `);
+        `, [restaurantId, restaurantId]);
 
         // Записываем в лог количество найденных отзывов
-        console.log(`Найдено ${reviews.length} отзывов для панели управления менеджером`);
+        console.log(`Найдено ${reviews.length} отзывов для ресторана (ID: ${restaurantId})`);
         
         // Форматируем ответы для фронтенда
         const formattedReviews = reviews.map(review => ({
@@ -183,14 +213,50 @@ const respondToReview = async (req, res) => {
             });
         }
 
-        // Проверяем, существует ли отзыв
-        const [reviewCheck] = await pool.query('SELECT id FROM reviews WHERE id = ?', [reviewId]);
+        // Получаем ресторан, к которому прикреплен менеджер
+        const [managerRestaurants] = await pool.query(`
+            SELECT restaurant_id 
+            FROM users 
+            WHERE id = ? AND role = 'manager'
+        `, [managerId]);
+        
+        if (managerRestaurants.length === 0) {
+            return res.status(403).json({
+                success: false,
+                message: 'Доступ запрещен',
+                details: 'Менеджер не прикреплен ни к одному ресторану'
+            });
+        }
+        
+        const managerRestaurantId = managerRestaurants[0].restaurant_id;
+        
+        // Проверяем, существует ли отзыв и принадлежит ли он ресторану менеджера
+        const [reviewCheck] = await pool.query(`
+            SELECT r.id, r.restaurant_id, rest.id as rest_id
+            FROM reviews r
+            LEFT JOIN restaurants rest ON r.restaurant_id = rest.id
+            WHERE r.id = ?
+        `, [reviewId]);
+        
         if (reviewCheck.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Отзыв не найден'
             });
         }
+        
+        const reviewRestaurantId = reviewCheck[0].restaurant_id || reviewCheck[0].rest_id;
+        
+        // Проверяем, принадлежит ли отзыв ресторану менеджера
+        if (reviewRestaurantId !== managerRestaurantId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Доступ запрещен',
+                details: 'Вы можете отвечать только на отзывы о своем ресторане'
+            });
+        }
+        
+        console.log(`Менеджер (ID: ${managerId}) отвечает на отзыв (ID: ${reviewId}) для ресторана (ID: ${managerRestaurantId})`);
 
         // Обновляем или создаем ответ на отзыв
         await pool.query(`
@@ -206,7 +272,7 @@ const respondToReview = async (req, res) => {
             success: true,
             message: 'Ответ успешно сохранен',
             data: {
-            reviewId,
+                reviewId,
                 response: responseText,
                 respondedBy: managerId,
                 responseDate: new Date()
@@ -229,25 +295,64 @@ const respondToReview = async (req, res) => {
  */
 const getStats = async (req, res) => {
     try {
-        // Получение всех отзывов
-        const [reviews] = await pool.query(`
-            SELECT * FROM reviews 
-            WHERE deleted = 0 
-            ORDER BY created_at DESC
-        `);
+        // Получаем ID пользователя из токена аутентификации
+        const userId = req.user.id;
         
-        // Получение всех ресторанов
-        const [restaurants] = await pool.query(`
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Необходима авторизация',
+                details: 'Пользователь не авторизован'
+            });
+        }
+        
+        console.log(`Получение статистики для менеджера (ID: ${userId})`);
+        
+        // Получаем ресторан, к которому прикреплен менеджер
+        const [managerRestaurants] = await pool.query(`
+            SELECT restaurant_id 
+            FROM users 
+            WHERE id = ? AND role = 'manager'
+        `, [userId]);
+        
+        if (managerRestaurants.length === 0) {
+            console.log(`Менеджер (ID: ${userId}) не прикреплен ни к одному ресторану`);
+            return res.json({
+                success: true,
+                totalReviews: 0,
+                averageRating: 0,
+                totalRestaurants: 0,
+                reviewsByType: { inRestaurant: 0, delivery: 0 },
+                activeUsers: 0,
+                responseRate: 0
+            });
+        }
+        
+        const restaurantId = managerRestaurants[0].restaurant_id;
+        console.log(`Менеджер (ID: ${userId}) прикреплен к ресторану ID: ${restaurantId}`);
+        
+        // Получение всех отзывов для ресторана менеджера
+        const [reviews] = await pool.query(`
+            SELECT r.* 
+            FROM reviews r
+            LEFT JOIN restaurants rest ON r.restaurant_id = rest.id
+            WHERE r.deleted = 0 
+            AND (r.restaurant_id = ? OR rest.id = ?)
+            ORDER BY r.created_at DESC
+        `, [restaurantId, restaurantId]);
+        
+        // Получение информации о ресторане
+        const [restaurant] = await pool.query(`
             SELECT * FROM restaurants 
-            WHERE deleted = 0
-        `);
+            WHERE id = ? AND deleted = 0
+        `, [restaurantId]);
         
         // Расчет основных статистических данных
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0 
             ? reviews.reduce((acc, review) => acc + review.rating, 0) / totalReviews 
             : 0;
-        const totalRestaurants = restaurants.length;
+        const totalRestaurants = restaurant.length; // Всегда должно быть 1
         
         // Расчет отзывов по типу
         const reviewsByType = reviews.reduce((acc, review) => {
@@ -256,12 +361,9 @@ const getStats = async (req, res) => {
             return acc;
         }, { inRestaurant: 0, delivery: 0 });
         
-        // Получение количества активных пользователей
-        const [activeUsers] = await pool.query(`
-            SELECT COUNT(*) as count 
-            FROM users 
-            WHERE is_active = 1
-        `);
+        // Получение количества активных пользователей, оставивших отзывы для ресторана
+        const uniqueUserIds = [...new Set(reviews.map(review => review.user_id))];
+        const activeUsers = uniqueUserIds.length;
         
         // Расчет коэффициента ответов
         const respondedReviews = reviews.filter(review => review.response !== null).length;
@@ -275,7 +377,7 @@ const getStats = async (req, res) => {
             averageRating: parseFloat(averageRating.toFixed(1)),
             totalRestaurants,
             reviewsByType,
-            activeUsers: activeUsers[0].count,
+            activeUsers,
             responseRate: parseFloat(responseRate.toFixed(1))
         });
         
@@ -296,6 +398,35 @@ const getStats = async (req, res) => {
  */
 const getChartData = async (req, res) => {
     try {
+        // Получаем ID пользователя из токена аутентификации
+        const userId = req.user.id;
+        
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Необходима авторизация',
+                details: 'Пользователь не авторизован'
+            });
+        }
+        
+        // Получаем ресторан, к которому прикреплен менеджер
+        const [managerRestaurants] = await pool.query(`
+            SELECT restaurant_id 
+            FROM users 
+            WHERE id = ? AND role = 'manager'
+        `, [userId]);
+        
+        if (managerRestaurants.length === 0) {
+            return res.json({
+                success: true,
+                ratingTrend: [],
+                reviewsPerDay: []
+            });
+        }
+        
+        const restaurantId = managerRestaurants[0].restaurant_id;
+        console.log(`Получение данных для графиков. Менеджер ID: ${userId}, Ресторан ID: ${restaurantId}`);
+        
         // Получение периода из query параметров (по умолчанию 7 дней)
         const period = req.query.period || 'week';
         let dateFilter;
@@ -336,9 +467,13 @@ const getChartData = async (req, res) => {
                 COUNT(r.id) as review_count
             FROM dates
             LEFT JOIN reviews r ON DATE(r.created_at) = DATE(dates.date) AND r.deleted = 0
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
             GROUP BY ${groupBy}
             ORDER BY date ASC
-        `);
+        `, [restaurantId, restaurantId]);
 
         // Получение количества отзывов по дням/месяцам
         const [reviewCounts] = await pool.query(`
@@ -354,59 +489,87 @@ const getChartData = async (req, res) => {
                 COUNT(r.id) as count
             FROM dates
             LEFT JOIN reviews r ON DATE(r.created_at) = DATE(dates.date) AND r.deleted = 0
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
             GROUP BY ${groupBy}
             ORDER BY date ASC
-        `);
+        `, [restaurantId, restaurantId]);
 
         // Получение распределения по рейтингам
         const [ratingDistribution] = await pool.query(`
             SELECT 
                 rating,
                 COUNT(*) as count
-            FROM reviews 
-            WHERE deleted = 0 
-                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+            FROM reviews r
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
             GROUP BY rating
             ORDER BY rating ASC
-        `);
+        `, [restaurantId, restaurantId]);
 
         // Получение критериев оценки
         const [criteriaRatings] = await pool.query(`
             SELECT 
                 'Качество еды' as name, COALESCE(ROUND(AVG(food_rating), 1), 4.2) as score
-            FROM reviews 
-            WHERE deleted = 0 
-                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
-                AND food_rating IS NOT NULL
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.food_rating IS NOT NULL
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
             UNION ALL
             SELECT 
                 'Обслуживание', COALESCE(ROUND(AVG(service_rating), 1), 4.0)
-            FROM reviews 
-            WHERE deleted = 0 
-                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
-                AND service_rating IS NOT NULL
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.service_rating IS NOT NULL
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
             UNION ALL
             SELECT 
                 'Интерьер', COALESCE(ROUND(AVG(atmosphere_rating), 1), 4.5)
-            FROM reviews 
-            WHERE deleted = 0 
-                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
-                AND atmosphere_rating IS NOT NULL
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.atmosphere_rating IS NOT NULL
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
             UNION ALL
             SELECT 
                 'Соотношение цена/качество', COALESCE(ROUND(AVG(price_rating), 1), 3.8)
-            FROM reviews 
-            WHERE deleted = 0 
-                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
-                AND price_rating IS NOT NULL
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.price_rating IS NOT NULL
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
             UNION ALL
             SELECT 
                 'Скорость обслуживания', COALESCE(ROUND(AVG(cleanliness_rating), 1), 3.9)
-            FROM reviews 
-            WHERE deleted = 0 
-                AND created_at >= DATE_SUB(CURDATE(), ${dateFilter})
-                AND cleanliness_rating IS NOT NULL
-        `);
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.cleanliness_rating IS NOT NULL
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
+        `, [restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId]);
 
         // Форматируем данные для фронтенда с учетом периода
         const formatDate = (dateStr, periodType) => {
@@ -486,6 +649,19 @@ const getChartData = async (req, res) => {
  */
 const getRestaurants = async (req, res) => {
     try {
+        // Получаем ID пользователя из токена аутентификации
+        const userId = req.user.id;
+        
+        if (!userId) {
+            return res.status(401).json({
+                error: 'Необходима авторизация',
+                details: 'Пользователь не авторизован'
+            });
+        }
+        
+        console.log(`Получение ресторанов для менеджера (ID: ${userId})`);
+        
+        // Получаем информацию о ресторанах, к которым прикреплен менеджер
         const [restaurants] = await pool.query(`
             SELECT 
                 r.*,
@@ -494,10 +670,13 @@ const getRestaurants = async (req, res) => {
                 COALESCE(r.is_active, 1) as is_active
             FROM restaurants r
             LEFT JOIN reviews rv ON r.id = rv.restaurant_id AND rv.deleted = 0
-            WHERE r.deleted = 0
+            JOIN users u ON u.restaurant_id = r.id AND u.id = ?
+            WHERE r.deleted = 0 AND u.role = 'manager'
             GROUP BY r.id
             ORDER BY r.name ASC
-        `);
+        `, [userId]);
+        
+        console.log(`Найдено ${restaurants.length} ресторанов для менеджера (ID: ${userId})`);
         
         const formattedRestaurants = restaurants.map(restaurant => ({
             id: restaurant.id,

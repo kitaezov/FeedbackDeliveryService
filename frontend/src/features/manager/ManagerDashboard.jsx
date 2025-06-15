@@ -522,8 +522,8 @@ const ManagerDashboard = () => {
     
     const fetchReviewsFromDatabase = async () => {
         try {
-            // Получаем данные с правильного эндпоинта
-            const data = await fetchData('reviews');
+            // Получаем данные с правильного эндпоинта для менеджера
+            const data = await fetchData('manager/reviews');
             console.log('Получены отзывы из базы данных:', data);
             
             // Проверяем структуру ответа

@@ -421,6 +421,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                             variants={buttonVariants}
                             whileHover="hover"
                             whileTap="tap"
+                            className="hidden md:block"
                         >
                             <Link 
                                 to="/restaurant-ratings" 
@@ -435,7 +436,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                         
                         {/* Уведомления */}
                         {user && (
-                            <div className="relative" ref={notificationsRef}>
+                            <div className="relative hidden md:block" ref={notificationsRef}>
                                 <motion.button
                                     onClick={() => setShowNotifications(!showNotifications)}
                                     className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-full relative"
@@ -539,7 +540,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                         {/* Переключатель темы */}
                         <motion.button 
                             onClick={toggleTheme}
-                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-full"
+                            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-full hidden md:block"
                             aria-label={isDarkMode ? 'Включить светлую тему' : 'Включить темную тему'}
                             variants={buttonVariants}
                             whileHover="hover"
@@ -556,7 +557,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                         
                         {/* Профиль пользователя */}
                         {user ? (
-                            <div className="relative" ref={profileMenuRef}>
+                            <div className="relative hidden md:block" ref={profileMenuRef}>
                                 <motion.button
                                     onClick={() => setShowProfileMenu(!showProfileMenu)}
                                     className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
@@ -762,18 +763,6 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
                                     duration: 0.3
                                 }}
                             >
-                                <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full w-full">
-                                    <div className="pl-4 pr-2">
-                                        <Search size={20} className="text-gray-500 dark:text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Найти в ресторане" 
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="py-2 pr-4 w-full bg-transparent focus:outline-none text-gray-900 dark:text-white"
-                                    />
-                                </div>
                             </motion.form>
                             
                             {/* Мобильные кнопки */}

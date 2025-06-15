@@ -251,8 +251,8 @@ async function runMigrations() {
             const migrationOrder = [
                 'users.sql',
                 'add_profile_columns.sql',
-                'fix_restaurants_table.sql',
                 'restaurants.sql',
+                'fix_restaurants_table.sql',
                 'add_restaurant_columns.sql',
                 'add_likes_columns.sql',
                 'deleted_reviews.sql',

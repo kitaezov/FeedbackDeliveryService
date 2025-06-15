@@ -57,8 +57,14 @@ SET @index_exists_category = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS
                              WHERE table_schema = DATABASE() 
                              AND table_name = 'restaurants' 
                              AND index_name = 'idx_restaurants_category');
+
+-- Проверяем существование колонки category
+SET @column_exists_category = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
+                              WHERE table_schema = DATABASE()
+                              AND table_name = 'restaurants'
+                              AND column_name = 'category');
                              
-SET @create_index_category = IF(@index_exists_category = 0, 
+SET @create_index_category = IF(@index_exists_category = 0 AND @column_exists_category > 0, 
                              'CREATE INDEX idx_restaurants_category ON restaurants(category)', 
                              'SELECT 1');
 PREPARE stmt_category FROM @create_index_category;

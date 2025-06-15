@@ -315,7 +315,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
                                         <div>
                                             <h4 className={`font-semibold text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
                                                 Ответ от ресторана "{reviewData.restaurantName}"
-                                                {reviewData.managerName && <span className="ml-1">• {reviewData.managerName}</span>}
+                                                {reviewData.managerName && <span className="ml-1"></span>}
                                             </h4>
                                             {reviewData.responseDate && (
                                                 <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>

@@ -60,6 +60,7 @@ const uploadMulter = multer({
 // Публичные маршруты
 router.get('/', restaurantController.getAllRestaurants);
 router.get('/search', restaurantController.searchRestaurants);
+router.get('/by-name/:name', restaurantController.getRestaurantByName);
 router.get('/:id', restaurantController.getRestaurant);
 router.get('/by-slug/:slug', restaurantController.getRestaurantBySlug);
 

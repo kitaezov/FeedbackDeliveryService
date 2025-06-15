@@ -207,10 +207,22 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                 const response = await api.get(`/reviews?restaurantName=${encodeURIComponent(restaurant.name)}`);
                 
                 if (response.data && response.data.reviews) {
-                    setRestaurantReviews(response.data.reviews);
+                    // Ensure we're working with an array
+                    const reviews = Array.isArray(response.data.reviews) 
+                        ? response.data.reviews 
+                        : (Array.isArray(response.data.reviews.reviews) 
+                            ? response.data.reviews.reviews 
+                            : []);
+                    
+                    setRestaurantReviews(reviews);
+                } else {
+                    // Default to empty array if no reviews found
+                    setRestaurantReviews([]);
                 }
             } catch (error) {
                 console.error('Error fetching restaurant reviews:', error);
+                // Set empty array on error
+                setRestaurantReviews([]);
             } finally {
                 setLoadingReviews(false);
             }
@@ -395,7 +407,11 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         
         // Добавить отзыв в список
         if (response.data && response.data.review) {
-            setRestaurantReviews(prevReviews => [response.data.review, ...prevReviews]);
+            setRestaurantReviews(prevReviews => {
+                // Ensure prevReviews is an array before spreading
+                const reviews = Array.isArray(prevReviews) ? prevReviews : [];
+                return [response.data.review, ...reviews];
+            });
         }
         
         // Вызовите обратный вызов с данными отзыва
@@ -486,95 +502,108 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             return;
         }
 
-        const averageRating = Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length;
+        try {
+            // Получаем актуальные данные о ресторане
+            const restaurantResponse = await api.get(`/restaurants/by-name/${encodeURIComponent(restaurant.name)}`);
+            const restaurantData = restaurantResponse.data.restaurant;
 
-        // Создать JSON-объект для оценок, чтобы правильно структурировать данные
-        const ratingsData = {
-            food: parseInt(Math.round(ratings.food || 0), 10),
-            price: parseInt(Math.round(ratings.price || 0), 10),
-            ...(reviewType === 'inRestaurant' ? {
-                service: parseInt(Math.round(ratings.service || 0), 10),
-                atmosphere: parseInt(Math.round(ratings.atmosphere || 0), 10),
-                cleanliness: parseInt(Math.round(ratings.cleanliness || 0), 10)
-            } : {
-                deliverySpeed: parseInt(Math.round(ratings.deliverySpeed || 0), 10),
-                deliveryQuality: parseInt(Math.round(ratings.deliveryQuality || 0), 10)
-            })
-        };
-        
-        // Создать структурированный объект отзыва, который соответствует ожиданиям бэкенда
-        const reviewData = {
-            userId: user?.id || 0,
-            restaurantId: restaurant.id,
-            restaurantName: restaurant.name,
-            rating: parseInt(Math.round(averageRating), 10),
-            comment: feedback,
-            ratings: ratingsData,
-            reviewType: reviewType,
-            hasReceipt: !!receiptPhoto
-        };
-        
-        // Преобразовать в JSON для отладки
-        console.log('Структурированные данные отзыва:', JSON.stringify(reviewData));
-        
-        // Отправка на сервер
-        setSubmitting(true);
-        
-        // Используйте прямой вызов axios вместо api экземпляра, чтобы избежать проблем с перехватчиками при использовании FormData
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        
-        // Проверьте, имеем ли мы фото или чек для отправки
-        if (photos.length > 0 || receiptPhoto) {
-            // Если у нас есть фото или чек, используйте FormData для отправки как JSON, так и файлов
-            const formData = new FormData();
+            if (!restaurantData) {
+                throw new Error('Не удалось получить данные о ресторане');
+            }
+
+            const averageRating = Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length;
+
+            // Создать JSON-объект для оценок, чтобы правильно структурировать данные
+            const ratingsData = {
+                food: parseInt(Math.round(ratings.food || 0), 10),
+                price: parseInt(Math.round(ratings.price || 0), 10),
+                ...(reviewType === 'inRestaurant' ? {
+                    service: parseInt(Math.round(ratings.service || 0), 10),
+                    atmosphere: parseInt(Math.round(ratings.atmosphere || 0), 10),
+                    cleanliness: parseInt(Math.round(ratings.cleanliness || 0), 10)
+                } : {
+                    deliverySpeed: parseInt(Math.round(ratings.deliverySpeed || 0), 10),
+                    deliveryQuality: parseInt(Math.round(ratings.deliveryQuality || 0), 10)
+                })
+            };
             
-            // Добавьте данные JSON как строку
-            formData.append('reviewData', JSON.stringify(reviewData));
+            // Создать структурированный объект отзыва, который соответствует ожиданиям бэкенда
+            const reviewData = {
+                userId: user?.id || 0,
+                restaurantId: restaurantData.id,
+                restaurantName: restaurantData.name,
+                restaurantCategory: restaurantData.category,
+                rating: parseInt(Math.round(averageRating), 10),
+                comment: feedback,
+                ratings: ratingsData,
+                reviewType: reviewType,
+                hasReceipt: !!receiptPhoto
+            };
             
-            try {
-                // Добавьте обычные фото - убедитесь, что имя поля точно 'photos'
-                if (photos.length > 0) {
-                    photos.forEach((photo) => {
-                        if (photo.file) {
-                            formData.append('photos', photo.file);
+            // Преобразовать в JSON для отладки
+            console.log('Структурированные данные отзыва:', JSON.stringify(reviewData));
+            
+            // Отправка на сервер
+            setSubmitting(true);
+            
+            // Используйте прямой вызов axios вместо api экземпляра, чтобы избежать проблем с перехватчиками при использовании FormData
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            
+            // Проверьте, имеем ли мы фото или чек для отправки
+            if (photos.length > 0 || receiptPhoto) {
+                // Если у нас есть фото или чек, используйте FormData для отправки как JSON, так и файлов
+                const formData = new FormData();
+                
+                // Добавьте данные JSON как строку
+                formData.append('reviewData', JSON.stringify(reviewData));
+                
+                try {
+                    // Добавьте обычные фото - убедитесь, что имя поля точно 'photos'
+                    if (photos.length > 0) {
+                        photos.forEach((photo) => {
+                            if (photo.file) {
+                                formData.append('photos', photo.file);
+                            }
+                        });
+                    }
+                    
+                    // Добавьте фото чека - убедитесь, что имя поля точно 'receiptPhoto'
+                    if (receiptPhoto && receiptPhoto.file) {
+                        formData.append('receiptPhoto', receiptPhoto.file);
+                    }
+                    
+                    console.log('FormData prepared with:', { 
+                        hasPhotos: photos.length > 0, 
+                        hasReceipt: !!receiptPhoto,
+                        fieldNames: [...formData.keys()] // Логирование всех имен полей
+                    });
+                    
+                    // Используйте тип содержимого FormData - пусть браузер установит его автоматически
+                    const response = await axios.post(`${API_URL}/api/reviews/with-photos`, formData, {
+                        headers: {
+                            // Не устанавливайте Content-Type - браузер установит его с границей
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         }
                     });
+                    
+                    handleSuccessResponse(response);
+                } catch (error) {
+                    handleErrorResponse(error);
                 }
-                
-                // Добавьте фото чека - убедитесь, что имя поля точно 'receiptPhoto'
-                if (receiptPhoto && receiptPhoto.file) {
-                    formData.append('receiptPhoto', receiptPhoto.file);
-                }
-                
-                console.log('FormData prepared with:', { 
-                    hasPhotos: photos.length > 0, 
-                    hasReceipt: !!receiptPhoto,
-                    fieldNames: [...formData.keys()] // Логирование всех имен полей
-                });
-                
-                // Используйте тип содержимого FormData - пусть браузер установит его автоматически
-                const response = await axios.post(`${API_URL}/api/reviews/with-photos`, formData, {
+            } else {
+                // Если нет фото, используйте простой JSON-запрос - не изменяйте эту часть
+                axios.post(`${API_URL}/api/reviews`, reviewData, {
                     headers: {
-                        // Не устанавливайте Content-Type - браузер установит его с границей
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     }
-                });
-                
-                handleSuccessResponse(response);
-            } catch (error) {
-                handleErrorResponse(error);
+                })
+                .then(response => handleSuccessResponse(response))
+                .catch(error => handleErrorResponse(error));
             }
-        } else {
-            // Если нет фото, используйте простой JSON-запрос - не изменяйте эту часть
-            axios.post(`${API_URL}/api/reviews`, reviewData, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                }
-            })
-            .then(response => handleSuccessResponse(response))
-            .catch(error => handleErrorResponse(error));
+        } catch (error) {
+            handleErrorResponse(error);
         }
     };
 

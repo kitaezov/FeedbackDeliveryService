@@ -6,6 +6,18 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { RestaurantImageUploader } from '../restaurants/components';
 import { getCategoriesList } from '../restaurants/constants/categories';
 
+// Добавим список категорий с правильными значениями для БД и отображения
+const RESTAURANT_CATEGORIES = {
+    italian: 'Итальянская кухня',
+    asian: 'Азиатская кухня',
+    russian: 'Русская кухня',
+    seafood: 'Морепродукты',
+    french: 'Французская кухня',
+    georgian: 'Грузинская кухня',
+    mexican: 'Мексиканская кухня',
+    american: 'Американская кухня'
+};
+
 const RestaurantEditor = ({ user }) => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -155,6 +167,7 @@ const RestaurantEditor = ({ user }) => {
         setSaving(true);
         setError(null);
 
+        try {
         // Validate restaurant name
         if (!restaurant.name.trim()) {
             setError('Название ресторана обязательно для заполнения');
@@ -207,7 +220,13 @@ const RestaurantEditor = ({ user }) => {
             return;
         }
 
-        try {
+            // Validate category
+            if (!restaurant.category) {
+                setError('Пожалуйста, выберите категорию ресторана');
+                setSaving(false);
+                return;
+            }
+
             // Format the data to match the expected API format
             const formData = {
                 name: restaurant.name.trim(),
@@ -218,7 +237,7 @@ const RestaurantEditor = ({ user }) => {
                 contactPhone: restaurant.contactPhone,
                 isActive: restaurant.isActive,
                 slug: slug,
-                category: restaurant.category,
+                category: restaurant.category, // Это уже правильное значение для БД (например, 'italian')
                 price_range: restaurant.priceRange,
                 min_price: parseInt(restaurant.minPrice, 10) || 0,
                 delivery_time: `${minTime}-${maxTime}`,
@@ -232,7 +251,6 @@ const RestaurantEditor = ({ user }) => {
             
             if (isNew) {
                 response = await api.post('/restaurants', formData);
-                // Очищаем форму после успешного создания
                 setRestaurant({
                     name: '',
                     address: '',
@@ -253,18 +271,13 @@ const RestaurantEditor = ({ user }) => {
                         closeTime: '22:00'
                     }
                 });
-                // Показываем сообщение об успехе
-                setError(null);
                 alert('Ресторан успешно создан!');
             } else {
                 response = await api.put(`/restaurants/${id}`, formData);
                 navigate('/admin');
             }
-
-            console.log("Ответ сервера:", response);
         } catch (error) {
             console.error('Error saving restaurant:', error);
-            console.error('Error response:', error.response?.data);
             setError(error.response?.data?.message || 'Ошибка при сохранении ресторана');
         } finally {
             setSaving(false);
@@ -486,25 +499,27 @@ const RestaurantEditor = ({ user }) => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Категория кухни
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Категория ресторана *
                             </label>
                             <select
                                 name="category"
-                                value={restaurant.category}
+                            value={restaurant.category || ''}
                                 onChange={handleChange}
-                                className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            required
                             >
                                 <option value="">Выберите категорию</option>
-                                {categories.map(category => (
-                                    <option key={category.id} value={category.name}>
-                                        {category.name}
+                            {Object.entries(RESTAURANT_CATEGORIES).map(([dbValue, displayName]) => (
+                                <option key={dbValue} value={dbValue}>
+                                    {displayName}
                                     </option>
                                 ))}
                             </select>
                         </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Ценовой диапазон

@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Trash2, User, Receipt, ImageIcon, MessageCircle
 import { Card, CardContent } from './Card';
 import { motion } from 'framer-motion';
 import { restaurantData } from '../features/restaurants/restaurantData';
+import { getCategoryName } from '../features/restaurants/constants/categories';
 
 // Animation variants
 const buttonVariants = {
@@ -147,6 +148,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
         userId: review.userId || review.user_id,
         userName: review.user_name || review.userName || 'Пользователь',
         restaurantName: review.restaurant_name || review.restaurantName || 'Ресторан',
+        restaurantCategory: review.restaurant_category || review.restaurantCategory,
         rating: Number(review.rating) || 0,
         comment: review.comment || review.text || '',
         date: review.created_at || review.date || new Date().toISOString(),
@@ -345,6 +347,11 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
                     <div className={`mb-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         <span>Ресторан: </span>
                         <span className="font-medium">{reviewData.restaurantName}</span>
+                        {reviewData.restaurantCategory && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                {getCategoryName(reviewData.restaurantCategory)}
+                            </div>
+                        )}
                     </div>
 
                     {/* Кнопки управления */}

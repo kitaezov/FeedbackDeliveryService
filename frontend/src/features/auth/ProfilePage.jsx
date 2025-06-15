@@ -223,16 +223,31 @@ const ProfilePage = ({ onLogout }) => {
 
                 console.log('Ответ от сервера с отзывами:', response.data);
                 
-                // Получаем массив отзывов из ответа сервера
-                const reviewsData = response.data.reviews || [];
+                // Получаем массив отзывов из ответа сервера с учетом разных возможных форматов
+                let reviewsData = [];
                 
-                if (!Array.isArray(reviewsData)) {
+                if (response.data && response.data.reviews && Array.isArray(response.data.reviews)) {
+                    // Формат: { reviews: [...] }
+                    reviewsData = response.data.reviews;
+                } else if (response.data && response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
+                    // Формат: { reviews: { reviews: [...] } }
+                    reviewsData = response.data.reviews.reviews;
+                } else if (Array.isArray(response.data)) {
+                    // Формат: [...] (массив напрямую)
+                    reviewsData = response.data;
+                } else if (response.data && response.data.reviews === null) {
+                    // Пустой результат
+                    reviewsData = [];
+                } else {
+                    console.error('Неизвестный формат данных:', response.data);
                     throw new Error('Неверный формат данных отзывов');
                 }
+                
+                console.log('Извлеченные данные отзывов:', reviewsData);
 
                 // Фильтрация отзывов по ID пользователя, а не по имени
                 const userReviews = reviewsData
-                    .filter(review => review.user_id === user.id)
+                    .filter(review => review && (review.user_id === user.id || review.userId === user.id))
                     .map(review => ({
                         ...review,
                         // Обеспечиваем совместимость полей с обоими форматами
@@ -242,7 +257,7 @@ const ProfilePage = ({ onLogout }) => {
                         restaurantName: review.restaurant_name || review.restaurantName,
                         rating: review.rating,
                         comment: review.comment,
-                        date: review.date || new Date().toISOString().split('T')[0],
+                        date: review.date || review.created_at || new Date().toISOString().split('T')[0],
                         likes: review.likes || 0,
                         // Преобразуем детальные оценки в формат, ожидаемый фронтендом
                         ratings: {

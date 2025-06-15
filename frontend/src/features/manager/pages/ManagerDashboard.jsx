@@ -80,7 +80,25 @@ const ManagerDashboard = () => {
             const response = await api.get('/api/reviews', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setReviews(response.data);
+            
+            // Обработка разных возможных структур ответов
+            let reviewsData = [];
+            
+            if (response.data && response.data.reviews && Array.isArray(response.data.reviews)) {
+                reviewsData = response.data.reviews;
+            } else if (response.data && response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
+                // Формат: { reviews: { reviews: [...] } }
+                reviewsData = response.data.reviews.reviews;
+            } else if (Array.isArray(response.data)) {
+                reviewsData = response.data;
+            } else if (response.data && response.data.reviews === null) {
+                reviewsData = [];
+            } else {
+                console.warn('Непредвиденная структура ответа от АПИ:', response.data);
+                reviewsData = [];
+            }
+            
+            setReviews(reviewsData);
         } catch (error) {
             console.error('Ошибка при загрузке отзывов:', error);
             toast.error('Не удалось загрузить отзывы');

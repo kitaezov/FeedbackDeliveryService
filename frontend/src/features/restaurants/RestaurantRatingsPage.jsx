@@ -405,11 +405,18 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
             const reviewsResponse = await axios.get(`${API_BASE_URL}/reviews`);
             let allReviews = [];
             
-            if (reviewsResponse.data && Array.isArray(reviewsResponse.data.reviews)) {
+            if (reviewsResponse.data && reviewsResponse.data.reviews && Array.isArray(reviewsResponse.data.reviews)) {
                 allReviews = reviewsResponse.data.reviews;
+            } else if (reviewsResponse.data && reviewsResponse.data.reviews && reviewsResponse.data.reviews.reviews && Array.isArray(reviewsResponse.data.reviews.reviews)) {
+                // Формат: { reviews: { reviews: [...] } }
+                allReviews = reviewsResponse.data.reviews.reviews;
             } else if (Array.isArray(reviewsResponse.data)) {
                 allReviews = reviewsResponse.data;
+            } else if (reviewsResponse.data && reviewsResponse.data.reviews === null) {
+                allReviews = [];
             }
+            
+            console.log('Получены отзывы:', allReviews);
             
             // Find the restaurant by ID
             const restaurant = restaurants.find(r => r.id === restaurantId);

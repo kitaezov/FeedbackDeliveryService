@@ -107,11 +107,9 @@ const getManagerReviews = async (req, res) => {
                 r.*,
                 u.name as user_name,
                 u.avatar as user_avatar,
-                ru.name as responder_name,
                 rest.name as restaurant_name
             FROM reviews r
             LEFT JOIN users u ON r.user_id = u.id
-            LEFT JOIN users ru ON r.responded_by = ru.id
             LEFT JOIN restaurants rest ON r.restaurant_id = rest.id
             WHERE r.deleted = 0
             ORDER BY r.created_at DESC
@@ -134,14 +132,7 @@ const getManagerReviews = async (req, res) => {
             user_avatar: review.user_avatar,
             response: review.response,
             response_date: review.response_date,
-            responded_by: review.responded_by,
-            responder_name: review.responder_name,
-            has_response: Boolean(review.response),
-            food_rating: review.food_rating,
-            service_rating: review.service_rating,
-            atmosphere_rating: review.atmosphere_rating,
-            price_rating: review.price_rating,
-            cleanliness_rating: review.cleanliness_rating
+            has_response: Boolean(review.response)
         }));
         
         // Получаем все рестораны для статистики
@@ -225,7 +216,7 @@ const respondToReview = async (req, res) => {
             success: true,
             message: 'Ответ успешно сохранен',
             data: {
-                reviewId,
+            reviewId,
                 response: responseText,
                 respondedBy: managerId,
                 responseDate: new Date()

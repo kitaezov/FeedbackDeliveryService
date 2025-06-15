@@ -528,10 +528,15 @@ const ManagerDashboard = () => {
             
             // Проверяем структуру ответа
             let reviewsData = [];
-            if (data.reviews && Array.isArray(data.reviews)) {
+            if (data && data.reviews && Array.isArray(data.reviews)) {
                 reviewsData = data.reviews;
+            } else if (data && data.reviews && data.reviews.reviews && Array.isArray(data.reviews.reviews)) {
+                // Формат: { reviews: { reviews: [...] } }
+                reviewsData = data.reviews.reviews;
             } else if (Array.isArray(data)) {
                 reviewsData = data;
+            } else if (data && data.reviews === null) {
+                reviewsData = [];
             }
             
             // Нормализуем данные отзывов

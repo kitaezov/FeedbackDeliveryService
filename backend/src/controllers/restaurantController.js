@@ -33,7 +33,7 @@ const getAllRestaurants = async (req, res) => {
             isActive: true,
             category: category
         });
-        res.json(restaurants);
+        res.json({ restaurants });
     } catch (error) {
         console.error('Error getting restaurants:', error);
         res.status(500).json({ 
@@ -59,6 +59,36 @@ const getRestaurant = async (req, res) => {
         res.json({ restaurant });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+/**
+ * Get restaurant by name
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const getRestaurantByName = async (req, res) => {
+    try {
+        const { name } = req.params;
+        const restaurant = await restaurantModel.getByName(decodeURIComponent(name));
+        
+        if (!restaurant) {
+            return res.status(404).json({ 
+                message: 'Ресторан не найден',
+                details: 'Ресторан с указанным именем не существует'
+            });
+        }
+        
+        res.json({ 
+            message: 'Ресторан успешно получен',
+            restaurant 
+        });
+    } catch (error) {
+        console.error('Error getting restaurant by name:', error);
+        res.status(500).json({ 
+            message: 'Ошибка получения ресторана',
+            details: error.message 
+        });
     }
 };
 
@@ -357,6 +387,7 @@ module.exports = {
     createRestaurant,
     getAllRestaurants,
     getRestaurant,
+    getRestaurantByName,
     getRestaurantBySlug,
     updateRestaurant,
     deleteRestaurant,

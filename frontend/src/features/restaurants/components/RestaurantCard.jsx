@@ -76,7 +76,7 @@ export const RestaurantCard = ({
     category
 }) => {
     // Используем функцию getCategoryName для отображения категории
-    const displayCategory = category ? RESTAURANT_CATEGORIES[category] || cuisine : cuisine;
+    const displayCategory = category ? getCategoryName(category) : cuisine;
 
     return (
         <motion.div

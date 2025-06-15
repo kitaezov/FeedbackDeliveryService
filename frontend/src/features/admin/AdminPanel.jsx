@@ -118,6 +118,8 @@ const AdminPanel = ({ user }) => {
     const [blockReason, setBlockReason] = useState('');
     const [userToUnblock, setUserToUnblock] = useState(null);
     const [showUnblockModal, setShowUnblockModal] = useState(false);
+    const [showRestaurantSelect, setShowRestaurantSelect] = useState(false);
+    const [selectedUserId, setSelectedUserId] = useState(null);
     
     // После авторизации и проверки прав загружаем заблокированных пользователей
     useEffect(() => {
@@ -191,9 +193,33 @@ const AdminPanel = ({ user }) => {
         setLoading(prev => ({ ...prev, reviews: true }));
         try {
             const response = await api.get('/reviews');
-            setReviews(response.data.reviews || []);
+            console.log('Reviews API response:', response.data);
+            
+            // Handle different response formats
+            let reviewsData = [];
+            
+            if (response.data && Array.isArray(response.data)) {
+                // Direct array format
+                reviewsData = response.data;
+            } else if (response.data && response.data.reviews) {
+                if (Array.isArray(response.data.reviews)) {
+                    // Format: { reviews: [...] }
+                    reviewsData = response.data.reviews;
+                } else if (response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
+                    // Format: { reviews: { reviews: [...] } }
+                    reviewsData = response.data.reviews.reviews;
+                } else {
+                    // Unknown format but not null
+                    console.warn('Unknown reviews format:', response.data);
+                    reviewsData = [];
+                }
+            }
+            
+            console.log('Processed reviews data:', reviewsData);
+            setReviews(reviewsData);
         } catch (error) {
             console.error('Error fetching reviews:', error);
+            setReviews([]); // Set empty array on error
         } finally {
             setLoading(prev => ({ ...prev, reviews: false }));
         }
@@ -204,9 +230,27 @@ const AdminPanel = ({ user }) => {
         setLoading(prev => ({ ...prev, deletedReviews: true }));
         try {
             const response = await api.get('/admin/deleted-reviews');
-            setDeletedReviews(response.data.deletedReviews || []);
+            console.log('Deleted reviews API response:', response.data);
+            
+            // Handle different response formats
+            let deletedReviewsData = [];
+            
+            if (response.data && Array.isArray(response.data)) {
+                deletedReviewsData = response.data;
+            } else if (response.data && response.data.deletedReviews) {
+                if (Array.isArray(response.data.deletedReviews)) {
+                    deletedReviewsData = response.data.deletedReviews;
+                } else {
+                    console.warn('Unknown deleted reviews format:', response.data);
+                    deletedReviewsData = [];
+                }
+            }
+            
+            console.log('Processed deleted reviews data:', deletedReviewsData);
+            setDeletedReviews(deletedReviewsData);
         } catch (error) {
             console.error('Error fetching deleted reviews:', error);
+            setDeletedReviews([]); // Set empty array on error
         } finally {
             setLoading(prev => ({ ...prev, deletedReviews: false }));
         }
@@ -312,6 +356,13 @@ const AdminPanel = ({ user }) => {
 
         if (newRoleLevel >= currentUserLevel) {
             alert('Вы не можете назначить роль выше или равную вашей собственной');
+            return;
+        }
+
+        // If selecting manager role, show restaurant selection
+        if (newRole === 'manager' && !restaurant_id) {
+            setSelectedUserId(userId);
+            setShowRestaurantSelect(true);
             return;
         }
 
@@ -671,150 +722,160 @@ const AdminPanel = ({ user }) => {
     );
 
     // Рендеринг таблицы отзывов (аналогичные анимации)
-    const renderReviewsTable = () => (
-        <div className="overflow-x-auto mt-2 sm:mt-4">
-            <div className="flex justify-between mb-3 sm:mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Управление отзывами</h2>
-            </div>
-            
-            {loading.reviews ? (
-                <div className="flex justify-center py-6 sm:py-10">
-                    <LoadingSpinner />
+    const renderReviewsTable = () => {
+        // Ensure reviews is always an array
+        const reviewsArray = Array.isArray(reviews) ? reviews : [];
+        
+        return (
+            <div className="overflow-x-auto mt-2 sm:mt-4">
+                <div className="flex justify-between mb-3 sm:mb-4">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Управление отзывами</h2>
                 </div>
-            ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-900">
-                                <tr>
-                                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Автор</th>
-                                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Текст</th>
-                                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ресторан</th>
-                                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Дата</th>
-                                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {reviews.map(review => (
-                                    <tr key={review.id}>
-                                        <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
-                                            <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{review.user_name}</div>
-                                        </td>
-                                        <td className="px-2 sm:px-6 py-2 sm:py-4">
-                                            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-[120px] sm:max-w-xs truncate">
-                                                {review.text || review.comment}
-                                            </div>
-                                            <div className="sm:hidden mt-1 text-xs text-gray-400">
-                                                {review.restaurant_name || '-'} • 
-                                                {review.created_at ? new Date(review.created_at).toLocaleDateString() : 
-                                                review.date ? new Date(review.date).toLocaleDateString() : 'Дата не указана'}
-                                            </div>
-                                        </td>
-                                        <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">{review.restaurant_name || '-'}</div>
-                                        </td>
-                                        <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                {review.created_at ? new Date(review.created_at).toLocaleDateString() : 
-                                                review.date ? new Date(review.date).toLocaleDateString() : 'Дата не указана'}
-                                            </div>
-                                        </td>
-                                        <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
-                                            <button
-                                                onClick={() => openDeleteModal(review.id)}
-                                                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                
-                                {reviews.length === 0 && (
-                                    <tr>
-                                        <td colSpan="5" className="px-6 py-4 text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                                            Нет отзывов для отображения
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                
+                {loading.reviews ? (
+                    <div className="flex justify-center py-6 sm:py-10">
+                        <LoadingSpinner />
                     </div>
-                </div>
-            )}
-        </div>
-    );
+                ) : (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-900">
+                                    <tr>
+                                        <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Автор</th>
+                                        <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Текст</th>
+                                        <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ресторан</th>
+                                        <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Дата</th>
+                                        <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {reviewsArray.map(review => (
+                                        <tr key={review.id}>
+                                            <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
+                                                <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{review.user_name}</div>
+                                            </td>
+                                            <td className="px-2 sm:px-6 py-2 sm:py-4">
+                                                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-[120px] sm:max-w-xs truncate">
+                                                    {review.text || review.comment}
+                                                </div>
+                                                <div className="sm:hidden mt-1 text-xs text-gray-400">
+                                                    {review.restaurant_name || '-'} • 
+                                                    {review.created_at ? new Date(review.created_at).toLocaleDateString() : 
+                                                    review.date ? new Date(review.date).toLocaleDateString() : 'Дата не указана'}
+                                                </div>
+                                            </td>
+                                            <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">{review.restaurant_name || '-'}</div>
+                                            </td>
+                                            <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {review.created_at ? new Date(review.created_at).toLocaleDateString() : 
+                                                    review.date ? new Date(review.date).toLocaleDateString() : 'Дата не указана'}
+                                                </div>
+                                            </td>
+                                            <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
+                                                <button
+                                                    onClick={() => openDeleteModal(review.id)}
+                                                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    
+                                    {reviewsArray.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-4 text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                                                Нет отзывов для отображения
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // Рендеринг таблицы удаленных отзывов (аналогичные анимации)
-    const renderDeletedReviewsTable = () => (
-        <div className="overflow-x-auto mt-2 sm:mt-4">
-            <div className="flex justify-between mb-3 sm:mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Удаленные отзывы</h2>
-            </div>
-            
-            {loading.deletedReviews ? (
-                <div className="flex justify-center py-6 sm:py-10">
-                    <LoadingSpinner />
+    const renderDeletedReviewsTable = () => {
+        // Ensure deletedReviews is always an array
+        const deletedReviewsArray = Array.isArray(deletedReviews) ? deletedReviews : [];
+        
+        return (
+            <div className="overflow-x-auto mt-2 sm:mt-4">
+                <div className="flex justify-between mb-3 sm:mb-4">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Удаленные отзывы</h2>
                 </div>
-            ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-900">
-                                <tr>
-                                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Пользователь</th>
-                                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ресторан</th>
-                                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Комментарий</th>
-                                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Причина</th>
-                                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Удалено</th>
-                                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Удалил</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {deletedReviews.map(review => (
-                                    <tr key={review.id}>
-                                        <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
-                                            <div className="text-xs sm:text-sm text-gray-900 dark:text-white">{review.user_name}</div>
-                                            <div className="sm:hidden text-xs text-gray-500">{review.restaurant_name}</div>
-                                        </td>
-                                        <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900 dark:text-white">{review.restaurant_name}</div>
-                                        </td>
-                                        <td className="px-2 sm:px-6 py-2 sm:py-4">
-                                            <div className="text-xs sm:text-sm text-gray-900 dark:text-white max-w-[120px] sm:max-w-xs truncate">{review.comment}</div>
-                                            <div className="sm:hidden mt-1 text-xs text-gray-400">
-                                                {review.deleted_at ? new Date(review.deleted_at).toLocaleString() : 'Дата не указана'} • 
-                                                {review.admin_name}
-                                            </div>
-                                        </td>
-                                        <td className="px-2 sm:px-6 py-2 sm:py-4">
-                                            <div className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-400 max-w-[120px] sm:max-w-xs truncate">{review.deletion_reason}</div>
-                                        </td>
-                                        <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                {review.deleted_at ? new Date(review.deleted_at).toLocaleString() : 'Дата не указана'}
-                                            </div>
-                                        </td>
-                                        <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">{review.admin_name}</div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                
-                                {deletedReviews.length === 0 && (
-                                    <tr>
-                                        <td colSpan="6" className="px-6 py-4 text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                                            Нет удаленных отзывов
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                
+                {loading.deletedReviews ? (
+                    <div className="flex justify-center py-6 sm:py-10">
+                        <LoadingSpinner />
                     </div>
-                </div>
-            )}
-        </div>
-    );
+                ) : (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-900">
+                                    <tr>
+                                        <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Пользователь</th>
+                                        <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ресторан</th>
+                                        <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Комментарий</th>
+                                        <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Причина</th>
+                                        <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Удалено</th>
+                                        <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Удалил</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {deletedReviewsArray.map(review => (
+                                        <tr key={review.id}>
+                                            <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
+                                                <div className="text-xs sm:text-sm text-gray-900 dark:text-white">{review.user_name}</div>
+                                                <div className="sm:hidden text-xs text-gray-500">{review.restaurant_name}</div>
+                                            </td>
+                                            <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900 dark:text-white">{review.restaurant_name}</div>
+                                            </td>
+                                            <td className="px-2 sm:px-6 py-2 sm:py-4">
+                                                <div className="text-xs sm:text-sm text-gray-900 dark:text-white max-w-[120px] sm:max-w-xs truncate">{review.comment}</div>
+                                                <div className="sm:hidden mt-1 text-xs text-gray-400">
+                                                    {review.deleted_at ? new Date(review.deleted_at).toLocaleString() : 'Дата не указана'} • 
+                                                    {review.admin_name}
+                                                </div>
+                                            </td>
+                                            <td className="px-2 sm:px-6 py-2 sm:py-4">
+                                                <div className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-400 max-w-[120px] sm:max-w-xs truncate">{review.deletion_reason}</div>
+                                            </td>
+                                            <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {review.deleted_at ? new Date(review.deleted_at).toLocaleString() : 'Дата не указана'}
+                                                </div>
+                                            </td>
+                                            <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">{review.admin_name}</div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    
+                                    {deletedReviewsArray.length === 0 && (
+                                        <tr>
+                                            <td colSpan="6" className="px-6 py-4 text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                                                Нет удаленных отзывов
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // Render blocked users table
     const renderBlockedUsersTable = () => (
@@ -1236,6 +1297,89 @@ const AdminPanel = ({ user }) => {
         </AnimatePresence>
     );
 
+    // Add restaurant selection modal component
+    const RestaurantSelectModal = ({ isOpen, onClose, onSelect }) => {
+        const [modalRestaurants, setModalRestaurants] = useState([]);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState(null);
+
+        useEffect(() => {
+            const fetchRestaurants = async () => {
+                if (!isOpen) return;
+                
+                setLoading(true);
+                setError(null);
+                try {
+                    const response = await api.get('restaurants');
+                    console.log('Restaurants response:', response.data);
+                    setModalRestaurants(response.data.restaurants || []);
+                } catch (error) {
+                    console.error('Error fetching restaurants:', error);
+                    setError('Ошибка загрузки списка ресторанов');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchRestaurants();
+        }, [isOpen]);
+
+        if (!isOpen) return null;
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                            Выберите ресторан
+                        </h3>
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
+                        >
+                            <span className="text-2xl">×</span>
+                        </button>
+                    </div>
+                    
+                    {loading ? (
+                        <div className="flex justify-center py-4">
+                            <LoadingSpinner />
+                        </div>
+                    ) : error ? (
+                        <div className="text-red-500 text-center py-4">
+                            {error}
+                        </div>
+                    ) : modalRestaurants.length === 0 ? (
+                        <div className="text-gray-500 dark:text-gray-400 text-center py-4">
+                            Нет доступных ресторанов
+                        </div>
+                    ) : (
+                        <div className="max-h-60 overflow-y-auto">
+                            {modalRestaurants.map(restaurant => (
+                                <button
+                                    key={restaurant.id}
+                                    onClick={() => onSelect(restaurant)}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md mb-1"
+                                >
+                                    <span className="text-gray-900 dark:text-white">{restaurant.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    
+                    <div className="mt-4 flex justify-end">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
+                        >
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="container mx-auto px-4 py-4 sm:py-8">
             <div className="mb-4 sm:mb-6">
@@ -1257,6 +1401,18 @@ const AdminPanel = ({ user }) => {
             {renderDeleteRestaurantModal()}
             {renderBlockUserModal()}
             {renderUnblockUserModal()}
+            <RestaurantSelectModal
+                isOpen={showRestaurantSelect}
+                onClose={() => {
+                    setShowRestaurantSelect(false);
+                    setSelectedUserId(null);
+                }}
+                onSelect={(restaurant) => {
+                    handleUpdateRole(selectedUserId, 'manager', restaurant.id);
+                    setShowRestaurantSelect(false);
+                    setSelectedUserId(null);
+                }}
+            />
         </div>
     );
 };

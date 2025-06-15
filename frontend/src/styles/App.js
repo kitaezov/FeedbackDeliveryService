@@ -140,10 +140,17 @@ const App = () => {
             
             if (response.data && response.data.reviews && Array.isArray(response.data.reviews)) {
                 reviewsData = response.data.reviews;
+            } else if (response.data && response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
+                // Формат: { reviews: { reviews: [...] } }
+                reviewsData = response.data.reviews.reviews;
             } else if (Array.isArray(response.data)) {
                 reviewsData = response.data;
+            } else if (response.data && response.data.reviews === null) {
+                // Пустой результат
+                reviewsData = [];
             } else {
                 console.warn('Непредвиденная структура ответа от АПИ:', response.data);
+                reviewsData = [];
             }
             
             console.log('Разобранные данные отзывов:', reviewsData);

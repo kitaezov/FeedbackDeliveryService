@@ -16,7 +16,12 @@ export const fixApiUrl = (url) => {
         return url;
     }
     
-    // Удалить ведущий слэш из всех путей, так как baseURL уже включает в себя слэш в конце
+    // Удалить префикс /api если он есть, так как он уже включен в baseURL
+    if (url.startsWith('/api/')) {
+        url = url.substring(4);
+    }
+    
+    // Удалить ведущий слэш из всех путей
     return url.startsWith('/') ? url.substring(1) : url;
 };
 

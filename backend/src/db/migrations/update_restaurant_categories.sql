@@ -1,5 +1,12 @@
--- First, modify the category column to be ENUM if it's not already
-ALTER TABLE restaurants MODIFY COLUMN category ENUM('italian', 'asian', 'russian', 'seafood', 'french', 'georgian', 'mexican', 'american') NOT NULL DEFAULT 'russian';
+-- Сначала обновим все существующие записи на значение по умолчанию
+UPDATE restaurants SET category = 'russian';
+
+-- Теперь обновим тип ENUM для категорий ресторанов
+ALTER TABLE restaurants 
+MODIFY COLUMN category ENUM(
+    'italian', 'asian', 'russian', 'seafood',
+    'french', 'georgian', 'mexican', 'american'
+) NOT NULL DEFAULT 'russian';
 
 -- Update restaurants with Italian cuisine
 UPDATE restaurants 

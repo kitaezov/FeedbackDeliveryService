@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { API_BASE } from '../config';
+import api from '../utils/api';
 
 const RestaurantSelector = ({ onSelect, selectedRestaurantId, isOpen, onClose }) => {
     const [restaurants, setRestaurants] = useState([]);
@@ -10,11 +9,15 @@ const RestaurantSelector = ({ onSelect, selectedRestaurantId, isOpen, onClose })
     useEffect(() => {
         const fetchRestaurants = async () => {
             try {
-                const response = await axios.get(`${API_BASE}/api/restaurants`);
-                setRestaurants(response.data);
+                const response = await api.get('/restaurants');
+                console.log('Restaurant response:', response.data);
+                const restaurantsData = Array.isArray(response.data) ? response.data : 
+                                      (response.data.restaurants || response.data.data || []);
+                setRestaurants(restaurantsData);
                 setLoading(false);
             } catch (err) {
-                setError('Failed to load restaurants');
+                console.error('Error loading restaurants:', err);
+                setError('Ошибка загрузки списка ресторанов');
                 setLoading(false);
             }
         };
@@ -28,12 +31,12 @@ const RestaurantSelector = ({ onSelect, selectedRestaurantId, isOpen, onClose })
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Выберите ресторан</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Выберите ресторан</h3>
                     <button
                         onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700"
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                     >
                         ✕
                     </button>
@@ -41,10 +44,14 @@ const RestaurantSelector = ({ onSelect, selectedRestaurantId, isOpen, onClose })
 
                 {loading ? (
                     <div className="text-center py-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100 mx-auto"></div>
                     </div>
                 ) : error ? (
                     <div className="text-red-500 text-center py-4">{error}</div>
+                ) : restaurants.length === 0 ? (
+                    <div className="text-gray-500 dark:text-gray-400 text-center py-4">
+                        Нет доступных ресторанов
+                    </div>
                 ) : (
                     <div className="max-h-96 overflow-y-auto">
                         {restaurants.map((restaurant) => (
@@ -54,16 +61,18 @@ const RestaurantSelector = ({ onSelect, selectedRestaurantId, isOpen, onClose })
                                     onSelect(restaurant);
                                     onClose();
                                 }}
-                                className={`w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors rounded-md mb-2 ${
+                                className={`w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md mb-2 ${
                                     selectedRestaurantId === restaurant.id
-                                        ? 'bg-blue-50 border border-blue-200'
+                                        ? 'bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700'
                                         : ''
                                 }`}
                             >
-                                <div className="font-medium">{restaurant.name}</div>
-                                <div className="text-sm text-gray-500">
-                                    {restaurant.address}
-                                </div>
+                                <div className="font-medium text-gray-900 dark:text-white">{restaurant.name}</div>
+                                {restaurant.address && (
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        {restaurant.address}
+                                    </div>
+                                )}
                             </button>
                         ))}
                     </div>

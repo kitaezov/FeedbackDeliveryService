@@ -7,12 +7,10 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Отладочная информация о подключении к базе данных
-if (process.env.DEBUG === 'true') {
-    console.log('Информация о подключении к базе данных:');
-    console.log('Хост:', process.env.DB_HOST || 'localhost');
-    console.log('Пользователь:', process.env.DB_USER || 'root');
-    console.log('База данных:', process.env.DB_NAME || 'feedback');
-}
+console.log('Информация о подключении к базе данных:');
+console.log('Хост:', process.env.DB_HOST || 'localhost');
+console.log('Пользователь:', process.env.DB_USER || 'root');
+console.log('База данных:', process.env.DB_NAME || 'feedback');
 
 // Создаем пул подключений
 const pool = mysql.createPool({
@@ -22,20 +20,50 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME || 'feedback',
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    debug: true,
+    multipleStatements: true
 });
 
 // Тестирование подключения к базе данных
 (async () => {
     try {
-        if (process.env.DEBUG === 'true') {
-            console.log('Тестирование подключения к базе данных...');
-            const connection = await pool.getConnection();
-            console.log('Подключение к базе данных успешно!');
-            connection.release();
-        }
+        console.log('Тестирование подключения к базе данных...');
+        const connection = await pool.getConnection();
+        console.log('Подключение к базе данных успешно!');
+        
+        // Проверяем существование базы данных
+        const [databases] = await connection.query('SHOW DATABASES');
+        console.log('Существующие базы данных:', databases.map(db => db.Database));
+        
+        // Проверяем существование таблиц
+        const [tables] = await connection.query('SHOW TABLES');
+        console.log('Существующие таблицы:', tables);
+        
+        connection.release();
     } catch (error) {
         console.error('Ошибка подключения к базе данных:', error);
+        // Пробуем создать базу данных, если она не существует
+        try {
+            const rootPool = mysql.createPool({
+                host: process.env.DB_HOST || 'localhost',
+                user: process.env.DB_USER || 'root',
+                password: process.env.DB_PASSWORD || '123123',
+                waitForConnections: true,
+                connectionLimit: 10,
+                queueLimit: 0
+            });
+            
+            await rootPool.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'feedback'}`);
+            console.log('База данных создана успешно');
+            
+            // Переподключаемся к созданной базе данных
+            const connection = await pool.getConnection();
+            console.log('Повторное подключение успешно');
+            connection.release();
+        } catch (createError) {
+            console.error('Ошибка создания базы данных:', createError);
+        }
     }
 })();
 

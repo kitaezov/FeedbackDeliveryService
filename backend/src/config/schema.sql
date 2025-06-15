@@ -18,4 +18,25 @@ CREATE TABLE IF NOT EXISTS restaurants (
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    restaurant_id INT,
+    restaurant_name VARCHAR(255) NOT NULL,
+    rating INT NOT NULL,
+    comment TEXT NOT NULL,
+    food_rating INT DEFAULT 0,
+    service_rating INT DEFAULT 0,
+    atmosphere_rating INT DEFAULT 0,
+    price_rating INT DEFAULT 0,
+    cleanliness_rating INT DEFAULT 0,
+    likes INT DEFAULT 0,
+    has_receipt BOOLEAN DEFAULT FALSE,
+    receipt_photo VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
 ); 

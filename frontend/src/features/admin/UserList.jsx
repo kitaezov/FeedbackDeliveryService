@@ -52,51 +52,54 @@ const buttonVariants = {
     }
 };
 
+// Helper function to get restaurant initials
+const getRestaurantInitials = (name) => {
+    if (!name) return '';
+    return name
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase())
+        .join('');
+};
+
 const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
     const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortField, setSortField] = useState('id');
     const [sortDirection, setSortDirection] = useState('asc');
     const [showRestaurantSelector, setShowRestaurantSelector] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState(null);
     const [pendingRole, setPendingRole] = useState(null);
-    const [restaurants, setRestaurants] = useState({});
+    const [restaurants, setRestaurants] = useState([]);
 
-    // Fetch users data
-    const fetchUsers = async () => {
-        setLoading(prev => ({ ...prev, users: true }));
-        try {
-            const response = await api.get('/admin/users');
-            setUsers(response.data.users || []);
-
-            // Fetch restaurant details for managers
-            const managerUsers = response.data.users.filter(u => u.role === 'manager' && u.restaurant_id);
-            const restaurantIds = [...new Set(managerUsers.map(u => u.restaurant_id))];
-            
-            if (restaurantIds.length > 0) {
-                const restaurantPromises = restaurantIds.map(id => 
-                    api.get(`/restaurants/${id}`)
-                        .then(res => [id, res.data])
-                        .catch(() => [id, null])
-                );
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+        setLoading(true);
+                const [usersResponse, restaurantsResponse] = await Promise.all([
+                    api.get('/admin/users'),
+                    api.get('/admin/restaurants')
+                ]);
                 
-                const restaurantResults = await Promise.all(restaurantPromises);
-                const restaurantMap = Object.fromEntries(
-                    restaurantResults.filter(([, data]) => data !== null)
-                );
-                setRestaurants(restaurantMap);
-            }
+                // Map restaurants to users
+                const usersWithRestaurants = usersResponse.data.users.map(user => {
+                    const restaurant = restaurantsResponse.data.restaurants?.find(r => r.id === user.restaurant_id);
+                    return {
+                        ...user,
+                        restaurant: restaurant
+                    };
+                });
+                
+                setUsers(usersWithRestaurants);
+                setRestaurants(restaurantsResponse.data.restaurants || []);
         } catch (error) {
-            console.error('Error fetching users:', error);
+                console.error('Error fetching users:', error);
         } finally {
-            setLoading(prev => ({ ...prev, users: false }));
+            setLoading(false);
         }
     };
 
-    // Load users on component mount
-    useEffect(() => {
-        fetchUsers();
+        fetchData();
     }, []);
 
     // Filter users based on search query
@@ -156,11 +159,46 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         }
     };
 
-    const getRestaurantName = (restaurantId) => {
-        if (!restaurantId || !restaurants[restaurantId]) return '';
-        const restaurant = restaurants[restaurantId];
-        return restaurant.name.split(' ').map(word => word[0]).join('');
+    // Format role display with restaurant name for managers
+    const formatRoleDisplay = (userItem) => {
+        if (userItem.role === 'manager' && userItem.restaurant) {
+            return (
+                <div className="flex flex-col gap-1">
+                    <div className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        Менеджер
+                    </div>
+                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                            {userItem.restaurant.name || 'Ресторан не указан'}
+                        </span>
+                    </div>
+                </div>
+            );
+        }
+        return (
+            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                ${userItem.role === 'head_admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
+                userItem.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
+                userItem.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
+                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
+            >
+                {userItem.role === 'head_admin' ? 'Гл. Админ' :
+                 userItem.role === 'admin' ? 'Админ' :
+                 userItem.role === 'manager' ? 'Менеджер' : 'Пользователь'}
+            </div>
+        );
     };
+
+    if (loading) {
+        return (
+            <div className="flex justify-center py-8">
+                <LoadingSpinner />
+            </div>
+        );
+    }
 
     return (
         <motion.div 
@@ -176,7 +214,9 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                     variants={buttonVariants}
                     whileHover="hover"
                     whileTap="tap"
-                    onClick={fetchUsers}
+                    onClick={() => {
+                        // Implement refresh logic
+                    }}
                     className="flex items-center text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                     title="Обновить список"
                 >
@@ -185,11 +225,6 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                 </motion.button>
             </div>
             
-            {loading.users ? (
-                <div className="flex justify-center py-6 sm:py-8">
-                    <LoadingSpinner />
-                </div>
-            ) : (
                 <div className="overflow-x-auto">
                     <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
@@ -272,23 +307,16 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                                             {userItem.email}
                                         </td>
                                         <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm">
-                                            <div className="flex flex-col items-start gap-1">
-                                                <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                                    ${userItem.role === 'head_admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
-                                                    userItem.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
-                                                    userItem.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
-                                                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
-                                                >
-                                                    {userItem.role === 'head_admin' ? 'Главный админ' : 
-                                                    userItem.role === 'admin' ? 'Админ' : 
-                                                    userItem.role === 'manager' ? 'Менеджер' : 'Пользователь'}
-                                                </span>
-                                                {userItem.role === 'manager' && userItem.restaurant_id && (
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {getRestaurantName(userItem.restaurant_id)}
-                                                    </span>
-                                                )}
-                                            </div>
+                                        <div className="flex flex-col items-start gap-1">
+                                            <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                                ${userItem.role === 'head_admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
+                                                userItem.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
+                                                userItem.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
+                                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
+                                            >
+                                                {formatRoleDisplay(userItem)}
+                                            </span>
+                                        </div>
                                         </td>
                                         <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-xs sm:text-sm">
                                             {userItem.is_blocked === 1 ? (
@@ -310,7 +338,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                                                 <div className="inline-block">
                                                     <select 
                                                         value={userItem.role}
-                                                        onChange={(e) => handleRoleChange(userItem.id, e.target.value)}
+                                                    onChange={(e) => handleRoleChange(userItem.id, e.target.value)}
                                                         className="border-gray-300 dark:border-gray-700 focus:ring-blue-500 focus:border-blue-500 block w-20 sm:w-24 text-xs sm:text-sm rounded-md dark:bg-gray-700 dark:text-white"
                                                     >
                                                         <option value="user">Пользователь</option>
@@ -377,7 +405,6 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                         </tbody>
                     </table>
                 </div>
-            )}
 
             {/* Restaurant selector modal */}
             <RestaurantSelector

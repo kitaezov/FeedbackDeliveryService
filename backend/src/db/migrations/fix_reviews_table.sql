@@ -1,12 +1,13 @@
+-- CAUTION: These DROP statements will delete all data. Only uncomment if you want to recreate the tables from scratch.
 -- Drop dependent tables first
-DROP TABLE IF EXISTS review_votes;
-DROP TABLE IF EXISTS review_photos;
-DROP TABLE IF EXISTS manager_responses;
-DROP TABLE IF EXISTS error_reports;
-DROP TABLE IF EXISTS deleted_reviews;
+-- DROP TABLE IF EXISTS review_votes;
+-- DROP TABLE IF EXISTS review_photos;
+-- DROP TABLE IF EXISTS manager_responses;
+-- DROP TABLE IF EXISTS error_reports;
+-- DROP TABLE IF EXISTS deleted_reviews;
 
 -- Drop the reviews table
-DROP TABLE IF EXISTS reviews;
+-- DROP TABLE IF EXISTS reviews;
 
 -- Create the reviews table with the correct structure
 CREATE TABLE IF NOT EXISTS reviews (
@@ -29,9 +30,9 @@ CREATE TABLE IF NOT EXISTS reviews (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Create indexes for better performance
-CREATE INDEX reviews_user_id_idx ON reviews(user_id);
-CREATE INDEX reviews_restaurant_name_idx ON reviews(restaurant_name);
-CREATE INDEX reviews_created_at_idx ON reviews(created_at);
+CREATE INDEX IF NOT EXISTS reviews_user_id_idx ON reviews(user_id);
+CREATE INDEX IF NOT EXISTS reviews_restaurant_name_idx ON reviews(restaurant_name);
+CREATE INDEX IF NOT EXISTS reviews_created_at_idx ON reviews(created_at);
 
 -- Recreate dependent tables
 CREATE TABLE IF NOT EXISTS review_votes (

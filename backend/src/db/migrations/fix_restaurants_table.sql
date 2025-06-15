@@ -1,19 +1,19 @@
 -- Disable foreign key checks to avoid constraint issues
-SET FOREIGN_KEY_CHECKS = 0;
+-- SET FOREIGN_KEY_CHECKS = 0;
 
 -- Drop dependent tables first
-DROP TABLE IF EXISTS deleted_reviews;
-DROP TABLE IF EXISTS review_votes;
-DROP TABLE IF EXISTS review_photos;
-DROP TABLE IF EXISTS manager_responses;
-DROP TABLE IF EXISTS error_reports;
-DROP TABLE IF EXISTS reviews;
+-- DROP TABLE IF EXISTS deleted_reviews;
+-- DROP TABLE IF EXISTS review_votes;
+-- DROP TABLE IF EXISTS review_photos;
+-- DROP TABLE IF EXISTS manager_responses;
+-- DROP TABLE IF EXISTS error_reports;
+-- DROP TABLE IF EXISTS reviews;
 
 -- Drop and recreate the restaurants table with the correct structure
-DROP TABLE IF EXISTS restaurants;
+-- DROP TABLE IF EXISTS restaurants;
 
 -- Create the restaurants table with all required columns
-CREATE TABLE restaurants (
+CREATE TABLE IF NOT EXISTS restaurants (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     category ENUM('italian', 'asian', 'russian', 'seafood', 'french', 'georgian', 'mexican', 'american') NOT NULL DEFAULT 'russian',
@@ -36,10 +36,47 @@ CREATE TABLE restaurants (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Add indexes for better performance
-CREATE INDEX idx_restaurants_name ON restaurants(name);
-CREATE INDEX idx_restaurants_category ON restaurants(category);
-CREATE INDEX idx_restaurants_slug ON restaurants(slug);
+-- Add indexes for better performance (проверка существования через условие)
+-- MySQL не поддерживает синтаксис IF NOT EXISTS для индексов, поэтому используем условную логику
+
+-- Проверяем существование индекса idx_restaurants_name
+SET @index_exists_name = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+                         WHERE table_schema = DATABASE() 
+                         AND table_name = 'restaurants' 
+                         AND index_name = 'idx_restaurants_name');
+                         
+SET @create_index_name = IF(@index_exists_name = 0, 
+                         'CREATE INDEX idx_restaurants_name ON restaurants(name)', 
+                         'SELECT 1');
+PREPARE stmt_name FROM @create_index_name;
+EXECUTE stmt_name;
+DEALLOCATE PREPARE stmt_name;
+
+-- Проверяем существование индекса idx_restaurants_category
+SET @index_exists_category = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+                             WHERE table_schema = DATABASE() 
+                             AND table_name = 'restaurants' 
+                             AND index_name = 'idx_restaurants_category');
+                             
+SET @create_index_category = IF(@index_exists_category = 0, 
+                             'CREATE INDEX idx_restaurants_category ON restaurants(category)', 
+                             'SELECT 1');
+PREPARE stmt_category FROM @create_index_category;
+EXECUTE stmt_category;
+DEALLOCATE PREPARE stmt_category;
+
+-- Проверяем существование индекса idx_restaurants_slug
+SET @index_exists_slug = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+                         WHERE table_schema = DATABASE() 
+                         AND table_name = 'restaurants' 
+                         AND index_name = 'idx_restaurants_slug');
+                         
+SET @create_index_slug = IF(@index_exists_slug = 0, 
+                         'CREATE INDEX idx_restaurants_slug ON restaurants(slug)', 
+                         'SELECT 1');
+PREPARE stmt_slug FROM @create_index_slug;
+EXECUTE stmt_slug;
+DEALLOCATE PREPARE stmt_slug;
 
 -- Add column comments
 ALTER TABLE restaurants
@@ -65,7 +102,7 @@ MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Дата �
 MODIFY COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Дата обновления';
 
 -- Recreate the reviews table
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     restaurant_id INT,
@@ -86,13 +123,48 @@ CREATE TABLE reviews (
     FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Create indexes for the reviews table
-CREATE INDEX idx_reviews_user_id ON reviews(user_id);
-CREATE INDEX idx_reviews_restaurant_id ON reviews(restaurant_id);
-CREATE INDEX idx_reviews_restaurant_name ON reviews(restaurant_name);
+-- Create indexes for the reviews table (проверка существования через условие)
+-- Проверяем существование индекса idx_reviews_user_id
+SET @index_exists_user = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+                         WHERE table_schema = DATABASE() 
+                         AND table_name = 'reviews' 
+                         AND index_name = 'idx_reviews_user_id');
+                         
+SET @create_index_user = IF(@index_exists_user = 0, 
+                         'CREATE INDEX idx_reviews_user_id ON reviews(user_id)', 
+                         'SELECT 1');
+PREPARE stmt_user FROM @create_index_user;
+EXECUTE stmt_user;
+DEALLOCATE PREPARE stmt_user;
+
+-- Проверяем существование индекса idx_reviews_restaurant_id
+SET @index_exists_rest = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+                         WHERE table_schema = DATABASE() 
+                         AND table_name = 'reviews' 
+                         AND index_name = 'idx_reviews_restaurant_id');
+                         
+SET @create_index_rest = IF(@index_exists_rest = 0, 
+                         'CREATE INDEX idx_reviews_restaurant_id ON reviews(restaurant_id)', 
+                         'SELECT 1');
+PREPARE stmt_rest FROM @create_index_rest;
+EXECUTE stmt_rest;
+DEALLOCATE PREPARE stmt_rest;
+
+-- Проверяем существование индекса idx_reviews_restaurant_name
+SET @index_exists_rest_name = (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS 
+                              WHERE table_schema = DATABASE() 
+                              AND table_name = 'reviews' 
+                              AND index_name = 'idx_reviews_restaurant_name');
+                              
+SET @create_index_rest_name = IF(@index_exists_rest_name = 0, 
+                              'CREATE INDEX idx_reviews_restaurant_name ON reviews(restaurant_name)', 
+                              'SELECT 1');
+PREPARE stmt_rest_name FROM @create_index_rest_name;
+EXECUTE stmt_rest_name;
+DEALLOCATE PREPARE stmt_rest_name;
 
 -- Insert sample restaurants
-INSERT INTO restaurants (name, category, cuisine_type, address, description, image_url, rating, slug, is_active)
+INSERT IGNORE INTO restaurants (name, category, cuisine_type, address, description, image_url, rating, slug, is_active)
 VALUES 
     ('Итальянский дворик', 'italian', 'Итальянская кухня', 'ул. Гастрономическая, 12', 'Уютный ресторан итальянской кухни с аутентичными рецептами', 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4', 4.8, 'italyanskiy-dvorik', true),
     ('Азиатский бриз', 'asian', 'Азиатская кухня', 'пр. Кулинаров, 45', 'Ресторан паназиатской кухни с широким выбором суши и вок', 'https://images.unsplash.com/photo-1552566626-52f8b828add9', 4.7, 'aziatskiy-briz', true),
@@ -112,4 +184,4 @@ ON DUPLICATE KEY UPDATE
     is_active = VALUES(is_active);
 
 -- Re-enable foreign key checks
-SET FOREIGN_KEY_CHECKS = 1; 
+-- SET FOREIGN_KEY_CHECKS = 1; 

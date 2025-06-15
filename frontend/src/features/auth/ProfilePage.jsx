@@ -218,56 +218,70 @@ const ProfilePage = ({ onLogout }) => {
     useEffect(() => {
         const fetchUserReviews = async () => {
             try {
-                // Запрос к API для получения всех отзывов
-                const response = await api.get('/reviews');
+                console.log('Загрузка отзывов пользователя...');
+                // Запрос к API для получения отзывов пользователя с указанием userId
+                const response = await api.get(`/reviews?userId=${user.id}`);
 
-                console.log('Ответ от сервера с отзывами:', response.data);
+                console.log('Ответ от сервера с отзывами пользователя:', response.data);
                 
-                // Получаем массив отзывов из ответа сервера с учетом разных возможных форматов
+                // Получаем массив отзывов из ответа сервера
                 let reviewsData = [];
                 
-                if (response.data && response.data.reviews && Array.isArray(response.data.reviews)) {
-                    // Формат: { reviews: [...] }
-                    reviewsData = response.data.reviews;
-                } else if (response.data && response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
-                    // Формат: { reviews: { reviews: [...] } }
-                    reviewsData = response.data.reviews.reviews;
-                } else if (Array.isArray(response.data)) {
-                    // Формат: [...] (массив напрямую)
+                if (Array.isArray(response.data)) {
+                    // Новый формат: API возвращает массив напрямую
                     reviewsData = response.data;
+                    console.log('Получен массив отзывов напрямую');
+                } else if (response.data && Array.isArray(response.data.reviews)) {
+                    // Старый формат: { reviews: [...] }
+                    reviewsData = response.data.reviews;
+                    console.log('Формат данных: { reviews: [...] }');
+                } else if (response.data && response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
+                    // Старый формат вложенности: { reviews: { reviews: [...] } }
+                    reviewsData = response.data.reviews.reviews;
+                    console.log('Формат данных: { reviews: { reviews: [...] } }');
                 } else if (response.data && response.data.reviews === null) {
                     // Пустой результат
                     reviewsData = [];
+                    console.log('Формат данных: { reviews: null } (пустой результат)');
                 } else {
                     console.error('Неизвестный формат данных:', response.data);
                     throw new Error('Неверный формат данных отзывов');
                 }
                 
-                console.log('Извлеченные данные отзывов:', reviewsData);
+                console.log('Извлеченные данные отзывов пользователя:', reviewsData);
+                console.log('Количество отзывов пользователя:', reviewsData.length);
 
-                // Фильтрация отзывов по ID пользователя, а не по имени
-                const userReviews = reviewsData
-                    .filter(review => review && (review.user_id === user.id || review.userId === user.id))
-                    .map(review => ({
-                        ...review,
-                        // Обеспечиваем совместимость полей с обоими форматами
-                        id: review.id,
-                        userId: review.user_id || review.userId,
-                        userName: review.user_name || review.userName,
-                        restaurantName: review.restaurant_name || review.restaurantName,
-                        rating: review.rating,
-                        comment: review.comment,
-                        date: review.date || review.created_at || new Date().toISOString().split('T')[0],
-                        likes: review.likes || 0,
-                        // Преобразуем детальные оценки в формат, ожидаемый фронтендом
-                        ratings: {
-                            food: review.food_rating || 0,
-                            service: review.service_rating || 0,
-                            atmosphere: review.atmosphere_rating || 0,
-                            price: review.price_rating || 0,
-                            cleanliness: review.cleanliness_rating || 0
-                        }
-                    }));
+                // Фильтруем отзывы, исключая удаленные
+                const filteredReviews = reviewsData.filter(review => review.deleted !== 1);
+                console.log('Отфильтрованные отзывы пользователя (без удаленных):', filteredReviews.length);
+                
+                // Проверяем, есть ли удаленные отзывы
+                const deletedReviews = reviewsData.filter(review => review.deleted === 1);
+                if (deletedReviews.length > 0) {
+                    console.warn(`Найдено ${deletedReviews.length} удаленных отзывов пользователя, которые будут скрыты`);
+                }
+
+                // Преобразуем данные в единый формат
+                const userReviews = filteredReviews.map(review => ({
+                    ...review,
+                    // Обеспечиваем совместимость полей с обоими форматами
+                    id: review.id,
+                    userId: review.user_id || review.userId,
+                    userName: review.user_name || review.userName,
+                    restaurantName: review.restaurant_name || review.restaurantName,
+                    rating: review.rating,
+                    comment: review.comment,
+                    date: review.date || review.created_at || new Date().toISOString().split('T')[0],
+                    likes: review.likes || 0,
+                    // Преобразуем детальные оценки в формат, ожидаемый фронтендом
+                    ratings: {
+                        food: review.food_rating || 0,
+                        service: review.service_rating || 0,
+                        atmosphere: review.atmosphere_rating || 0,
+                        price: review.price_rating || 0,
+                        cleanliness: review.cleanliness_rating || 0
+                    }
+                }));
 
                 console.log('Отфильтрованные отзывы пользователя:', userReviews);
 

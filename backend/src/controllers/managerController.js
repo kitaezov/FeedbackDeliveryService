@@ -132,22 +132,12 @@ const getManagerReviews = async (req, res) => {
             user_avatar: review.user_avatar,
             response: review.response,
             response_date: review.response_date,
-            has_response: Boolean(review.response)
+            has_response: Boolean(review.response),
+            deleted: review.deleted === 1
         }));
         
-        // Получаем все рестораны для статистики
-        const [restaurants] = await pool.query(`
-            SELECT * FROM restaurants 
-            WHERE deleted = 0
-        `);
-
-        res.json({
-            success: true,
-            message: 'Отзывы успешно получены',
-            reviews: formattedReviews,
-            restaurants: restaurants,
-            reviewsData: formattedReviews // Adding this for the frontend
-        });
+        // Возвращаем отзывы напрямую без вложенности
+        res.json(formattedReviews);
     } catch (error) {
         console.error('Ошибка получения отзывов:', error);
         res.status(500).json({

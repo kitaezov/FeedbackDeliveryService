@@ -23,6 +23,23 @@ class ReviewModel {
      */
     async initializeTables() {
         try {
+            // Check if reviews table already exists
+            const [reviewsExists] = await pool.execute(`
+                SELECT 1 FROM information_schema.tables 
+                WHERE table_schema = DATABASE() 
+                AND table_name = 'reviews'
+            `);
+            
+            if (reviewsExists.length > 0) {
+                console.log('Reviews table already exists, skipping recreation');
+                
+                // Check if any columns need to be added
+                await this.ensureColumnsExist();
+                
+                this.initialized = true;
+                return;
+            }
+            
             // Create users table if it doesn't exist
             await pool.execute(`
                 CREATE TABLE IF NOT EXISTS users (
@@ -70,6 +87,47 @@ class ReviewModel {
             `);
             console.log('Reviews table initialized');
 
+            // Create review_votes table if it doesn't exist
+            await pool.execute(`
+                CREATE TABLE IF NOT EXISTS review_votes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    review_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    vote_type ENUM('up', 'down') NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY unique_review_vote (review_id, user_id),
+                    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            `);
+            console.log('Review votes table initialized');
+
+            // Create review_photos table if it doesn't exist
+            await pool.execute(`
+                CREATE TABLE IF NOT EXISTS review_photos (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    review_id INT NOT NULL,
+                    photo_url VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
+                )
+            `);
+            console.log('Review photos table initialized');
+
+            this.initialized = true;
+        } catch (error) {
+            console.error('Error initializing tables:', error);
+            // Set initialized to true anyway to avoid blocking operations
+            this.initialized = true;
+        }
+    }
+    
+    /**
+     * Ensure all necessary columns exist in the reviews table
+     * @returns {Promise<void>}
+     */
+    async ensureColumnsExist() {
+        try {
             // Check if responded_by column exists in reviews table, if not add it
             try {
                 await pool.execute(`
@@ -108,50 +166,13 @@ class ReviewModel {
                 }
             }
 
-            // Create restaurants table if it doesn't exist
+            // Update any NULL deleted values to FALSE
             await pool.execute(`
-                CREATE TABLE IF NOT EXISTS restaurants (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    category VARCHAR(50) DEFAULT 'russian',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                )
+                UPDATE reviews SET deleted = FALSE WHERE deleted IS NULL
             `);
-            console.log('Restaurants table initialized');
-
-            // Create review_votes table if it doesn't exist
-            await pool.execute(`
-                CREATE TABLE IF NOT EXISTS review_votes (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    review_id INT NOT NULL,
-                    user_id INT NOT NULL,
-                    vote_type ENUM('up', 'down') NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY unique_review_vote (review_id, user_id),
-                    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                )
-            `);
-            console.log('Review votes table initialized');
-
-            // Create review_photos table if it doesn't exist
-            await pool.execute(`
-                CREATE TABLE IF NOT EXISTS review_photos (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    review_id INT NOT NULL,
-                    photo_url VARCHAR(255) NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
-                )
-            `);
-            console.log('Review photos table initialized');
-
-            this.initialized = true;
+            console.log('Updated NULL deleted values to FALSE');
         } catch (error) {
-            console.error('Error initializing tables:', error);
-            // Set initialized to true anyway to avoid blocking operations
-            this.initialized = true;
+            console.error('Error ensuring columns exist:', error);
         }
     }
 
@@ -173,6 +194,8 @@ class ReviewModel {
             priceRating = 0,
             cleanlinessRating = 0
         } = reviewData;
+        
+        console.log('Creating new review:', reviewData);
         
         // Получаем или создаем ресторан
         let [restaurant] = await pool.execute(
@@ -198,13 +221,22 @@ class ReviewModel {
             );
             restaurantId = result.insertId;
         }
-        
+
+        // Создаем отзыв
         const [result] = await pool.execute(
-            `INSERT INTO reviews 
-            (user_id, restaurant_id, restaurant_name, rating, comment, 
-            food_rating, service_rating, atmosphere_rating, 
-            price_rating, cleanliness_rating) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO reviews (
+                user_id, 
+                restaurant_id, 
+                restaurant_name, 
+                rating, 
+                comment, 
+                food_rating, 
+                service_rating, 
+                atmosphere_rating, 
+                price_rating, 
+                cleanliness_rating,
+                deleted
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
             [
                 userId,
                 restaurantId,
@@ -218,13 +250,32 @@ class ReviewModel {
                 cleanlinessRating
             ]
         );
+
+        // Получаем созданный отзыв
+        const [reviews] = await pool.execute(
+            'SELECT * FROM reviews WHERE id = ?',
+            [result.insertId]
+        );
         
-        return { 
-            id: result.insertId, 
-            ...reviewData,
-            restaurant_id: restaurantId,
-            restaurant_category: restaurantCategory
-        };
+        if (reviews.length === 0) {
+            console.error('Failed to retrieve created review');
+            throw new Error('Failed to create review');
+        }
+        
+        console.log('Created review:', reviews[0]);
+        
+        // Проверяем, что отзыв не помечен как удаленный
+        if (reviews[0].deleted === 1) {
+            console.error('Warning: Created review is marked as deleted');
+            // Исправляем это
+            await pool.execute(
+                'UPDATE reviews SET deleted = 0 WHERE id = ?',
+                [result.insertId]
+            );
+            reviews[0].deleted = 0;
+        }
+
+        return reviews[0];
     }
     
     /**
@@ -282,8 +333,8 @@ class ReviewModel {
                 `INSERT INTO reviews 
                 (user_id, restaurant_id, restaurant_name, rating, comment, 
                 food_rating, service_rating, atmosphere_rating, 
-                price_rating, cleanliness_rating) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                price_rating, cleanliness_rating, deleted) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
                 [
                     userId,
                     restaurantId,
@@ -361,6 +412,31 @@ class ReviewModel {
                 await this.initPromise;
             }
 
+            console.log('getAll called with params:', { page, limit, userId, restaurantName, currentUserId, sortBy });
+
+            // Добавляем прямой запрос для проверки наличия отзывов в базе данных
+            try {
+                const [allReviews] = await pool.execute('SELECT COUNT(*) as total FROM reviews');
+                console.log('Total reviews in database:', allReviews[0].total);
+                
+                if (userId) {
+                    const [userReviews] = await pool.execute('SELECT COUNT(*) as total FROM reviews WHERE user_id = ?', [userId]);
+                    console.log(`Reviews for user ${userId} in database:`, userReviews[0].total);
+                }
+                
+                const [deletedReviewsCount] = await pool.execute('SELECT COUNT(*) as total FROM reviews WHERE deleted = 1');
+                console.log('Deleted reviews in database:', deletedReviewsCount[0].total);
+                
+                const [nonDeletedReviewsCount] = await pool.execute('SELECT COUNT(*) as total FROM reviews WHERE deleted = 0 OR deleted IS NULL');
+                console.log('Non-deleted reviews in database:', nonDeletedReviewsCount[0].total);
+                
+                // Проверяем все отзывы в базе данных
+                const [allReviewsData] = await pool.execute('SELECT id, user_id, restaurant_name, rating, deleted FROM reviews');
+                console.log('All reviews in database:', allReviewsData);
+            } catch (error) {
+                console.error('Error checking database reviews:', error);
+            }
+
             let query = `
                 SELECT 
                     r.*,
@@ -376,7 +452,9 @@ class ReviewModel {
             const params = [];
 
             // Добавляем условия фильтрации
-            const conditions = [];
+            // Важно: явно преобразуем deleted в число или NULL для правильного сравнения
+            const conditions = ['(r.deleted = 0 OR r.deleted IS NULL)']; 
+            
             if (userId) {
                 conditions.push('r.user_id = ?');
                 params.push(userId);
@@ -408,26 +486,41 @@ class ReviewModel {
 
             // Пагинация
             const offset = (page - 1) * limit;
-            query += ' LIMIT ? OFFSET ?';
-            params.push(parseInt(limit), parseInt(offset));
+            query += ` LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+
+            // Log the query and parameters for debugging
+            console.log('Reviews query:', query);
+            console.log('Query parameters:', params);
 
             // Выполняем запрос
             const [reviews] = await pool.execute(query, params);
+            console.log(`Found ${reviews.length} reviews`);
+            
+            // Debug: Check if any reviews have the deleted flag set
+            const deletedReviews = reviews.filter(r => r.deleted === 1);
+            if (deletedReviews.length > 0) {
+                console.warn(`Warning: Found ${deletedReviews.length} reviews with deleted flag set that should have been filtered out`);
+            }
 
             // Получаем общее количество отзывов для пагинации
             let countQuery = `
                 SELECT COUNT(DISTINCT r.id) as total
                 FROM reviews r
+                WHERE (r.deleted = 0 OR r.deleted IS NULL)
             `;
+            
+            const countParams = [];
+            
             if (userId) {
-                countQuery += ' WHERE r.user_id = ?';
+                countQuery += ' AND r.user_id = ?';
+                countParams.push(userId);
             }
             if (restaurantName) {
-                countQuery += userId ? ' AND' : ' WHERE';
-                countQuery += ' r.restaurant_name LIKE ?';
+                countQuery += ' AND r.restaurant_name LIKE ?';
+                countParams.push(`%${restaurantName}%`);
             }
 
-            const [countResult] = await pool.execute(countQuery, params.slice(0, -2));
+            const [countResult] = await pool.execute(countQuery, countParams);
             const total = countResult[0].total;
 
             // Получаем фотографии для каждого отзыва
@@ -482,8 +575,53 @@ class ReviewModel {
                 }
             }
 
+            // Преобразуем поле deleted в булево значение для совместимости с фронтендом
+            const processedReviews = reviews.map(review => {
+                // Convert deleted from 0/1 to boolean
+                const deleted = review.deleted === 1;
+                
+                // Format the author object correctly
+                const author = {
+                    id: review.user_id,
+                    name: review.user_name || 'Unknown User',
+                    avatar: review.avatar || null
+                };
+                
+                // Format the ratings object
+                const ratings = {
+                    food: review.food_rating || 0,
+                    service: review.service_rating || 0,
+                    atmosphere: review.atmosphere_rating || 0,
+                    price: review.price_rating || 0,
+                    cleanliness: review.cleanliness_rating || 0
+                };
+                
+                // Format dates
+                const created_at = review.created_at ? new Date(review.created_at).toISOString() : new Date().toISOString();
+                const updated_at = review.updated_at ? new Date(review.updated_at).toISOString() : created_at;
+                
+                // Return the properly formatted review object
+                return {
+                    id: review.id,
+                    user_id: review.user_id,
+                    restaurant_name: review.restaurant_name,
+                    rating: review.rating,
+                    comment: review.comment,
+                    created_at,
+                    updated_at,
+                    likes: review.likes || 0,
+                    deleted,
+                    author,
+                    ratings,
+                    date: created_at,
+                    photos: review.photos || [],
+                    isLikedByUser: review.isLikedByUser || false,
+                    userVoteType: review.userVoteType || null
+                };
+            });
+
             return {
-                reviews,
+                reviews: processedReviews,
                 pagination: {
                     total,
                     page,
@@ -634,7 +772,9 @@ class ReviewModel {
      * @returns {Promise<boolean>} - Результат удаления
      */
     async delete(id) {
-        await pool.execute('DELETE FROM reviews WHERE id = ?', [id]);
+        // Instead of deleting, mark the review as deleted
+        await pool.execute('UPDATE reviews SET deleted = 1 WHERE id = ?', [id]);
+        console.log(`Review ${id} marked as deleted`);
         return true;
     }
 

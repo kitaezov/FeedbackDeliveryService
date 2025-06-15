@@ -36,9 +36,9 @@ const EmptyReviews = ({ sortMode, themeClasses }) => (
         </motion.div>
         <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-2">Нет отзывов</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-            {sortMode === 'new'
-                ? 'Пока никто не оставил отзыв'
-                : 'Нет старых отзывов'}
+            {sortMode === 'old'
+                ? 'Здесь будут показаны более старые отзывы'
+                : 'Пока никто не оставил отзыв'}
         </p>
     </motion.div>
 );
@@ -167,7 +167,19 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
 
     // Обновляем состояние reviews при изменении initialReviews
     React.useEffect(() => {
-        setReviews(initialReviews);
+        console.log('ReviewsSection: получены новые отзывы:', initialReviews);
+        
+        // Проверка, что initialReviews является массивом
+        if (Array.isArray(initialReviews)) {
+            // Фильтруем отзывы, исключая удаленные
+            const filteredReviews = initialReviews.filter(review => !review.deleted);
+            console.log('ReviewsSection: отфильтрованные отзывы:', filteredReviews.length);
+            
+            setReviews(filteredReviews);
+        } else {
+            console.warn('ReviewsSection: initialReviews не является массивом:', initialReviews);
+            setReviews([]);
+        }
     }, [initialReviews]);
 
     // Функция для добавления нового отзыва

@@ -140,6 +140,41 @@ async function initializeReviewsTable() {
                 FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
             )
         `);
+        
+        // Проверяем наличие столбца deleted
+        const [deletedColumn] = await pool.query(`
+            SHOW COLUMNS FROM reviews LIKE 'deleted'
+        `);
+        
+        // Если столбец deleted не существует, добавляем его
+        if (deletedColumn.length === 0) {
+            console.log('Adding deleted column to reviews table');
+            await pool.query(`
+                ALTER TABLE reviews 
+                ADD COLUMN deleted BOOLEAN DEFAULT FALSE
+            `);
+            console.log('deleted column added to reviews table');
+        } else {
+            console.log('deleted column already exists in reviews table');
+        }
+        
+        // Проверяем наличие столбца responded_by
+        const [respondedByColumn] = await pool.query(`
+            SHOW COLUMNS FROM reviews LIKE 'responded_by'
+        `);
+        
+        // Если столбец responded_by не существует, добавляем его
+        if (respondedByColumn.length === 0) {
+            console.log('Adding responded_by column to reviews table');
+            await pool.query(`
+                ALTER TABLE reviews 
+                ADD COLUMN responded_by INT DEFAULT NULL,
+                ADD COLUMN response_text TEXT DEFAULT NULL,
+                ADD COLUMN response_date TIMESTAMP NULL
+            `);
+            console.log('responded_by column added to reviews table');
+        }
+        
         console.log('Таблица отзывов создана или уже существует');
     } catch (error) {
         console.error('Error initializing reviews table:', error);
@@ -221,7 +256,8 @@ async function runMigrations() {
                 'add_restaurant_columns.sql',
                 'add_likes_columns.sql',
                 'deleted_reviews.sql',
-                'notifications.sql'
+                'notifications.sql',
+                'add_restaurant_id_to_users.sql'
             ];
             
             for (const filename of migrationOrder) {

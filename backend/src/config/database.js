@@ -21,7 +21,7 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    debug: true,
+    debug: false,
     multipleStatements: true
 });
 
@@ -32,13 +32,11 @@ const pool = mysql.createPool({
         const connection = await pool.getConnection();
         console.log('Подключение к базе данных успешно!');
         
-        // Проверяем существование базы данных
+        // Проверяем существование базы данных без вывода в консоль
         const [databases] = await connection.query('SHOW DATABASES');
-        console.log('Существующие базы данных:', databases.map(db => db.Database));
         
-        // Проверяем существование таблиц
+        // Проверяем существование таблиц без вывода в консоль
         const [tables] = await connection.query('SHOW TABLES');
-        console.log('Существующие таблицы:', tables);
         
         connection.release();
     } catch (error) {

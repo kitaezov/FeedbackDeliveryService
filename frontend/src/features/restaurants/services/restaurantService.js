@@ -126,13 +126,12 @@ export const restaurantService = {
     /**
      * Получает отзывы пользователя
      * 
-     * @param {Object} params - Параметры запроса
-     * @param {number} params.page - Номер страницы
-     * @param {number} params.limit - Количество элементов на странице
+     * @param {number} userId - ID пользователя
+     * @param {Object} params - Параметры запроса (page, limit)
      * @returns {Promise<Object>} Отзывы пользователя с метаданными
      */
-    getUserReviews: (params = {}) => {
-        return apiService.get('/user/reviews', params);
+    getUserReviews: (userId, params = {}) => {
+        return api.get('/reviews', { params: { ...params, userId } });
     },
     
     /**

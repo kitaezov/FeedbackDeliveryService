@@ -16,7 +16,9 @@ import {
     Key,
     Eye,
     EyeOff,
-    ArrowLeft
+    ArrowLeft,
+    Star,
+    MessageSquare
 } from 'lucide-react';
 import { useAuthContext } from '../../../common/contexts/AuthContext';
 import { useTheme } from '../../../common/contexts/ThemeContext';
@@ -24,6 +26,8 @@ import { Link } from 'react-router-dom';
 import api from '../../../utils/api';
 import { API_URL } from '../../../config';
 import { getAvatarUrl } from '../../../utils/imageUtils';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 // Анимация для компонентов
 const itemVariants = {
@@ -196,6 +200,63 @@ const InputField = ({
     );
 };
 
+// Компонент отзыва пользователя
+const ReviewCard = ({ review }) => {
+    const { isDarkMode } = useTheme();
+    
+    // Форматирование даты
+    const formattedDate = review.created_at ? 
+        format(new Date(review.created_at), 'dd MMMM yyyy', { locale: ru }) : 
+        '';
+    
+    return (
+        <motion.div 
+            className={`p-4 mb-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-sm`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
+            <div className="flex justify-between items-start mb-3">
+                <div>
+                    <h3 className={`font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        {review.restaurant_name}
+                    </h3>
+                    <div className="flex items-center mt-1">
+                        {[...Array(5)].map((_, i) => (
+                            <Star 
+                                key={i} 
+                                size={16} 
+                                className={i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} 
+                            />
+                        ))}
+                        <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {formattedDate}
+                        </span>
+                    </div>
+                </div>
+                <Link 
+                    to={`/reviews/${review.id}`} 
+                    className={`text-sm font-medium ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
+                >
+                    Подробнее
+                </Link>
+            </div>
+            
+            <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
+                {review.comment.length > 150 ? `${review.comment.substring(0, 150)}...` : review.comment}
+            </div>
+            
+            <div className="flex items-center text-sm">
+                <MessageSquare size={14} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
+                <span className={`ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {review.likes} {review.likes === 1 ? 'лайк' : 
+                     review.likes > 1 && review.likes < 5 ? 'лайка' : 'лайков'}
+                </span>
+            </div>
+        </motion.div>
+    );
+};
+
 // Главный компонент профиля
 const ProfilePage = () => {
     const { user, updateUser } = useAuthContext();
@@ -219,6 +280,11 @@ const ProfilePage = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [passwordErrors, setPasswordErrors] = useState({});
     const deleteConfirmRef = useRef(null);
+    
+    // Состояние для отзывов пользователя
+    const [userReviews, setUserReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [reviewsError, setReviewsError] = useState(null);
 
     // Загрузка данных профиля
     useEffect(() => {
@@ -246,6 +312,63 @@ const ProfilePage = () => {
 
         if (user) {
             fetchUserProfile();
+        }
+    }, [user]);
+
+    // Загрузка отзывов пользователя
+    useEffect(() => {
+        const fetchUserReviews = async () => {
+            if (!user) return;
+            
+            setReviewsLoading(true);
+            setReviewsError(null);
+            
+            try {
+                const response = await api.get('/reviews', { 
+                    params: { 
+                        userId: user.id,
+                        limit: 5,
+                        page: 1
+                    } 
+                });
+                
+                console.log('User reviews API response:', response);
+                
+                // Handle different response formats
+                let reviewsData = [];
+                
+                if (response.data && Array.isArray(response.data)) {
+                    // Direct array format
+                    reviewsData = response.data;
+                    console.log('Reviews data is an array:', reviewsData);
+                } else if (response.data && response.data.reviews) {
+                    if (Array.isArray(response.data.reviews)) {
+                        // Format: { reviews: [...] }
+                        reviewsData = response.data.reviews;
+                        console.log('Reviews data is in reviews property:', reviewsData);
+                    } else if (response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
+                        // Format: { reviews: { reviews: [...] } }
+                        reviewsData = response.data.reviews.reviews;
+                        console.log('Reviews data is nested in reviews.reviews:', reviewsData);
+                    }
+                }
+                
+                console.log('Final processed reviews data:', reviewsData);
+                setUserReviews(reviewsData);
+            } catch (error) {
+                console.error('Error fetching user reviews:', error);
+                setReviewsError('Не удалось загрузить отзывы');
+                setNotification({
+                    type: 'error',
+                    message: 'Не удалось загрузить отзывы'
+                });
+            } finally {
+                setReviewsLoading(false);
+            }
+        };
+
+        if (user) {
+            fetchUserReviews();
         }
     }, [user]);
 
@@ -508,19 +631,19 @@ const ProfilePage = () => {
                 transition={{ duration: 0.3 }}
             >
                 <Link to="/">
-                                    <motion.button
-                                        variants={buttonVariants}
-                                        whileHover="hover"
-                                        whileTap="tap"
+                    <motion.button
+                        variants={buttonVariants}
+                        whileHover="hover"
+                        whileTap="tap"
                         className="mr-3 p-2 rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                                    >
+                    >
                         <ArrowLeft size={20} />
-                                    </motion.button>
+                    </motion.button>
                 </Link>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Профиль пользователя</h1>
             </motion.div>
             
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-colors duration-300">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-colors duration-300 mb-6">
                 {/* Аватар и базовая информация */}
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
@@ -782,7 +905,51 @@ const ProfilePage = () => {
                         )}
                     </AnimatePresence>
                 </div>
+            </div>
+            
+            {/* Отзывы пользователя */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-colors duration-300">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                            Мои отзывы
+                        </h2>
+                        
+                        <Link to="/reviews/my">
+                            <motion.button
+                                variants={buttonVariants}
+                                whileHover="hover"
+                                whileTap="tap"
+                                className="px-3 py-1.5 rounded-md flex items-center bg-blue-500 text-white dark:bg-blue-600 transition-colors duration-200"
+                            >
+                                <span>Все отзывы</span>
+                            </motion.button>
+                        </Link>
                     </div>
+                    
+                    <div>
+                        {reviewsLoading ? (
+                            <div className="flex justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                            </div>
+                        ) : reviewsError ? (
+                            <div className="text-center py-8 text-red-500 dark:text-red-400">
+                                {reviewsError}
+                            </div>
+                        ) : userReviews.length > 0 ? (
+                            <div>
+                                {userReviews.map(review => (
+                                    <ReviewCard key={review.id} review={review} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                У вас пока нет отзывов. Оставьте свой первый отзыв о ресторане!
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
             
             {/* Модальное окно подтверждения удаления аватара */}
             <AnimatePresence>

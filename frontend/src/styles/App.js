@@ -131,23 +131,30 @@ const App = () => {
     const fetchReviews = async () => {
         try {
             console.log('Загрузка отзывов из API...');
+            // Добавляем параметр запроса для исключения удаленных отзывов
             const response = await api.get('/reviews');
             
-            console.log('Ответ API:', response);
+            console.log('Ответ API:', response.data);
             
             // Обработка разных возможных структур ответов
             let reviewsData = [];
             
-            if (response.data && response.data.reviews && Array.isArray(response.data.reviews)) {
+            if (response.data && Array.isArray(response.data.reviews)) {
+                // Формат: { reviews: [...] } - наиболее ожидаемый формат
                 reviewsData = response.data.reviews;
+                console.log('Формат данных: { reviews: [...] }');
             } else if (response.data && response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
                 // Формат: { reviews: { reviews: [...] } }
                 reviewsData = response.data.reviews.reviews;
+                console.log('Формат данных: { reviews: { reviews: [...] } }');
             } else if (Array.isArray(response.data)) {
+                // Формат: [...] (массив напрямую)
                 reviewsData = response.data;
+                console.log('Формат данных: [...] (массив напрямую)');
             } else if (response.data && response.data.reviews === null) {
                 // Пустой результат
                 reviewsData = [];
+                console.log('Формат данных: { reviews: null } (пустой результат)');
             } else {
                 console.warn('Непредвиденная структура ответа от АПИ:', response.data);
                 reviewsData = [];
@@ -160,7 +167,17 @@ const App = () => {
                 console.warn('Нет отзывов, возвращенных от АПИ');
             }
 
-            const reviewsWithAvatars = reviewsData.map(review => ({
+            // Фильтруем отзывы, исключая удаленные
+            const filteredReviews = reviewsData.filter(review => !review.deleted);
+            console.log('Отфильтрованные отзывы (без удаленных):', filteredReviews.length);
+            
+            // Проверяем, есть ли удаленные отзывы
+            const deletedReviews = reviewsData.filter(review => review.deleted);
+            if (deletedReviews.length > 0) {
+                console.warn(`Найдено ${deletedReviews.length} удаленных отзывов, которые будут скрыты`);
+            }
+
+            const reviewsWithAvatars = filteredReviews.map(review => ({
                 ...review,
                 avatar: null,
             }));
@@ -180,7 +197,9 @@ const App = () => {
                     Array.isArray(fallbackResponse.data) ? fallbackResponse.data : [];
                 
                 console.log('Данные от запасного API:', fallbackData);
-                setReviews(fallbackData.map(review => ({...review, avatar: null})));
+                // Фильтруем отзывы, исключая удаленные
+                const filteredFallbackData = fallbackData.filter(review => !review.deleted);
+                setReviews(filteredFallbackData.map(review => ({...review, avatar: null})));
             } catch (fallbackErr) {
                 console.error('Ошибка при запросе резервного API:', fallbackErr);
                 setReviews([]);
@@ -239,7 +258,8 @@ const App = () => {
             date: new Date().toISOString().split('T')[0],
             likes: 0,
             comments: 0,
-            rating: newReviewData.rating || 5
+            rating: newReviewData.rating || 5,
+            deleted: 0 // Явно указываем, что отзыв не удален
         };
 
         try {
@@ -251,17 +271,38 @@ const App = () => {
                 }
             });
 
-            console.log('Ответ сервера:', response.data);
+            console.log('Ответ сервера при создании отзыва:', response.data);
 
-            // Обновляем локальный список reviews с ID от сервера
-            setReviews(prevReviews => [
-                {...localNewReview, id: response.data.review.id},
-                ...prevReviews.filter(r => r.id !== localNewReview.id)
-            ]);
+            if (response.data && response.data.review) {
+                // Получаем ID нового отзыва из ответа сервера
+                const newReviewId = response.data.review.id;
+                console.log(`Новый отзыв создан с ID: ${newReviewId}`);
 
-            // Сбрасываем форму или показываем уведомление
-            setSubmitted(true);
-            setTimeout(() => setSubmitted(false), 3000);
+                // Обновляем локальный список reviews с ID от сервера
+                const newReviewWithId = {
+                    ...localNewReview,
+                    id: newReviewId,
+                    // Добавляем дополнительные поля из ответа сервера
+                    ...response.data.review
+                };
+
+                setReviews(prevReviews => [
+                    newReviewWithId,
+                    ...prevReviews.filter(r => r.id !== localNewReview.id)
+                ]);
+
+                // Сбрасываем форму или показываем уведомление
+                setSubmitted(true);
+                setTimeout(() => setSubmitted(false), 3000);
+            } else {
+                console.error('Ответ сервера не содержит данные о созданном отзыве:', response.data);
+            }
+
+            // Обновляем список отзывов после добавления нового
+            setTimeout(() => {
+                console.log('Обновление списка отзывов после добавления нового отзыва');
+                fetchReviews();
+            }, 1000);
 
         } catch (err) {
             console.error('Ошибка при отправке отзыва:', err);

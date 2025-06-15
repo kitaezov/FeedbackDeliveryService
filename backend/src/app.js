@@ -36,15 +36,15 @@ const clients = new Set();
 
 // Обработка WebSocket соединений
 wss.on('connection', (ws) => {
-    console.log('Новое WebSocket соединение установлено');
+    // Убрано избыточное логирование
     clients.add(ws);
     
     ws.on('message', (message) => {
-        console.log('Получено сообщение:', message);
+        // Убрано избыточное логирование сообщений
     });
     
     ws.on('close', () => {
-        console.log('WebSocket соединение закрыто');
+        // Убрано избыточное логирование
         clients.delete(ws);
     });
     
@@ -82,7 +82,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(morgan('dev'));
+app.use(morgan('tiny'));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Импорт маршрутов

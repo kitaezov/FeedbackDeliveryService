@@ -324,6 +324,14 @@ const SimplePieChart = ({ data }) => {
         color: data.datasets[0].backgroundColor[index]
     })).filter(rating => rating.count > 0).sort((a, b) => b.count - a.count);
 
+    // Функция для правильного склонения слова "звезда" в зависимости от числа
+    const getStarWord = (rating) => {
+        const num = parseInt(rating);
+        if (num === 1) return "звезда";
+        if (num >= 2 && num <= 4) return "звезды";
+        return "звёзд";
+    };
+
     return (
         <div className="h-full flex flex-col">
             {/* Распределение по рейтингам */}
@@ -336,7 +344,7 @@ const SimplePieChart = ({ data }) => {
                                 className="w-4 h-4 mr-2 rounded-full" 
                                 style={{ backgroundColor: rating.color }}
                             ></div>
-                            <div className="text-sm truncate">{rating.name}: {rating.count}</div>
+                            <div className="text-sm truncate">{rating.name.replace("звезд", getStarWord(rating.name.split(" ")[0]))}: {rating.count}</div>
                         </div>
                     ))}
                 </div>
@@ -942,7 +950,7 @@ const ManagerDashboard = () => {
                         )}
                     </ChartCard>
                     
-                    <ChartCard title="Распределение по ресторанам" className="col-span-1 lg:col-span-1">
+                    <ChartCard title="Критерии оценивания" className="col-span-1 lg:col-span-1">
                         {chartData.categoryDistribution && (
                             <SimplePieChart data={chartData.categoryDistribution} />
                         )}
@@ -983,7 +991,7 @@ const ManagerDashboard = () => {
                             className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         >
                             <option value="all">Все рейтинги</option>
-                            <option value="5">5 звезд</option>
+                            <option value="5">5 звёзд</option>
                             <option value="4">4 звезды</option>
                             <option value="3">3 звезды</option>
                             <option value="2">2 звезды</option>

@@ -140,7 +140,27 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
         if (!priceRange) return null;
         return Array(priceRange).fill('$').join('');
     };
-    
+
+    // Функция для правильного склонения слова "звезда" в зависимости от числа
+    const getStarWord = (rating) => {
+        const lastDigit = rating % 10;
+        const lastTwoDigits = rating % 100;
+        
+        if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
+            return 'звёзд';
+        }
+        
+        if (lastDigit === 1) {
+            return 'звезда';
+        }
+        
+        if (lastDigit >= 2 && lastDigit <= 4) {
+            return 'звезды';
+        }
+        
+        return 'звёзд';
+    };
+
     // Получить иконку для особенности
     const getFeatureIcon = (feature) => {
         const Icon = featureIcons[feature] || Utensils;
@@ -390,7 +410,7 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
                             </h3>
                             {reviewCount > 0 ? (
                                 <div className="text-sm text-gray-700 dark:text-gray-300">
-                                    <p>У ресторана {reviewCount} {reviewCount === 1 ? 'отзыв' : reviewCount > 1 && reviewCount < 5 ? 'отзыва' : 'отзывов'} и рейтинг {rating.toFixed(1)}/5</p>
+                                    <p>У ресторана {reviewCount} {reviewCount === 1 ? 'отзыв' : reviewCount > 1 && reviewCount < 5 ? 'отзыва' : 'отзывов'} и рейтинг {rating.toFixed(1)}/5 {getStarWord(Math.round(rating))}</p>
                                     <motion.button
                                         className="mt-2 text-primary-600 dark:text-primary-400 hover:underline flex items-center"
                                         onClick={() => handleTabChange('reviews')}

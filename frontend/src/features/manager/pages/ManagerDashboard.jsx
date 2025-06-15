@@ -374,7 +374,7 @@ const ManagerDashboard = () => {
                                     className="bg-white/5 border border-white/20 rounded-lg text-white px-4 py-2"
                                 >
                                     <option value="all">Все рейтинги</option>
-                                    <option value="5">5 звезд</option>
+                                    <option value="5">5 звёзд</option>
                                     <option value="4">4 звезды</option>
                                     <option value="3">3 звезды</option>
                                     <option value="2">2 звезды</option>

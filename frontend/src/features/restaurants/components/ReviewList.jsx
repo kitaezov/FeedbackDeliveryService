@@ -111,6 +111,26 @@ export const ReviewList = ({
         return stats;
     }, {});
     
+    // Функция для правильного склонения слова "звезда" в зависимости от числа
+    const getStarWord = (rating) => {
+        const lastDigit = rating % 10;
+        const lastTwoDigits = rating % 100;
+        
+        if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
+            return 'звёзд';
+        }
+        
+        if (lastDigit === 1) {
+            return 'звезда';
+        }
+        
+        if (lastDigit >= 2 && lastDigit <= 4) {
+            return 'звезды';
+        }
+        
+        return 'звёзд';
+    };
+    
     // Расчет процентов для статистики
     const getRatingPercent = (rating) => {
         if (!reviews.length) return 0;
@@ -231,7 +251,7 @@ export const ReviewList = ({
                                                 ))}
                                             </div>
                                             <span className="ml-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                {review.rating.toFixed(1)}
+                                                {review.rating.toFixed(1)} {getStarWord(review.rating)}
                                             </span>
                                         </div>
                                     </div>

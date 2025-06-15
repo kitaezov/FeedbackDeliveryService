@@ -54,7 +54,7 @@ const register = async (req, res) => {
             console.log('Ошибка при проверке пароля:', password);
             return res.status(400).json({
                 message: 'Некорректный пароль',
-                details: 'Пароль должен содержать не менее 6 символов'
+                details: 'Пароль должен содержать не менее 8 символов, включать как минимум одну букву и одну цифру'
             });
         }
         
@@ -503,7 +503,7 @@ const updateProfile = async (req, res) => {
             if (!validatePassword(newPassword)) {
                 return res.status(400).json({
                     message: 'Некорректный новый пароль',
-                    details: 'Новый пароль должен содержать не менее 6 символов',
+                    details: 'Новый пароль должен содержать не менее 8 символов, включать как минимум одну букву и одну цифру',
                     field: 'newPassword'
                 });
             }

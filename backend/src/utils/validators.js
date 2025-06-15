@@ -34,8 +34,11 @@ const validateEmail = (email) => {
  * @returns {boolean} - true если пароль корректен, false в противном случае
  */
 const validatePassword = (password) => {
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-    return passwordRegex.test(password);
+    // Проверяем длину и наличие хотя бы одной буквы и одной цифры
+    return password && 
+           password.length >= 8 && 
+           /[A-Za-z]/.test(password) && 
+           /\d/.test(password);
 };
 
 /**

@@ -27,7 +27,8 @@ const ManagerResponse = ({
     onEdit, 
     onDelete, 
     isEditable = false,
-    onSave 
+    onSave,
+    managerName = ''
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedText, setEditedText] = useState(response?.text || '');
@@ -59,7 +60,7 @@ const ManagerResponse = ({
                                 <p className="text-white text-lg">{response?.text}</p>
                             )}
                             <p className="text-white/60 text-sm mt-2">
-                                Ответ от менеджера • {response?.date}
+                                Ответ от менеджера {managerName ? `${managerName} • ` : ''}{response?.date}
                             </p>
                         </div>
                         

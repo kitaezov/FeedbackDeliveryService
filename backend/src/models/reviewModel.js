@@ -81,6 +81,7 @@ class ReviewModel {
                     response TEXT NULL,
                     response_date TIMESTAMP NULL,
                     responded_by INT NULL,
+                    manager_name VARCHAR(100) NULL,
                     deleted BOOLEAN DEFAULT FALSE,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
@@ -142,6 +143,25 @@ class ReviewModel {
                         ADD COLUMN responded_by INT NULL
                     `);
                     console.log('responded_by column added to reviews table');
+                } else {
+                    throw error;
+                }
+            }
+            
+            // Check if manager_name column exists in reviews table, if not add it
+            try {
+                await pool.execute(`
+                    SELECT manager_name FROM reviews LIMIT 1
+                `);
+                console.log('manager_name column already exists in reviews table');
+            } catch (error) {
+                if (error.code === 'ER_BAD_FIELD_ERROR') {
+                    console.log('Adding manager_name column to reviews table');
+                    await pool.execute(`
+                        ALTER TABLE reviews 
+                        ADD COLUMN manager_name VARCHAR(100) NULL
+                    `);
+                    console.log('manager_name column added to reviews table');
                 } else {
                     throw error;
                 }
@@ -443,7 +463,10 @@ class ReviewModel {
                     u.name as user_name,
                     u.avatar,
                     COALESCE(rest.category, 'russian') as restaurant_category,
-                    COALESCE(r.likes, 0) as likes
+                    COALESCE(r.likes, 0) as likes,
+                    r.response,
+                    r.response_date,
+                    r.manager_name
                 FROM reviews r
                 LEFT JOIN users u ON r.user_id = u.id
                 LEFT JOIN restaurants rest ON r.restaurant_id = rest.id
@@ -616,7 +639,11 @@ class ReviewModel {
                     date: created_at,
                     photos: review.photos || [],
                     isLikedByUser: review.isLikedByUser || false,
-                    userVoteType: review.userVoteType || null
+                    userVoteType: review.userVoteType || null,
+                    response: review.response || '',
+                    response_date: review.response_date ? new Date(review.response_date).toISOString() : null,
+                    manager_name: review.manager_name || '',
+                    responded: Boolean(review.response)
                 };
             });
 

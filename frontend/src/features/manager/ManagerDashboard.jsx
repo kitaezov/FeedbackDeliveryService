@@ -8,6 +8,7 @@ import {
 import useBackendApi from '../../hooks/useBackendApi';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, BarChart, Bar } from 'recharts';
+import { toast } from 'react-hot-toast';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -109,6 +110,7 @@ const ChartCard = ({ title, children, className = '' }) => (
 const ReviewItem = ({ review, onRespond }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [responseText, setResponseText] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
 
     // Получение имени пользователя с учетом разных форматов данных
     const getUserName = () => {
@@ -124,6 +126,12 @@ const ReviewItem = ({ review, onRespond }) => {
         } else {
             return 'Анонимно';
         }
+    };
+
+    // Функция для начала редактирования ответа
+    const startEditing = () => {
+        setResponseText(review.response || '');
+        setIsEditing(true);
     };
 
     return (
@@ -150,10 +158,10 @@ const ReviewItem = ({ review, onRespond }) => {
                     </div>
                 </div>
                 <span className={`px-2 py-1 text-xs rounded-full ${
-                    review.responded ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 
+                    review.responded || Boolean(review.response) ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 
                     'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
                 }`}>
-                    {review.responded ? 'Отвечено' : 'Ожидает'}
+                    {review.responded || Boolean(review.response) ? 'Отвечено' : 'Ожидает'}
                 </span>
             </div>
             
@@ -168,14 +176,22 @@ const ReviewItem = ({ review, onRespond }) => {
             
             {isExpanded && (
                 <div className="mt-3">
-                    {review.responded ? (
+                    {(review.responded || Boolean(review.response)) && !isEditing ? (
                         <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                            <p className="text-sm font-medium mb-1 dark:text-gray-300">
-                                <span className="text-blue-600 dark:text-blue-400">
-                                    {review.restaurant?.name || 'Ресторан'}
-                                </span>
-                                <span className="text-gray-500 dark:text-gray-400"> • Менеджер ресторана</span>
-                            </p>
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="text-sm font-medium mb-1 dark:text-gray-300">
+                                    <span className="text-blue-600 dark:text-blue-400">
+                                        {review.restaurant?.name || 'Ресторан'}
+                                    </span>
+                                    <span className="text-gray-500 dark:text-gray-400"> • Менеджер {review.manager_name || 'ресторана'}</span>
+                                </p>
+                                <button 
+                                    onClick={startEditing}
+                                    className="text-blue-600 dark:text-blue-400 text-xs flex items-center hover:underline"
+                                >
+                                    Редактировать
+                                </button>
+                            </div>
                             <p className="text-gray-700 dark:text-gray-300">{review.response}</p>
                         </div>
                     ) : (
@@ -195,19 +211,40 @@ const ReviewItem = ({ review, onRespond }) => {
                                 placeholder="Напишите ваш ответ от имени ресторана..."
                                 rows={3}
                             />
-                            <button
-                                onClick={() => {
-                                    onRespond(review.id, responseText);
-                                    setResponseText('');
-                                    setIsExpanded(false);
-                                }}
-                                disabled={!responseText.trim()}
-                                className={`mt-2 px-3 py-1 rounded-md text-white ${
-                                    responseText.trim() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'
-                                }`}
-                            >
-                                Отправить ответ
-                            </button>
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={() => {
+                                        // Проверка валидности значений перед отправкой
+                                        if (review.id && responseText.trim()) {
+                                            console.log('Нажата кнопка отправки ответа:', { reviewId: review.id, responseText });
+                                            onRespond(review.id, responseText);
+                                            setResponseText('');
+                                            setIsEditing(false);
+                                            setIsExpanded(false);
+                                        } else {
+                                            console.error('Ошибка: отсутствует ID отзыва или текст ответа');
+                                            toast.error('Пожалуйста, введите текст ответа');
+                                        }
+                                    }}
+                                    disabled={!responseText.trim()}
+                                    className={`mt-2 px-3 py-1 rounded-md text-white font-medium ${
+                                        responseText.trim() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    {isEditing ? 'Сохранить изменения' : 'Отправить ответ'}
+                                </button>
+                                {isEditing && (
+                                    <button
+                                        onClick={() => {
+                                            setIsEditing(false);
+                                            setResponseText('');
+                                        }}
+                                        className="mt-2 px-3 py-1 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 font-medium"
+                                    >
+                                        Отмена
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -540,23 +577,37 @@ const ManagerDashboard = () => {
             }
             
             // Нормализуем данные отзывов
-            const normalizedReviews = reviewsData.map(review => ({
-                id: review.id,
-                text: review.comment || review.text || review.content || '',
-                rating: Number(review.rating) || 0,
-                createdAt: review.created_at || review.createdAt || review.date || new Date().toISOString(),
-                responded: review.responded || Boolean(review.response),
-                response: review.response || '',
-                responseDate: review.responseDate || review.response_date || null,
-                user: {
-                    name: review.user_name || review.userName || review.username || 'Пользователь'
-                },
-                restaurant: {
-                    name: review.restaurant_name || review.restaurantName || 'Ресторан'
-                }
-            })).filter(review => review.text && review.rating); // Фильтруем невалидные отзывы
+            const normalizedReviews = reviewsData.map(review => {
+                // Проверяем наличие ответа несколькими способами
+                const hasResponse = Boolean(review.response) || 
+                                   Boolean(review.has_response) || 
+                                   review.responded === true;
+                                   
+                return {
+                    id: review.id,
+                    text: review.comment || review.text || review.content || '',
+                    rating: Number(review.rating) || 0,
+                    createdAt: review.created_at || review.createdAt || review.date || new Date().toISOString(),
+                    responded: hasResponse,
+                    response: review.response || '',
+                    responseDate: review.responseDate || review.response_date || null,
+                    manager_name: review.manager_name || review.managerName || '',
+                    user: {
+                        name: review.user_name || review.userName || review.username || 'Пользователь'
+                    },
+                    restaurant: {
+                        name: review.restaurant_name || review.restaurantName || 'Ресторан'
+                    }
+                };
+            }).filter(review => review.text && review.rating); // Фильтруем невалидные отзывы
             
             console.log(`Обработано ${normalizedReviews.length} валидных отзывов`);
+            
+            // Логгируем каждый отзыв для отладки состояния "отвечено"
+            normalizedReviews.forEach(review => {
+                console.log(`Отзыв ID=${review.id}, responded=${review.responded}, hasResponse=${Boolean(review.response)}`);
+            });
+            
             setReviews(normalizedReviews);
             return normalizedReviews;
         } catch (error) {
@@ -655,16 +706,38 @@ const ManagerDashboard = () => {
 
     const handleResponse = async (reviewId, responseText) => {
         try {
-            await postData('manager/reviews/respond', {
+            console.log('Отправка ответа на отзыв:', { reviewId, responseText });
+            
+            // Добавляем информацию для отладки
+            toast.loading('Отправка ответа...', { id: 'response-toast' });
+            
+            // Отправляем запрос на сервер
+            const response = await postData('manager/reviews/respond', {
                 reviewId,
                 responseText
             });
             
+            console.log('Ответ успешно отправлен, результат:', response);
+            
             // Обновляем список отзывов после ответа
             await fetchReviewsFromDatabase();
             await calculateStatsFromDatabase();
+            
+            toast.success('Ответ успешно сохранен', { id: 'response-toast' });
+            
         } catch (error) {
             console.error('Ошибка при ответе на отзыв:', error);
+            
+            // Более подробное логирование ошибки
+            if (error.response) {
+                console.error('Данные ответа сервера с ошибкой:', error.response.data);
+                toast.error(`Ошибка: ${error.response.data?.message || error.message}`, { id: 'response-toast' });
+            } else if (error.request) {
+                console.error('Сервер не ответил на запрос');
+                toast.error('Ошибка соединения с сервером', { id: 'response-toast' });
+            } else {
+                toast.error(`Ошибка: ${error.message}`, { id: 'response-toast' });
+            }
         }
     };
 

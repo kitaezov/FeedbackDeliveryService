@@ -136,7 +136,10 @@ const getManagerReviews = async (req, res) => {
                 r.*,
                 u.name as user_name,
                 u.avatar as user_avatar,
-                rest.name as restaurant_name
+                rest.name as restaurant_name,
+                IFNULL(r.manager_name, 
+                    (SELECT name FROM users WHERE id = r.responded_by LIMIT 1)
+                ) as manager_name
             FROM reviews r
             LEFT JOIN users u ON r.user_id = u.id
             LEFT JOIN restaurants rest ON r.restaurant_id = rest.id
@@ -162,6 +165,7 @@ const getManagerReviews = async (req, res) => {
             user_avatar: review.user_avatar,
             response: review.response,
             response_date: review.response_date,
+            manager_name: review.manager_name,
             has_response: Boolean(review.response),
             deleted: review.deleted === 1
         }));
@@ -189,8 +193,9 @@ const respondToReview = async (req, res) => {
         const reviewId = req.params.id || req.body.reviewId;
         const responseText = req.body.text || req.body.responseText;
         const managerId = req.user?.id;
+        const managerName = req.user?.name;
         
-        console.log('Ответ на отзыв:', { reviewId, responseText, managerId });
+        console.log('Ответ на отзыв:', { reviewId, responseText, managerId, managerName });
 
         if (!reviewId) {
             return res.status(400).json({
@@ -263,9 +268,10 @@ const respondToReview = async (req, res) => {
             UPDATE reviews 
             SET response = ?, 
                 response_date = CURRENT_TIMESTAMP,
-                responded_by = ?
+                responded_by = ?,
+                manager_name = ?
             WHERE id = ?`,
-            [responseText, managerId, reviewId]
+            [responseText, managerId, managerName || '', reviewId]
         );
 
         res.json({
@@ -275,6 +281,7 @@ const respondToReview = async (req, res) => {
                 reviewId,
                 response: responseText,
                 respondedBy: managerId,
+                managerName: managerName,
                 responseDate: new Date()
             }
         });

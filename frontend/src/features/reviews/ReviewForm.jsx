@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { User, MapPin, DollarSign, Award, Smile, Star, Clock, Phone, Globe, ChevronLeft, X, Heart, ThumbsUp, Check, FileText, Camera, ThumbsDown, ImagePlus, Trash2, Utensils, Receipt } from 'lucide-react';
+import { User, MapPin, DollarSign, Award, Smile, Star, Clock, Phone, Globe, ChevronLeft, X, Heart, ThumbsUp, Check, FileText, Camera, ThumbsDown, ImagePlus, Trash2, Utensils, Receipt, MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import api from '../../utils/api';
@@ -199,37 +199,51 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
     // Поиск отзывов для ресторана при его выборе
     useEffect(() => {
-        const fetchRestaurantReviews = async () => {
-            if (!restaurant) return;
-            
-            try {
-                setLoadingReviews(true);
-                const response = await api.get(`/reviews?restaurantName=${encodeURIComponent(restaurant.name)}`);
-                
-                if (response.data && response.data.reviews) {
-                    // Ensure we're working with an array
-                    const reviews = Array.isArray(response.data.reviews) 
-                        ? response.data.reviews 
-                        : (Array.isArray(response.data.reviews.reviews) 
-                            ? response.data.reviews.reviews 
-                            : []);
-                    
-                    setRestaurantReviews(reviews);
-                } else {
-                    // Default to empty array if no reviews found
-                    setRestaurantReviews([]);
-                }
-            } catch (error) {
-                console.error('Error fetching restaurant reviews:', error);
-                // Set empty array on error
-                setRestaurantReviews([]);
-            } finally {
-                setLoadingReviews(false);
-            }
-        };
-
-        fetchRestaurantReviews();
+        if (restaurant?.id) {
+            fetchRestaurantReviews();
+        }
     }, [restaurant]);
+
+    // Получение отзывов для выбранного ресторана
+    const fetchRestaurantReviews = async () => {
+        if (!restaurant) return;
+        
+        setLoadingReviews(true);
+        try {
+            const response = await api.get(`/reviews?restaurantName=${encodeURIComponent(restaurant.name)}`);
+            console.log('Получены отзывы для ресторана:', response.data);
+            
+            if (response.data && response.data.reviews) {
+                // Преобразуем данные отзывов для единообразия
+                const formattedReviews = response.data.reviews.map(review => ({
+                    id: review.id,
+                    user_id: review.user_id,
+                    user_name: review.user_name || review.userName || 'Пользователь',
+                    rating: review.rating,
+                    text: review.comment || review.text,
+                    created_at: review.created_at || review.date,
+                    photos: review.photos || [],
+                    hasReceipt: review.hasReceipt || false,
+                    likes: review.likes || 0,
+                    dislikes: review.dislikes || 0,
+                    response: review.response || '',
+                    manager_name: review.manager_name || review.managerName || '',
+                    responded: Boolean(review.response) || Boolean(review.responded),
+                    showResponse: true
+                }));
+                
+                console.log('Форматированные отзывы:', formattedReviews);
+                setRestaurantReviews(formattedReviews);
+            } else {
+                setRestaurantReviews([]);
+            }
+        } catch (error) {
+            console.error('Ошибка при получении отзывов:', error);
+            setRestaurantReviews([]);
+        } finally {
+            setLoadingReviews(false);
+        }
+    };
 
     if (!restaurant) return null;
 
@@ -1195,6 +1209,50 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                         </div>
 
                                         <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{review.text || review.comment}</p>
+
+                                        {/* Response from restaurant manager */}
+                                        {review.response && (
+                                            <div className="mb-3 mt-3">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <div className="flex items-center">
+                                                        <MessageCircle size={14} className="mr-1.5 text-blue-600 dark:text-blue-400" />
+                                                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                                                            Ответ от ресторана
+                                                        </span>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => {
+                                                            const updatedReviews = [...restaurantReviews];
+                                                            const reviewIndex = updatedReviews.findIndex(r => r.id === review.id);
+                                                            if (reviewIndex !== -1) {
+                                                                updatedReviews[reviewIndex].showResponse = !updatedReviews[reviewIndex].showResponse;
+                                                                setRestaurantReviews(updatedReviews);
+                                                            }
+                                                        }}
+                                                        className="text-xs px-2 py-1 rounded bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
+                                                    >
+                                                        {review.showResponse !== false ? "Скрыть" : "Показать"}
+                                                    </button>
+                                                </div>
+                                                
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ 
+                                                        opacity: review.showResponse !== false ? 1 : 0,
+                                                        height: review.showResponse !== false ? 'auto' : 0
+                                                    }}
+                                                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                    className="overflow-hidden"
+                                                >
+                                                    <div className="pt-2 pb-2 px-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-700">
+                                                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                                            Ответ от ресторана {review.manager_name && <span>• {review.manager_name}</span>}
+                                                        </p>
+                                                        <p className="text-sm text-gray-700 dark:text-gray-300">{review.response}</p>
+                                                    </div>
+                                                </motion.div>
+                                            </div>
+                                        )}
 
                                         {/* Receipt photo indicator */}
                                         {review.hasReceipt && (

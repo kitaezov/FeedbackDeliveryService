@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronUp, Trash2, User, Receipt, ImageIcon, MessageCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, User, Receipt, ImageIcon, MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent } from './Card';
 import { motion } from 'framer-motion';
 import { restaurantData } from '../features/restaurants/restaurantData';
@@ -135,6 +135,7 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
     
     const [showDetails, setShowDetails] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showResponse, setShowResponse] = useState(true);
 
     // Проверяем наличие отзыва
     if (!review) {
@@ -167,7 +168,8 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
         },
         responded: Boolean(review.responded || review.response),
         response: review.response || '',
-        responseDate: review.response_date || review.responseDate || null
+        responseDate: review.response_date || review.responseDate || null,
+        managerName: review.manager_name || review.managerName || ''
     };
 
     // Проверяем, принадлежит ли отзыв текущему пользователю
@@ -272,27 +274,61 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
                     </p>
 
                     {/* Ответ менеджера */}
-                    {reviewData.responded && reviewData.response && (
-                        <div className={`mb-6 mt-6 pt-4 pb-4 px-4 rounded-lg
-                                    ${isDarkMode ? 'bg-gray-700 border-l-4 border-blue-600' : 'bg-blue-50 border-l-4 border-blue-500'}`}>
-                            <div className="flex items-center mb-2">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center mr-2">
-                                    <MessageCircle size={16} className="text-blue-600 dark:text-blue-400" />
+                    {reviewData.response && (
+                        <div className="mb-2">
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center">
+                                    <MessageCircle size={16} className={`mr-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                                    <span className={`text-sm font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                                        Ответ от ресторана
+                                    </span>
                                 </div>
-                                <div>
-                                    <h4 className={`font-semibold text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
-                                        Ответ от ресторана "{reviewData.restaurantName}"
-                                    </h4>
-                                    {reviewData.responseDate && (
-                                        <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            {formatDate(reviewData.responseDate)}
-                                        </span>
-                                    )}
-                                </div>
+                                <motion.button
+                                    onClick={() => setShowResponse(!showResponse)}
+                                    variants={buttonVariants}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                    className={`text-xs px-2 py-1 rounded ${isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} transition-all`}
+                                >
+                                    {showResponse ? "Скрыть" : "Показать"}
+                                </motion.button>
                             </div>
-                            <p className={`text-sm ml-10 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                {reviewData.response}
-                            </p>
+
+                            <motion.div 
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ 
+                                    opacity: showResponse ? 1 : 0,
+                                    height: showResponse ? 'auto' : 0
+                                }}
+                                transition={{ 
+                                    duration: 0.3,
+                                    ease: "easeInOut"
+                                }}
+                                className="overflow-hidden"
+                            >
+                                <div className={`mb-6 pt-4 pb-4 px-4 rounded-lg
+                                    ${isDarkMode ? 'bg-gray-700 border-l-4 border-blue-600' : 'bg-blue-50 border-l-4 border-blue-500'}`}>
+                                    <div className="flex items-center mb-2">
+                                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center mr-2">
+                                            <MessageCircle size={16} className="text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <h4 className={`font-semibold text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                                                Ответ от ресторана "{reviewData.restaurantName}"
+                                                {reviewData.managerName && <span className="ml-1">• {reviewData.managerName}</span>}
+                                            </h4>
+                                            {reviewData.responseDate && (
+                                                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                    {formatDate(reviewData.responseDate)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p className={`text-sm ml-10 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        {reviewData.response}
+                                    </p>
+                                </div>
+                            </motion.div>
                         </div>
                     )}
 

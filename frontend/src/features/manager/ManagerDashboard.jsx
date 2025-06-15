@@ -228,33 +228,38 @@ const ReviewItem = ({ review, onRespond }) => {
                     {key: 'atmosphere', name: 'Атмосфера', value: Number(review.atmosphere_rating || review.ratings?.atmosphere || 0)},
                     {key: 'price', name: 'Цена/качество', value: Number(review.price_rating || review.ratings?.price || 0)},
                     {key: 'cleanliness', name: 'Чистота', value: Number(review.cleanliness_rating || review.ratings?.cleanliness || 0)}
-                ].map(({key, name, value}) => (
-                    <div key={key} className="bg-gray-50 dark:bg-gray-700 p-2 rounded flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">{name}:</span>
-                        <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => {
-                                const isFilled = i < value;
-                                return (
-                                    <svg 
-                                        key={i}
-                                        xmlns="http://www.w3.org/2000/svg" 
-                                        width="14" 
-                                        height="14" 
-                                        viewBox="0 0 24 24" 
-                                        fill={isFilled ? "#FBBF24" : "none"}
-                                        stroke={isFilled ? "#FBBF24" : "#D1D5DB"}
-                                        strokeWidth="2"
-                                        strokeLinecap="round" 
-                                        strokeLinejoin="round" 
-                                        className={isFilled ? "text-yellow-400" : "text-gray-300"}
-                                    >
-                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                    </svg>
-                                );
-                            })}
+                ].map(({key, name, value}) => {
+                    // Преобразуем значение в число и убедимся, что оно в диапазоне 0-5
+                    const ratingValue = Math.max(0, Math.min(5, parseInt(value) || 0));
+                    
+                    return (
+                        <div key={key} className="bg-gray-50 dark:bg-gray-700 p-2 rounded flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">{name}:</span>
+                            <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => {
+                                    const isFilled = i < ratingValue;
+                                    return (
+                                        <svg 
+                                            key={i}
+                                            xmlns="http://www.w3.org/2000/svg" 
+                                            width="14" 
+                                            height="14" 
+                                            viewBox="0 0 24 24" 
+                                            fill={isFilled ? "#FBBF24" : "none"}
+                                            stroke={isFilled ? "#FBBF24" : "#D1D5DB"}
+                                            strokeWidth="2"
+                                            strokeLinecap="round" 
+                                            strokeLinejoin="round" 
+                                            className={isFilled ? "text-yellow-400" : "text-gray-300"}
+                                        >
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                        </svg>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
             
             {/* Отображение фотографий с улучшенной обработкой ошибок */}

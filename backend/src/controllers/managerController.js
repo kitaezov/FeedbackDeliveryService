@@ -167,7 +167,7 @@ const getManagerReviews = async (req, res) => {
                 user_id: review.user_id,
                 restaurant_id: review.restaurant_id,
                 restaurant_name: review.restaurant_name,
-                rating: review.rating,
+                rating: review.rating || 0,
                 comment: review.comment,
                 created_at: review.created_at,
                 updated_at: review.updated_at,
@@ -178,11 +178,11 @@ const getManagerReviews = async (req, res) => {
                 manager_name: review.manager_name,
                 has_response: Boolean(review.response),
                 deleted: review.deleted === 1,
-                food_rating: review.food_rating,
-                service_rating: review.service_rating,
-                atmosphere_rating: review.atmosphere_rating,
-                price_rating: review.price_rating,
-                cleanliness_rating: review.cleanliness_rating,
+                food_rating: parseInt(review.food_rating) || 0,
+                service_rating: parseInt(review.service_rating) || 0,
+                atmosphere_rating: parseInt(review.atmosphere_rating) || 0,
+                price_rating: parseInt(review.price_rating) || 0,
+                cleanliness_rating: parseInt(review.cleanliness_rating) || 0,
                 photos: []
             };
             

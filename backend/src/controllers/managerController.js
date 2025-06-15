@@ -151,33 +151,80 @@ const getManagerReviews = async (req, res) => {
         // Записываем в лог количество найденных отзывов
         console.log(`Найдено ${reviews.length} отзывов для ресторана (ID: ${restaurantId})`);
         
-        // Форматируем ответы для фронтенда
-        const formattedReviews = reviews.map(review => ({
-            id: review.id,
-            user_id: review.user_id,
-            restaurant_id: review.restaurant_id,
-            restaurant_name: review.restaurant_name,
-            rating: review.rating,
-            comment: review.comment,
-            created_at: review.created_at,
-            updated_at: review.updated_at,
-            user_name: review.user_name,
-            user_avatar: review.user_avatar,
-            response: review.response,
-            response_date: review.response_date,
-            manager_name: review.manager_name,
-            has_response: Boolean(review.response),
-            deleted: review.deleted === 1
-        }));
+        // Проверяем наличие таблицы review_photos
+        const [tableExists] = await pool.query(`
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_schema = DATABASE() 
+            AND table_name = 'review_photos'
+        `);
         
-        // Возвращаем отзывы напрямую без вложенности
-        res.json(formattedReviews);
+        // Получаем фотографии для каждого отзыва, если таблица существует
+        const reviewsWithPhotos = [];
+        for (const review of reviews) {
+            // Форматируем отзыв для фронтенда
+            const formattedReview = {
+                id: review.id,
+                user_id: review.user_id,
+                restaurant_id: review.restaurant_id,
+                restaurant_name: review.restaurant_name,
+                rating: review.rating,
+                comment: review.comment,
+                created_at: review.created_at,
+                updated_at: review.updated_at,
+                user_name: review.user_name,
+                user_avatar: review.user_avatar,
+                response: review.response,
+                response_date: review.response_date,
+                manager_name: review.manager_name,
+                has_response: Boolean(review.response),
+                deleted: review.deleted === 1,
+                food_rating: review.food_rating,
+                service_rating: review.service_rating,
+                atmosphere_rating: review.atmosphere_rating,
+                price_rating: review.price_rating,
+                cleanliness_rating: review.cleanliness_rating,
+                photos: []
+            };
+            
+            // Если таблица фотографий существует, получаем фотографии для отзыва
+            if (tableExists.length > 0) {
+                try {
+                    const [photos] = await pool.query(
+                        'SELECT * FROM review_photos WHERE review_id = ?',
+                        [review.id]
+                    );
+                    
+                    if (photos && photos.length > 0) {
+                        console.log(`Найдено ${photos.length} фотографий для отзыва ID: ${review.id}`);
+                        
+                        // Преобразуем фотографии в нужный формат
+                        formattedReview.photos = photos.map(photo => {
+                            try {
+                                // Пробуем распарсить photo_url как JSON
+                                const photoData = JSON.parse(photo.photo_url);
+                                return photoData;
+                            } catch (e) {
+                                // Если не получилось распарсить, возвращаем как есть
+                                return { url: photo.photo_url, isReceipt: Boolean(photo.is_receipt) };
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Ошибка при получении фотографий для отзыва ID: ${review.id}:`, error);
+                }
+            }
+            
+            reviewsWithPhotos.push(formattedReview);
+        }
+        
+        // Возвращаем отзывы с фотографиями
+        res.json(reviewsWithPhotos);
     } catch (error) {
-        console.error('Ошибка получения отзывов:', error);
+        console.error('Ошибка при получении отзывов для менеджера:', error);
         res.status(500).json({
             success: false,
-            message: 'Не удалось получить отзывы',
-            details: error.message
+            message: 'Ошибка сервера при получении отзывов',
+            error: error.message
         });
     }
 };

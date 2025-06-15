@@ -12,6 +12,43 @@ import { toast } from 'react-hot-toast';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
+// Функция для правильной обработки URL изображений
+const formatImageUrl = (url) => {
+    if (!url) return null;
+    
+    // Если это объект с URL, извлекаем URL
+    if (typeof url === 'object' && url !== null) {
+        if (url.url) return formatImageUrl(url.url);
+        return null;
+    }
+    
+    // Попытка распарсить JSON строку
+    if (typeof url === 'string' && (url.startsWith('{') || url.startsWith('['))) {
+        try {
+            const parsed = JSON.parse(url);
+            if (parsed && parsed.url) {
+                return formatImageUrl(parsed.url);
+            }
+            return null;
+        } catch (e) {
+            // Если не удалось распарсить, продолжаем обработку как строки
+        }
+    }
+    
+    // Если URL уже абсолютный, возвращаем его как есть
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+    
+    // Если URL начинается с /, считаем его относительным к API
+    if (url.startsWith('/')) {
+        return `${process.env.REACT_APP_API_URL || ''}${url}`;
+    }
+    
+    // В остальных случаях предполагаем, что это относительный путь
+    return `${process.env.REACT_APP_API_URL || ''}/${url}`;
+};
+
 // Форматирование даты с учетом возможных ошибок
 const formatDate = (dateString) => {
     try {
@@ -115,16 +152,18 @@ const ReviewItem = ({ review, onRespond }) => {
     // Получение имени пользователя с учетом разных форматов данных
     const getUserName = () => {
         // Проверяем различные структуры данных для имени пользователя
-        if (review.user?.name) {
+        if (review.user_name) {
+            return review.user_name;
+        } else if (review.user?.name) {
             return review.user.name;
         } else if (review.userName) {
             return review.userName;
         } else if (review.author) {
-            return typeof review.author === 'string' ? review.author : review.author.name || 'Анонимно';
+            return typeof review.author === 'string' ? review.author : review.author.name || 'Аноним';
         } else if (review.username) {
             return review.username;
         } else {
-            return 'Анонимно';
+            return 'Аноним';
         }
     };
 
@@ -144,16 +183,29 @@ const ReviewItem = ({ review, onRespond }) => {
                     <h4 className="font-medium dark:text-white">{getUserName()}</h4>
                     <div className="flex items-center">
                         <div className="flex items-center mr-3">
-                            {[...Array(5)].map((_, i) => (
-                                <Star 
-                                    key={i} 
-                                    size={16} 
-                                    className={i < review.rating ? "text-yellow-400 fill-current" : "text-gray-300"} 
-                                />
-                            ))}
+                            {[...Array(5)].map((_, i) => {
+                                const isFilled = i < Number(review.rating || 0);
+                                return (
+                                    <svg 
+                                        key={i}
+                                        xmlns="http://www.w3.org/2000/svg" 
+                                        width="16" 
+                                        height="16" 
+                                        viewBox="0 0 24 24" 
+                                        fill={isFilled ? "#FBBF24" : "none"}
+                                        stroke={isFilled ? "#FBBF24" : "#D1D5DB"}
+                                        strokeWidth="2"
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        className={isFilled ? "text-yellow-400" : "text-gray-300"}
+                                    >
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                    </svg>
+                                );
+                            })}
                         </div>
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatDate(review.createdAt)}
+                            {formatDate(review.created_at || review.createdAt)}
                         </span>
                     </div>
                 </div>
@@ -165,7 +217,102 @@ const ReviewItem = ({ review, onRespond }) => {
                 </span>
             </div>
             
-            <p className="text-gray-700 dark:text-gray-300 mb-2">{review.text}</p>
+            <p className="text-gray-700 dark:text-gray-300 mb-2">{review.comment || review.text}</p>
+            
+            {/* Отображение критериев оценки всегда, даже если нет данных */}
+            <div className="mb-3 grid grid-cols-2 gap-2">
+                {/* Показываем все критерии, даже с нулевыми значениями */}
+                {[
+                    {key: 'food', name: 'Еда', value: Number(review.food_rating || review.ratings?.food || 0)},
+                    {key: 'service', name: 'Обслуживание', value: Number(review.service_rating || review.ratings?.service || 0)},
+                    {key: 'atmosphere', name: 'Атмосфера', value: Number(review.atmosphere_rating || review.ratings?.atmosphere || 0)},
+                    {key: 'price', name: 'Цена/качество', value: Number(review.price_rating || review.ratings?.price || 0)},
+                    {key: 'cleanliness', name: 'Чистота', value: Number(review.cleanliness_rating || review.ratings?.cleanliness || 0)}
+                ].map(({key, name, value}) => (
+                    <div key={key} className="bg-gray-50 dark:bg-gray-700 p-2 rounded flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">{name}:</span>
+                        <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => {
+                                const isFilled = i < value;
+                                return (
+                                    <svg 
+                                        key={i}
+                                        xmlns="http://www.w3.org/2000/svg" 
+                                        width="14" 
+                                        height="14" 
+                                        viewBox="0 0 24 24" 
+                                        fill={isFilled ? "#FBBF24" : "none"}
+                                        stroke={isFilled ? "#FBBF24" : "#D1D5DB"}
+                                        strokeWidth="2"
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        className={isFilled ? "text-yellow-400" : "text-gray-300"}
+                                    >
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                    </svg>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </div>
+            
+            {/* Отображение фотографий с улучшенной обработкой ошибок */}
+            <div className="mb-3">
+                <h5 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Фотографии:</h5>
+                <div className="flex flex-wrap gap-2">
+                    {(() => {
+                        // Обработка фотографий из всех возможных источников
+                        const processPhotos = () => {
+                            // Проверяем разные форматы фотографий
+                            if (review.photos && review.photos.length > 0) {
+                                return review.photos.map((photo, index) => {
+                                    let photoUrl;
+                                    if (typeof photo === 'string') {
+                                        photoUrl = formatImageUrl(photo);
+                                    } else if (photo && photo.url) {
+                                        photoUrl = formatImageUrl(photo.url);
+                                    } else if (photo && typeof photo === 'object') {
+                                        photoUrl = formatImageUrl(JSON.stringify(photo));
+                                    }
+                                    
+                                    if (photoUrl) {
+                                        return (
+                                            <div 
+                                                key={index} 
+                                                className="w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-700"
+                                                onClick={() => window.open(photoUrl, '_blank')}
+                                                style={{ cursor: 'pointer' }}
+                                            >
+                                                <img 
+                                                    src={photoUrl} 
+                                                    alt={`Фото ${index + 1}`} 
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        console.log(`Ошибка загрузки изображения: ${photoUrl}`);
+                                                        e.target.onerror = null;
+                                                        e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+                                                    }}
+                                                />
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                }).filter(Boolean);
+                            }
+                            return [];
+                        };
+                        
+                        const photos = processPhotos();
+                        
+                        if (photos.length > 0) {
+                            return photos;
+                        } else {
+                            return <p className="text-sm text-gray-500 dark:text-gray-400">Нет прикрепленных фотографий</p>;
+                        }
+                    })()}
+                </div>
+            </div>
             
             <button 
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -181,7 +328,7 @@ const ReviewItem = ({ review, onRespond }) => {
                             <div className="flex justify-between items-start mb-2">
                                 <p className="text-sm font-medium mb-1 dark:text-gray-300">
                                     <span className="text-blue-600 dark:text-blue-400">
-                                        {review.restaurant?.name || 'Ресторан'}
+                                        {review.restaurant_name || 'Ресторан'}
                                     </span>
                                     <span className="text-gray-500 dark:text-gray-400"> • Менеджер {review.manager_name || 'ресторана'}</span>
                                 </p>
@@ -201,7 +348,7 @@ const ReviewItem = ({ review, onRespond }) => {
                                     Вы отвечаете как менеджер ресторана
                                 </span>
                                 <span className="text-blue-600 dark:text-blue-400 font-medium">
-                                    {review.restaurant?.name || 'Неизвестный ресторан'}
+                                    {review.restaurant_name || 'Неизвестный ресторан'}
                                 </span>
                             </div>
                             <textarea
@@ -569,7 +716,7 @@ const ManagerDashboard = () => {
         try {
             // Получаем данные с правильного эндпоинта для менеджера
             const data = await fetchData('manager/reviews');
-            console.log('Получены отзывы из базы данных:', data);
+            console.log('Получены отзывы из базы данных (RAW):', data);
             
             // Проверяем структуру ответа
             let reviewsData = [];
@@ -591,30 +738,128 @@ const ManagerDashboard = () => {
                                    Boolean(review.has_response) || 
                                    review.responded === true;
                                    
+                // Обработка критериев оценки с более глубоким поиском значений
+                const ratings = {
+                    food: Number(review.food_rating || review.ratings?.food || review.criteriaRatings?.food || 0),
+                    service: Number(review.service_rating || review.ratings?.service || review.criteriaRatings?.service || 0),
+                    atmosphere: Number(review.atmosphere_rating || review.ratings?.atmosphere || review.criteriaRatings?.atmosphere || 0),
+                    price: Number(review.price_rating || review.ratings?.price || review.criteriaRatings?.price || 0),
+                    cleanliness: Number(review.cleanliness_rating || review.ratings?.cleanliness || review.criteriaRatings?.cleanliness || 0)
+                };
+                
+                // Добавляем отладочную информацию для рейтингов
+                console.log(`Отзыв ID=${review.id}, исходные рейтинги:`, {
+                    food_rating: review.food_rating,
+                    service_rating: review.service_rating,
+                    atmosphere_rating: review.atmosphere_rating,
+                    price_rating: review.price_rating,
+                    cleanliness_rating: review.cleanliness_rating,
+                    ratings: review.ratings,
+                    criteriaRatings: review.criteriaRatings
+                });
+                console.log(`Отзыв ID=${review.id}, обработанные рейтинги:`, ratings);
+                
+                // Обработка фотографий
+                let photos = [];
+                
+                // Проверяем все возможные источники фотографий
+                if (review.photos) {
+                    if (Array.isArray(review.photos)) {
+                        photos = review.photos;
+                    } else if (typeof review.photos === 'string') {
+                        try {
+                            const parsed = JSON.parse(review.photos);
+                            if (Array.isArray(parsed)) {
+                                photos = parsed;
+                            } else if (parsed && parsed.url) {
+                                photos = [parsed];
+                            }
+                        } catch (e) {
+                            // Если не JSON, то считаем строку URL-ом
+                            photos = [{ url: review.photos }];
+                        }
+                    }
+                }
+                
+                // Если нет фотографий, проверяем другие источники
+                if (photos.length === 0) {
+                    // Проверяем другие возможные источники фотографий
+                    const photoSources = [
+                        review.images,
+                        review.attachments,
+                        review.photo_urls,
+                        review.photo,
+                        review.user_avatar
+                    ];
+                    
+                    for (const source of photoSources) {
+                        if (!source) continue;
+                        
+                        if (Array.isArray(source)) {
+                            photos = source.map(item => {
+                                if (typeof item === 'string') return { url: item };
+                                if (item && typeof item === 'object') return { url: item.url || item.path || item.src || item };
+                                return null;
+                            }).filter(Boolean);
+                            
+                            if (photos.length > 0) break;
+                        } else if (typeof source === 'string') {
+                            try {
+                                // Пробуем распарсить как JSON
+                                const parsed = JSON.parse(source);
+                                if (Array.isArray(parsed)) {
+                                    photos = parsed.map(item => {
+                                        if (typeof item === 'string') return { url: item };
+                                        if (item && typeof item === 'object') return { url: item.url || item.path || item.src || item };
+                                        return null;
+                                    }).filter(Boolean);
+                                } else if (parsed && typeof parsed === 'object') {
+                                    photos = [{ url: parsed.url || parsed.path || parsed.src || '' }].filter(p => p.url);
+                                }
+                            } catch (e) {
+                                // Если не JSON, то считаем строку URL-ом
+                                photos = [{ url: source }];
+                            }
+                            
+                            if (photos.length > 0) break;
+                        } else if (source && typeof source === 'object') {
+                            if (source.url || source.path || source.src) {
+                                photos = [{ url: source.url || source.path || source.src }];
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Добавляем отладочную информацию для фотографий
+                console.log(`Отзыв ID=${review.id}, обработанные фото:`, photos);
+                
+                // Формируем нормализованный отзыв
                 return {
                     id: review.id,
                     text: review.comment || review.text || review.content || '',
+                    comment: review.comment || review.text || review.content || '',
                     rating: Number(review.rating) || 0,
+                    created_at: review.created_at || review.createdAt || review.date || new Date().toISOString(),
                     createdAt: review.created_at || review.createdAt || review.date || new Date().toISOString(),
                     responded: hasResponse,
                     response: review.response || '',
-                    responseDate: review.responseDate || review.response_date || null,
+                    response_date: review.response_date || review.responseDate || null,
+                    responseDate: review.response_date || review.responseDate || null,
                     manager_name: review.manager_name || review.managerName || '',
-                    user: {
-                        name: review.author?.name || review.user_name || review.userName || review.username || review.name || 'Аноним'
-                    },
-                    restaurant: {
-                        name: review.restaurant_name || review.restaurantName || 'Ресторан'
-                    }
+                    photos: photos,
+                    food_rating: ratings.food,
+                    service_rating: ratings.service,
+                    atmosphere_rating: ratings.atmosphere,
+                    price_rating: ratings.price,
+                    cleanliness_rating: ratings.cleanliness,
+                    ratings: ratings,
+                    user_name: review.user_name || review.userName || review.username || review.name || 'Аноним',
+                    restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан'
                 };
-            }).filter(review => review.text && review.rating); // Фильтруем невалидные отзывы
+            }).filter(review => review.text && review.rating !== undefined); // Фильтруем невалидные отзывы
             
             console.log(`Обработано ${normalizedReviews.length} валидных отзывов`);
-            
-            // Логгируем каждый отзыв для отладки состояния "отвечено"
-            normalizedReviews.forEach(review => {
-                console.log(`Отзыв ID=${review.id}, responded=${review.responded}, hasResponse=${Boolean(review.response)}`);
-            });
             
             setReviews(normalizedReviews);
             return normalizedReviews;
@@ -771,8 +1016,8 @@ const ManagerDashboard = () => {
         if (filters.search && filters.search.trim() !== '') {
             const searchTerm = filters.search.toLowerCase().trim();
             const textMatch = review.text && review.text.toLowerCase().includes(searchTerm);
-            const userMatch = review.user?.name && review.user.name.toLowerCase().includes(searchTerm);
-            const restaurantMatch = review.restaurant?.name && review.restaurant.name.toLowerCase().includes(searchTerm);
+            const userMatch = review.user_name && review.user_name.toLowerCase().includes(searchTerm);
+            const restaurantMatch = review.restaurant_name && review.restaurant_name.toLowerCase().includes(searchTerm);
             
             if (!textMatch && !userMatch && !restaurantMatch) return false;
         }
@@ -833,9 +1078,9 @@ const ManagerDashboard = () => {
                 headers.join(';'),
                 ...reviews.map(review => [
                     review.id,
-                    formatDate(review.date),
-                    review.userName,
-                    review.restaurantName,
+                    formatDate(review.created_at),
+                    review.user_name,
+                    review.restaurant_name,
                     review.rating,
                     escapeCSV(review.comment),
                     review.responded ? 'Отвечено' : 'Без ответа'

@@ -144,10 +144,38 @@ const ChartCard = ({ title, children, className = '' }) => (
     </motion.div>
 );
 
-const ReviewItem = ({ review, onRespond }) => {
+// Добавляем функцию для получения текста типа отзыва
+const getReviewTypeText = (type) => {
+    if (!type) return "Не указано";
+    switch (type.toLowerCase()) {
+        case "inrestaurant":
+            return "В ресторане";
+        case "delivery":
+            return "Доставка";
+        default:
+            return type;
+    }
+};
+
+// Добавляем функцию для получения цвета типа отзыва
+const getReviewTypeColor = (type) => {
+    if (!type) return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+    switch (type.toLowerCase()) {
+        case "inrestaurant":
+            return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+        case "delivery":
+            return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+        default:
+            return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+    }
+};
+
+const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [responseText, setResponseText] = useState('');
     const [isEditing, setIsEditing] = useState(false);
+    const [reviewType, setReviewType] = useState(review.type || "inRestaurant");
+    const [isTypeLoading, setIsTypeLoading] = useState(false);
 
     // Получение имени пользователя с учетом разных форматов данных
     const getUserName = () => {
@@ -173,6 +201,46 @@ const ReviewItem = ({ review, onRespond }) => {
         setIsEditing(true);
     };
 
+    // Функция для установки типа отзыва
+    const setReviewTypeValue = async (newType) => {
+        // Если уже выполняется запрос или текущий тип совпадает с новым, не делаем ничего
+        if (isTypeLoading || reviewType === newType) return;
+        
+        setIsTypeLoading(true);
+        
+        // Вызываем API для обновления типа отзыва в базе данных
+        try {
+            console.log(`Изменение типа отзыва ID=${review.id} с ${reviewType} на ${newType}`);
+            
+            // Используем postData из useBackendApi
+            await postData('manager/reviews/update-type', { 
+                reviewId: review.id, 
+                type: newType 
+            });
+            
+            // Обновляем состояние после успешного запроса
+            setReviewType(newType);
+            
+            // Показываем уведомление об успешном обновлении
+            toast.success(`Тип отзыва установлен: "${newType === "inRestaurant" ? "В ресторане" : "Доставка"}"`);
+            
+            // Вызываем функцию для обновления данных
+            if (onTypeChange) {
+                onTypeChange();
+            }
+        } catch (error) {
+            console.error('Ошибка при обновлении типа отзыва:', error);
+            
+            // Показываем уведомление об ошибке
+            toast.error('Не удалось обновить тип отзыва');
+        } finally {
+            setIsTypeLoading(false);
+        }
+    };
+
+    // Определяем, является ли отзыв доставкой
+    const isDelivery = reviewType === "delivery";
+
     return (
         <motion.div 
             variants={itemVariants}
@@ -180,27 +248,53 @@ const ReviewItem = ({ review, onRespond }) => {
         >
             <div className="flex justify-between items-start mb-2">
                 <div>
-                    <h4 className="font-medium dark:text-white">{getUserName()}</h4>
+                    <div className="flex items-center gap-2">
+                        <h4 className="font-medium dark:text-white">{getUserName()}</h4>
+                        <div className="flex items-center gap-1">
+                            <button 
+                                onClick={() => reviewType !== "inRestaurant" && setReviewTypeValue("inRestaurant")}
+                                disabled={isTypeLoading || reviewType === "inRestaurant"}
+                                className={`px-2 py-0.5 text-xs rounded-full transition-all
+                                ${reviewType === "inRestaurant" 
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 ring-2 ring-blue-400 font-bold" 
+                                    : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}
+                                ${isTypeLoading || reviewType === "inRestaurant" ? "cursor-not-allowed" : "cursor-pointer hover:bg-blue-50"}`}
+                                title={reviewType === "inRestaurant" ? "Текущий тип отзыва" : "Изменить тип отзыва"}
+                            >
+                                {isTypeLoading && reviewType === "delivery" ? "..." : "В ресторане"}
+                            </button>
+                            <button 
+                                onClick={() => reviewType !== "delivery" && setReviewTypeValue("delivery")}
+                                disabled={isTypeLoading || reviewType === "delivery"}
+                                className={`px-2 py-0.5 text-xs rounded-full transition-all
+                                ${reviewType === "delivery" 
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 ring-2 ring-green-400 font-bold" 
+                                    : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}
+                                ${isTypeLoading || reviewType === "delivery" ? "cursor-not-allowed" : "cursor-pointer hover:bg-green-50"}`}
+                                title={reviewType === "delivery" ? "Текущий тип отзыва" : "Изменить тип отзыва"}
+                            >
+                                {isTypeLoading && reviewType === "inRestaurant" ? "..." : "Доставка"}
+                            </button>
+                        </div>
+                    </div>
                     <div className="flex items-center">
                         <div className="flex items-center mr-3">
-                            {[...Array(5)].map((_, i) => {
-                                const isFilled = i < Number(review.rating || 0);
+                            {[1, 2, 3, 4, 5].map((star) => {
+                                const isFilled = star <= Number(review.rating || 0);
                                 return (
-                                    <svg 
-                                        key={i}
-                                        xmlns="http://www.w3.org/2000/svg" 
-                                        width="16" 
-                                        height="16" 
-                                        viewBox="0 0 24 24" 
-                                        fill={isFilled ? "#FBBF24" : "none"}
-                                        stroke={isFilled ? "#FBBF24" : "#D1D5DB"}
-                                        strokeWidth="2"
-                                        strokeLinecap="round" 
-                                        strokeLinejoin="round" 
-                                        className={isFilled ? "text-yellow-400" : "text-gray-300"}
+                                    <span 
+                                        key={star} 
+                                        className={`text-lg ${isFilled ? 'text-yellow-400' : 'text-gray-300'}`}
+                                        style={{ 
+                                            display: 'inline-block',
+                                            width: '16px',
+                                            height: '16px',
+                                            lineHeight: '16px',
+                                            textAlign: 'center'
+                                        }}
                                     >
-                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                    </svg>
+                                        ★
+                                    </span>
                                 );
                             })}
                         </div>
@@ -219,43 +313,44 @@ const ReviewItem = ({ review, onRespond }) => {
             
             <p className="text-gray-700 dark:text-gray-300 mb-2">{review.comment || review.text}</p>
             
-            {/* Отображение критериев оценки всегда, даже если нет данных */}
+            {/* Отображение критериев оценки в зависимости от типа отзыва */}
             <div className="mb-3 grid grid-cols-2 gap-2">
-                {/* Показываем все критерии, даже с нулевыми значениями */}
-                {[
-                    {key: 'food', name: 'Еда', value: Number(review.food_rating || review.ratings?.food || 0)},
-                    {key: 'service', name: 'Обслуживание', value: Number(review.service_rating || review.ratings?.service || 0)},
-                    {key: 'atmosphere', name: 'Атмосфера', value: Number(review.atmosphere_rating || review.ratings?.atmosphere || 0)},
-                    {key: 'price', name: 'Цена/качество', value: Number(review.price_rating || review.ratings?.price || 0)},
-                    {key: 'cleanliness', name: 'Чистота', value: Number(review.cleanliness_rating || review.ratings?.cleanliness || 0)}
-                ].map(({key, name, value}) => {
-                    // Преобразуем значение в число и убедимся, что оно в диапазоне 0-5
+                {/* Для отзывов о доставке показываем одни критерии, для отзывов в ресторане - другие */}
+                {(isDelivery ? [
+                    {key: 'food', name: 'Еда', value: review.food_rating},
+                    {key: 'delivery', name: 'Скорость доставки', value: review.service_rating}, // Переименовываем для доставки
+                    {key: 'packaging', name: 'Упаковка', value: review.atmosphere_rating}, // Переименовываем для доставки
+                    {key: 'price', name: 'Цена/качество', value: review.price_rating}
+                ] : [
+                    {key: 'food', name: 'Еда', value: review.food_rating},
+                    {key: 'service', name: 'Обслуживание', value: review.service_rating},
+                    {key: 'atmosphere', name: 'Атмосфера', value: review.atmosphere_rating},
+                    {key: 'price', name: 'Цена/качество', value: review.price_rating},
+                    {key: 'cleanliness', name: 'Чистота', value: review.cleanliness_rating}
+                ]).map(({key, name, value}) => {
+                    // Принудительно преобразуем значение в число от 0 до 5
                     const ratingValue = Math.max(0, Math.min(5, parseInt(value) || 0));
                     
                     return (
                         <div key={key} className="bg-gray-50 dark:bg-gray-700 p-2 rounded flex items-center justify-between">
                             <span className="text-sm text-gray-600 dark:text-gray-300">{name}:</span>
                             <div className="flex items-center">
-                                {[...Array(5)].map((_, i) => {
-                                    const isFilled = i < ratingValue;
-                                    return (
-                                        <svg 
-                                            key={i}
-                                            xmlns="http://www.w3.org/2000/svg" 
-                                            width="14" 
-                                            height="14" 
-                                            viewBox="0 0 24 24" 
-                                            fill={isFilled ? "#FBBF24" : "none"}
-                                            stroke={isFilled ? "#FBBF24" : "#D1D5DB"}
-                                            strokeWidth="2"
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            className={isFilled ? "text-yellow-400" : "text-gray-300"}
-                                        >
-                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                        </svg>
-                                    );
-                                })}
+                                {/* Используем простые span элементы с символами звезд для более надежного отображения */}
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <span 
+                                        key={star} 
+                                        className={`text-lg ${star <= ratingValue ? 'text-yellow-400' : 'text-gray-300'}`}
+                                        style={{ 
+                                            display: 'inline-block',
+                                            width: '16px',
+                                            height: '16px',
+                                            lineHeight: '16px',
+                                            textAlign: 'center'
+                                        }}
+                                    >
+                                        ★
+                                    </span>
+                                ))}
                             </div>
                         </div>
                     );
@@ -595,7 +690,8 @@ const ManagerDashboard = () => {
     const [filters, setFilters] = useState({
         status: 'all',
         rating: 'all',
-        search: ''
+        search: '',
+        type: 'all'
     });
     const [chartPeriod, setChartPeriod] = useState('week');
     const [chartData, setChartData] = useState({
@@ -721,7 +817,7 @@ const ManagerDashboard = () => {
         try {
             // Получаем данные с правильного эндпоинта для менеджера
             const data = await fetchData('manager/reviews');
-            console.log('Получены отзывы из базы данных (RAW):', data);
+            console.log('Получены отзывы из базы данных:', data);
             
             // Проверяем структуру ответа
             let reviewsData = [];
@@ -743,26 +839,21 @@ const ManagerDashboard = () => {
                                    Boolean(review.has_response) || 
                                    review.responded === true;
                                    
-                // Обработка критериев оценки с более глубоким поиском значений
-                const ratings = {
-                    food: Number(review.food_rating || review.ratings?.food || review.criteriaRatings?.food || 0),
-                    service: Number(review.service_rating || review.ratings?.service || review.criteriaRatings?.service || 0),
-                    atmosphere: Number(review.atmosphere_rating || review.ratings?.atmosphere || review.criteriaRatings?.atmosphere || 0),
-                    price: Number(review.price_rating || review.ratings?.price || review.criteriaRatings?.price || 0),
-                    cleanliness: Number(review.cleanliness_rating || review.ratings?.cleanliness || review.criteriaRatings?.cleanliness || 0)
-                };
+                // Обработка критериев оценки с принудительным преобразованием в числа
+                const food_rating = parseInt(review.food_rating) || 0;
+                const service_rating = parseInt(review.service_rating) || 0;
+                const atmosphere_rating = parseInt(review.atmosphere_rating) || 0;
+                const price_rating = parseInt(review.price_rating) || 0;
+                const cleanliness_rating = parseInt(review.cleanliness_rating) || 0;
                 
                 // Добавляем отладочную информацию для рейтингов
-                console.log(`Отзыв ID=${review.id}, исходные рейтинги:`, {
-                    food_rating: review.food_rating,
-                    service_rating: review.service_rating,
-                    atmosphere_rating: review.atmosphere_rating,
-                    price_rating: review.price_rating,
-                    cleanliness_rating: review.cleanliness_rating,
-                    ratings: review.ratings,
-                    criteriaRatings: review.criteriaRatings
+                console.log(`Отзыв ID=${review.id}, обработанные рейтинги:`, {
+                    food_rating,
+                    service_rating,
+                    atmosphere_rating,
+                    price_rating,
+                    cleanliness_rating
                 });
-                console.log(`Отзыв ID=${review.id}, обработанные рейтинги:`, ratings);
                 
                 // Обработка фотографий
                 let photos = [];
@@ -844,7 +935,7 @@ const ManagerDashboard = () => {
                     id: review.id,
                     text: review.comment || review.text || review.content || '',
                     comment: review.comment || review.text || review.content || '',
-                    rating: Number(review.rating) || 0,
+                    rating: parseInt(review.rating) || 0,
                     created_at: review.created_at || review.createdAt || review.date || new Date().toISOString(),
                     createdAt: review.created_at || review.createdAt || review.date || new Date().toISOString(),
                     responded: hasResponse,
@@ -853,14 +944,14 @@ const ManagerDashboard = () => {
                     responseDate: review.response_date || review.responseDate || null,
                     manager_name: review.manager_name || review.managerName || '',
                     photos: photos,
-                    food_rating: ratings.food,
-                    service_rating: ratings.service,
-                    atmosphere_rating: ratings.atmosphere,
-                    price_rating: ratings.price,
-                    cleanliness_rating: ratings.cleanliness,
-                    ratings: ratings,
+                    food_rating,
+                    service_rating,
+                    atmosphere_rating,
+                    price_rating,
+                    cleanliness_rating,
                     user_name: review.user_name || review.userName || review.username || review.name || 'Аноним',
-                    restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан'
+                    restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан',
+                    type: review.type || 'inRestaurant' // Добавляем тип отзыва с дефолтным значением
                 };
             }).filter(review => review.text && review.rating !== undefined); // Фильтруем невалидные отзывы
             
@@ -1016,6 +1107,12 @@ const ManagerDashboard = () => {
         
         // Rating filter
         if (filters.rating !== 'all' && parseInt(review.rating) !== parseInt(filters.rating)) return false;
+        
+        // Type filter (new)
+        if (filters.type !== 'all') {
+            const reviewType = (review.type || 'inRestaurant').toLowerCase();
+            if (reviewType !== filters.type.toLowerCase()) return false;
+        }
         
         // Search filter (name, text content, restaurant name)
         if (filters.search && filters.search.trim() !== '') {
@@ -1247,6 +1344,17 @@ const ManagerDashboard = () => {
                             <option value="2">2 звезды</option>
                             <option value="1">1 звезда</option>
                         </select>
+
+                        {/* Добавляем фильтр по типу отзыва */}
+                        <select
+                            value={filters.type}
+                            onChange={(e) => handleFilterChange('type', e.target.value)}
+                            className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        >
+                            <option value="all">Все типы</option>
+                            <option value="inRestaurant">В ресторане</option>
+                            <option value="delivery">Доставка</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -1256,7 +1364,7 @@ const ManagerDashboard = () => {
                             Показано {sortedReviews.length} отзывов
                         </span>
                         <button
-                            onClick={() => setFilters({ status: 'all', rating: 'all', search: '' })}
+                            onClick={() => setFilters({ status: 'all', rating: 'all', search: '', type: 'all' })}
                             className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                         >
                             Сбросить фильтры
@@ -1269,7 +1377,12 @@ const ManagerDashboard = () => {
                                 <ReviewItem 
                                     key={review.id} 
                                     review={review} 
-                                    onRespond={handleResponse} 
+                                    onRespond={handleResponse}
+                                    postData={postData}
+                                    onTypeChange={() => {
+                                        // Refresh data after type change
+                                        fetchReviewsFromDatabase();
+                                    }}
                                 />
                             ))
                         ) : (

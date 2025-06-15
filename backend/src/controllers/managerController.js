@@ -183,6 +183,7 @@ const getManagerReviews = async (req, res) => {
                 atmosphere_rating: parseInt(review.atmosphere_rating) || 0,
                 price_rating: parseInt(review.price_rating) || 0,
                 cleanliness_rating: parseInt(review.cleanliness_rating) || 0,
+                type: review.type || "inRestaurant",
                 photos: []
             };
             
@@ -754,11 +755,64 @@ const getRestaurants = async (req, res) => {
     }
 };
 
+/**
+ * Обновление типа отзыва (в ресторане или доставка)
+ */
+const updateReviewType = async (req, res) => {
+    try {
+        const { reviewId, type } = req.body;
+        
+        // Проверяем валидность параметров
+        if (!reviewId || !type) {
+            return res.status(400).json({
+                success: false,
+                message: 'Не указан ID отзыва или тип'
+            });
+        }
+        
+        // Проверяем, что тип имеет допустимое значение
+        if (type !== 'inRestaurant' && type !== 'delivery') {
+            return res.status(400).json({
+                success: false,
+                message: 'Недопустимый тип отзыва. Допустимые значения: inRestaurant, delivery'
+            });
+        }
+        
+        // Обновляем тип отзыва в базе данных
+        const [result] = await pool.execute(
+            'UPDATE reviews SET type = ? WHERE id = ?',
+            [type, reviewId]
+        );
+        
+        // Проверяем, был ли обновлен отзыв
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Отзыв не найден'
+            });
+        }
+        
+        // Возвращаем успешный ответ
+        return res.status(200).json({
+            success: true,
+            message: 'Тип отзыва успешно обновлен'
+        });
+    } catch (error) {
+        console.error('Ошибка при обновлении типа отзыва:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Произошла ошибка при обновлении типа отзыва',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getManagerStatistics,
     getManagerReviews,
     respondToReview,
     getStats,
     getChartData,
-    getRestaurants
+    getRestaurants,
+    updateReviewType
 }; 

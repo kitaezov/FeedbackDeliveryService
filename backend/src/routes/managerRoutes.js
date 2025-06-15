@@ -16,6 +16,9 @@ router.get('/reviews', managerController.getManagerReviews);
 router.post('/reviews/respond', managerController.respondToReview);
 router.post('/reviews/:id/response', managerController.respondToReview);
 
+// Добавляем новый маршрут для обновления типа отзыва
+router.post('/reviews/update-type', managerController.updateReviewType);
+
 // Данные ресторана
 router.get('/restaurants', managerController.getRestaurants);
 

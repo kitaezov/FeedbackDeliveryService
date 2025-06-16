@@ -8,7 +8,7 @@ export const restaurantData = {
         workingHours: "Пн-Вс: 12:00 - 23:00",
         cuisineType: "Французская",
         averageCheck: "3000-5000 ₽",
-        reviews: [], // Will be populated dynamically
+        reviews: [], // будет заполняться динамически
         rating: 4.5,
         photos: [
             "/path/to/restaurant-interior1.jpg",

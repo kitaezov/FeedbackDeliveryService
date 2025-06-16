@@ -1,7 +1,7 @@
 /**
- * Update User Schema Script
- * Expands the role column in the users table to support all roles: 'user', 'manager', 'admin', 'head_admin'
- * Adds columns for user blocking functionality
+ * Обновляем схему пользователей
+ * Расширяем колонку роли в таблице users, чтобы поддерживать все роли: 'user', 'manager', 'admin', 'head_admin'
+ * Добавляем колонки для функциональности блокировки пользователей
  */
 
 require('dotenv').config({ path: '../../.env' });
@@ -11,7 +11,7 @@ async function updateUserSchema() {
     try {
         console.log('Checking user schema...');
         
-        // Check the current role column definition
+        // Проверяем определение текущей колонки роли
         const [columns] = await pool.query(`
             SELECT COLUMN_TYPE 
             FROM INFORMATION_SCHEMA.COLUMNS 
@@ -22,7 +22,7 @@ async function updateUserSchema() {
             const currentType = columns[0].COLUMN_TYPE;
             console.log(`Current role column type: ${currentType}`);
             
-            // Check if it's an ENUM and if it has all the required roles
+            // Проверяем, является ли это ENUM и содержит ли он все необходимые роли
             if (currentType.includes('enum') && 
                 (!currentType.includes('manager') || !currentType.includes('head_admin'))) {
                 console.log('Modifying role column to support all roles...');
@@ -34,7 +34,7 @@ async function updateUserSchema() {
                 
                 console.log('Role column updated successfully!');
             } else if (currentType.includes('varchar') && parseInt(currentType.match(/varchar\((\d+)\)/)[1]) < 20) {
-                // If it's VARCHAR but too short
+                // Если это VARCHAR, но слишком короткий
                 console.log('Expanding the size of role column...');
                 
                 await pool.query(`
@@ -47,7 +47,7 @@ async function updateUserSchema() {
                 console.log('Role column already supports all necessary roles or is properly sized.');
             }
             
-            // Also update any legacy roles to match the new hierarchy
+            // Иначе обновляем любые устаревшие роли, чтобы соответствовать новой иерархии 
             console.log('Updating any legacy role values...');
             
             await pool.query(`
@@ -61,17 +61,17 @@ async function updateUserSchema() {
             console.error('Could not find role column in users table.');
         }
         
-        // Проверяем наличие колонок для блокировки пользователей
+        // Проверяем наличие колонок для блокировки пользователей  
         console.log('Checking for user blocking columns...');
         
-        // Проверяем наличие колонки is_blocked
+        // Проверяем наличие колонки is_blocked  
         const [hasBlockedColumn] = await pool.query(`
             SELECT COLUMN_NAME 
             FROM INFORMATION_SCHEMA.COLUMNS 
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'is_blocked'
         `, [process.env.DB_NAME]);
         
-        // Если колонки нет, добавляем её
+        // Если колонки нет, добавляем её 
         if (hasBlockedColumn.length === 0) {
             console.log('Adding is_blocked column to users table...');
             
@@ -85,14 +85,14 @@ async function updateUserSchema() {
             console.log('is_blocked column already exists.');
         }
         
-        // Проверяем наличие колонки blocked_reason
+        // Проверяем наличие колонки blocked_reason ( 
         const [hasReasonColumn] = await pool.query(`
             SELECT COLUMN_NAME 
             FROM INFORMATION_SCHEMA.COLUMNS 
             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'blocked_reason'
         `, [process.env.DB_NAME]);
         
-        // Если колонки нет, добавляем её
+        // Если колонки нет, добавляем её      
         if (hasReasonColumn.length === 0) {
             console.log('Adding blocked_reason column to users table...');
             

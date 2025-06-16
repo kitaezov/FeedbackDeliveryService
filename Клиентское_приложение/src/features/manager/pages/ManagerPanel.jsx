@@ -31,6 +31,10 @@ const ManagerPanel = () => {
         responses: []
     });
     const [restaurants, setRestaurants] = useState([]);
+    const [categoryRatings, setCategoryRatings] = useState({
+        restaurant: [],
+        delivery: []
+    });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -104,6 +108,9 @@ const ManagerPanel = () => {
                 
                 setRestaurants(processedRestaurants);
                 
+                // Calculate category ratings
+                calculateCategoryRatings(reviewsData);
+                
             } catch (error) {
                 console.error('Error loading manager data:', error);
             } finally {
@@ -113,6 +120,117 @@ const ManagerPanel = () => {
 
         fetchData();
     }, [timeRange]);
+    
+    // Функция для расчета рейтингов по категориям
+    const calculateCategoryRatings = (reviewsData) => {
+        // Разделяем отзывы по типам
+        const restaurantReviews = reviewsData.filter(review => 
+            review.type === 'inRestaurant' || 
+            (!review.type && !review.isDelivery && !review.delivery)
+        );
+        
+        const deliveryReviews = reviewsData.filter(review => 
+            review.type === 'delivery' || 
+            review.isDelivery === true || 
+            review.delivery === true
+        );
+        
+        console.log(`Разделение отзывов: В ресторане - ${restaurantReviews.length}, Доставка - ${deliveryReviews.length}`);
+        
+        // Рассчитываем рейтинги для ресторана
+        const restaurantCategories = [
+            { id: 'food', name: 'Качество блюд' },
+            { id: 'service', name: 'Уровень сервиса' },
+            { id: 'atmosphere', name: 'Атмосфера' },
+            { id: 'price', name: 'Цена/Качество' },
+            { id: 'cleanliness', name: 'Чистота' }
+        ];
+        
+        // Рассчитываем рейтинги для доставки
+        const deliveryCategories = [
+            { id: 'food', name: 'Качество блюд' },
+            { id: 'deliverySpeed', name: 'Скорость доставки' },
+            { id: 'deliveryQuality', name: 'Качество доставки' },
+            { id: 'price', name: 'Цена/Качество' }
+        ];
+        
+        // Функция для расчета среднего рейтинга по категории
+        const calculateAverage = (reviews, categoryId, alternativeIds = []) => {
+            let sum = 0;
+            let count = 0;
+            
+            reviews.forEach(review => {
+                let rating = null;
+                const overallRating = parseFloat(review.rating) || 3;
+                
+                // Проверяем различные форматы данных
+                if (review.ratings && review.ratings[categoryId] !== undefined) {
+                    rating = parseFloat(review.ratings[categoryId]);
+                } else if (review[`${categoryId}_rating`] !== undefined) {
+                    rating = parseFloat(review[`${categoryId}_rating`]);
+                } else {
+                    // Проверяем альтернативные ID
+                    for (const altId of alternativeIds) {
+                        if (review.ratings && review.ratings[altId] !== undefined) {
+                            rating = parseFloat(review.ratings[altId]);
+                            break;
+                        } else if (review[`${altId}_rating`] !== undefined) {
+                            rating = parseFloat(review[`${altId}_rating`]);
+                            break;
+                        }
+                    }
+                }
+                
+                // Если рейтинг не найден или равен 0, используем общий рейтинг
+                if (!rating || rating === 0 || isNaN(rating)) {
+                    rating = overallRating;
+                }
+                
+                sum += rating;
+                count++;
+            });
+            
+            return count > 0 ? sum / count : 3.0;
+        };
+        
+        // Рассчитываем рейтинги для ресторана
+        const restaurantRatings = restaurantCategories.map(category => {
+            const alternativeIds = [];
+            const value = calculateAverage(restaurantReviews, category.id, alternativeIds);
+            
+            return {
+                ...category,
+                value: value
+            };
+        });
+        
+        // Рассчитываем рейтинги для доставки
+        const deliveryRatings = deliveryCategories.map(category => {
+            let alternativeIds = [];
+            
+            if (category.id === 'deliverySpeed') {
+                alternativeIds = ['service'];
+            } else if (category.id === 'deliveryQuality') {
+                alternativeIds = ['atmosphere'];
+            }
+            
+            const value = calculateAverage(deliveryReviews, category.id, alternativeIds);
+            
+            return {
+                ...category,
+                value: value
+            };
+        });
+        
+        // Устанавливаем рейтинги
+        setCategoryRatings({
+            restaurant: restaurantRatings,
+            delivery: deliveryRatings
+        });
+        
+        console.log('Рассчитанные рейтинги для ресторана:', restaurantRatings);
+        console.log('Рассчитанные рейтинги для доставки:', deliveryRatings);
+    };
 
     if (loading) {
         return (
@@ -200,137 +318,163 @@ const ManagerPanel = () => {
                         </ResponsiveContainer>
                     </ChartCard>
 
-                    {/* Критерии оценивания */}
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg">
-                            <h3 className="text-lg font-medium mb-4">Критерии оценивания</h3>
-                            
-                            <div className="mb-4">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">По количеству отзывов:</p>
-                                <div className="flex items-center mt-1">
-                                    <div className="w-5 h-5 rounded-full bg-pink-300 flex items-center justify-center mr-2">
-                                        <Star className="w-3 h-3 text-white" />
-                                    </div>
-                                    <span className="text-sm">5 звезд: {stats.totalReviews || 1}</span>
-                                </div>
-                            </div>
-                            
-                            <div className="mb-2">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Основные критерии оценки:</p>
-                            </div>
-                            
-                            <div className="space-y-3">
-                                {/* Категории для оценки в ресторане */}
-                                <div>
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span>Качество еды:</span>
-                                        <div className="flex items-center">
-                                            <span className="mr-2">4.5</span>
-                                            <div className="flex">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <span 
-                                                        key={star} 
-                                                        className={`text-xs ${star <= 4.5 ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                    >
-                                                        ★
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                        <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '90%' }}></div>
-                                    </div>
-                                </div>
+                    {/* График типов отзывов */}
+                    <ChartCard 
+                        title="Распределение типов отзывов"
+                        icon={PieChartIcon}
+                    >
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={[
+                                        { name: 'В ресторане', value: stats.reviewsByType?.inRestaurant || 0 },
+                                        { name: 'Доставка', value: stats.reviewsByType?.delivery || 0 }
+                                    ]}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                >
+                                    {[
+                                        { name: 'В ресторане', value: stats.reviewsByType?.inRestaurant || 0 },
+                                        { name: 'Доставка', value: stats.reviewsByType?.delivery || 0 }
+                                    ].map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => [`${value} отзывов`, 'Количество']} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+                </div>
+
+                {/* Рейтинги по категориям */}
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Рейтинги по категориям</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {/* Рейтинги для ресторана */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                        <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                            В ресторане
+                        </h3>
+                        <div className="space-y-4">
+                            {categoryRatings.restaurant.map((category) => {
+                                // Calculate color based on rating value
+                                let barColor = "bg-red-500";
+                                if (category.value >= 4.5) barColor = "bg-green-500";
+                                else if (category.value >= 4) barColor = "bg-teal-500";
+                                else if (category.value >= 3.5) barColor = "bg-blue-500";
+                                else if (category.value >= 3) barColor = "bg-yellow-500";
+                                else if (category.value >= 2) barColor = "bg-orange-500";
                                 
-                                <div>
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span>Обслуживание:</span>
-                                        <div className="flex items-center">
-                                            <span className="mr-2">4.2</span>
-                                            <div className="flex">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <span 
-                                                        key={star} 
-                                                        className={`text-xs ${star <= 4.2 ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                    >
-                                                        ★
-                                                    </span>
-                                                ))}
+                                return (
+                                    <div key={category.id} className="flex flex-col">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                {category.name}
+                                            </div>
+                                            <div className="flex items-center">
+                                                <span className="mr-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    {Number(category.value).toFixed(1)}
+                                                </span>
+                                                <div className="flex">
+                                                    {[1, 2, 3, 4, 5].map((star) => {
+                                                        // For partial stars
+                                                        const value = Number(category.value);
+                                                        const isFullStar = star <= Math.floor(value);
+                                                        const isHalfStar = !isFullStar && star === Math.ceil(value) && value % 1 >= 0.5;
+                                                        
+                                                        return (
+                                                            <span 
+                                                                key={star} 
+                                                                className={`text-sm ${
+                                                                    isFullStar 
+                                                                        ? 'text-yellow-400' 
+                                                                        : isHalfStar 
+                                                                            ? 'text-yellow-300' 
+                                                                            : 'text-gray-300'
+                                                                }`}
+                                                            >
+                                                                ★
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
+                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div 
+                                                className={`${barColor} h-2 rounded-full transition-all duration-300`} 
+                                                style={{ width: `${(category.value / 5) * 100}%` }}
+                                            ></div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                        <div className="bg-teal-500 h-2.5 rounded-full" style={{ width: '84%' }}></div>
-                                    </div>
-                                </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    
+                    {/* Рейтинги для доставки */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                        <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                            Доставка
+                        </h3>
+                        <div className="space-y-4">
+                            {categoryRatings.delivery.map((category) => {
+                                // Calculate color based on rating value
+                                let barColor = "bg-red-500";
+                                if (category.value >= 4.5) barColor = "bg-green-500";
+                                else if (category.value >= 4) barColor = "bg-teal-500";
+                                else if (category.value >= 3.5) barColor = "bg-blue-500";
+                                else if (category.value >= 3) barColor = "bg-yellow-500";
+                                else if (category.value >= 2) barColor = "bg-orange-500";
                                 
-                                <div>
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span>Интерьер:</span>
-                                        <div className="flex items-center">
-                                            <span className="mr-2">3.8</span>
-                                            <div className="flex">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <span 
-                                                        key={star} 
-                                                        className={`text-xs ${star <= 3.8 ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                    >
-                                                        ★
-                                                    </span>
-                                                ))}
+                                return (
+                                    <div key={category.id} className="flex flex-col">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                {category.name}
+                                            </div>
+                                            <div className="flex items-center">
+                                                <span className="mr-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    {Number(category.value).toFixed(1)}
+                                                </span>
+                                                <div className="flex">
+                                                    {[1, 2, 3, 4, 5].map((star) => {
+                                                        // For partial stars
+                                                        const value = Number(category.value);
+                                                        const isFullStar = star <= Math.floor(value);
+                                                        const isHalfStar = !isFullStar && star === Math.ceil(value) && value % 1 >= 0.5;
+                                                        
+                                                        return (
+                                                            <span 
+                                                                key={star} 
+                                                                className={`text-sm ${
+                                                                    isFullStar 
+                                                                        ? 'text-yellow-400' 
+                                                                        : isHalfStar 
+                                                                            ? 'text-yellow-300' 
+                                                                            : 'text-gray-300'
+                                                                }`}
+                                                            >
+                                                                ★
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '76%' }}></div>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span>Цена/Качество:</span>
-                                        <div className="flex items-center">
-                                            <span className="mr-2">3.5</span>
-                                            <div className="flex">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <span 
-                                                        key={star} 
-                                                        className={`text-xs ${star <= 3.5 ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                    >
-                                                        ★
-                                                    </span>
-                                                ))}
-                                            </div>
+                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div 
+                                                className={`${barColor} h-2 rounded-full transition-all duration-300`} 
+                                                style={{ width: `${(category.value / 5) * 100}%` }}
+                                            ></div>
                                         </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '70%' }}></div>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span>Чистота:</span>
-                                        <div className="flex items-center">
-                                            <span className="mr-2">4.0</span>
-                                            <div className="flex">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <span 
-                                                        key={star} 
-                                                        className={`text-xs ${star <= 4.0 ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                    >
-                                                        ★
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                        <div className="bg-teal-500 h-2.5 rounded-full" style={{ width: '80%' }}></div>
-                                    </div>
-                                </div>
-                            </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

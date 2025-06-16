@@ -20,13 +20,8 @@ const createReview = async (req, res) => {
             restaurantName,
             rating,
             comment,
-            ratings: {
-                food: foodRating = 0,
-                service: serviceRating = 0,
-                atmosphere: atmosphereRating = 0,
-                price: priceRating = 0,
-                cleanliness: cleanlinessRating = 0
-            } = {}
+            reviewType = 'inRestaurant', // Добавляем тип отзыва с дефолтным значением
+            ratings = {}
         } = req.body;
         
         const userId = req.user.id;
@@ -36,11 +31,8 @@ const createReview = async (req, res) => {
             restaurantName,
             rating,
             comment,
-            foodRating,
-            serviceRating,
-            atmosphereRating,
-            priceRating,
-            cleanlinessRating
+            reviewType,
+            ratings
         });
         
         // Проверка входных данных
@@ -89,6 +81,23 @@ const createReview = async (req, res) => {
             });
         }
         
+        // Извлекаем рейтинги в зависимости от типа отзыва
+        let foodRating = 0, serviceRating = 0, atmosphereRating = 0, priceRating = 0, cleanlinessRating = 0;
+        let deliverySpeedRating = 0, deliveryQualityRating = 0;
+        
+        if (reviewType === 'inRestaurant') {
+            foodRating = parseInt(ratings.food || 0, 10);
+            serviceRating = parseInt(ratings.service || 0, 10);
+            atmosphereRating = parseInt(ratings.atmosphere || 0, 10);
+            priceRating = parseInt(ratings.price || 0, 10);
+            cleanlinessRating = parseInt(ratings.cleanliness || 0, 10);
+        } else {
+            foodRating = parseInt(ratings.food || 0, 10);
+            priceRating = parseInt(ratings.price || 0, 10);
+            deliverySpeedRating = parseInt(ratings.deliverySpeed || 0, 10);
+            deliveryQualityRating = parseInt(ratings.deliveryQuality || 0, 10);
+        }
+        
         // Создание отзыва
         const reviewData = {
             userId,
@@ -99,7 +108,10 @@ const createReview = async (req, res) => {
             serviceRating,
             atmosphereRating,
             priceRating,
-            cleanlinessRating
+            cleanlinessRating,
+            deliverySpeedRating,
+            deliveryQualityRating,
+            reviewType
         };
         
         const review = await reviewModel.create(reviewData);
@@ -502,13 +514,8 @@ const createReviewWithPhotos = async (req, res) => {
             rating,
             comment,
             hasReceipt,
-            ratings: {
-                food: foodRating = 0,
-                service: serviceRating = 0,
-                atmosphere: atmosphereRating = 0,
-                price: priceRating = 0,
-                cleanliness: cleanlinessRating = 0
-            } = {}
+            reviewType = 'inRestaurant',
+            ratings = {}
         } = reviewData;
         
         const userId = req.user.id;
@@ -559,6 +566,23 @@ const createReviewWithPhotos = async (req, res) => {
             });
         }
         
+        // Извлекаем рейтинги в зависимости от типа отзыва
+        let foodRating = 0, serviceRating = 0, atmosphereRating = 0, priceRating = 0, cleanlinessRating = 0;
+        let deliverySpeedRating = 0, deliveryQualityRating = 0;
+        
+        if (reviewType === 'inRestaurant') {
+            foodRating = parseInt(ratings.food || 0, 10);
+            serviceRating = parseInt(ratings.service || 0, 10);
+            atmosphereRating = parseInt(ratings.atmosphere || 0, 10);
+            priceRating = parseInt(ratings.price || 0, 10);
+            cleanlinessRating = parseInt(ratings.cleanliness || 0, 10);
+        } else {
+            foodRating = parseInt(ratings.food || 0, 10);
+            priceRating = parseInt(ratings.price || 0, 10);
+            deliverySpeedRating = parseInt(ratings.deliverySpeed || 0, 10);
+            deliveryQualityRating = parseInt(ratings.deliveryQuality || 0, 10);
+        }
+        
         // Обработка загруженных фотографий
         const photoUrls = [];
         let receiptPhotoUrl = null;
@@ -601,7 +625,10 @@ const createReviewWithPhotos = async (req, res) => {
             atmosphereRating,
             priceRating,
             cleanlinessRating,
-            photos: photoUrls,
+            deliverySpeedRating,
+            deliveryQualityRating,
+            reviewType,
+            photos: photoUrls.map(photo => photo.url),
             hasReceipt: !!receiptPhotoUrl || hasReceipt,
             receiptPhoto: receiptPhotoUrl
         };
@@ -627,7 +654,9 @@ const createReviewWithPhotos = async (req, res) => {
                 service: serviceRating,
                 atmosphere: atmosphereRating,
                 price: priceRating,
-                cleanliness: cleanlinessRating
+                cleanliness: cleanlinessRating,
+                deliverySpeed: deliverySpeedRating,
+                deliveryQuality: deliveryQualityRating
             }
         };
         

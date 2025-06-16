@@ -245,23 +245,45 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
 
     // Получаем данные о рейтингах по категориям
     const getRatingCategories = () => {
+        // Ensure we have a ratings object to work with
         const ratings = review.ratings || {};
+        const overallRating = parseFloat(review.rating) || 3;
+        
+        // Normalize ratings - check all possible sources for ratings data
+        const normalizedRatings = {
+            food: parseFloat(ratings.food || review.food_rating || 0),
+            service: parseFloat(ratings.service || review.service_rating || 0),
+            atmosphere: parseFloat(ratings.atmosphere || review.atmosphere_rating || 0),
+            price: parseFloat(ratings.price || review.price_rating || 0),
+            cleanliness: parseFloat(ratings.cleanliness || review.cleanliness_rating || 0),
+            deliverySpeed: parseFloat(ratings.deliverySpeed || ratings.service || review.service_rating || 0),
+            deliveryQuality: parseFloat(ratings.deliveryQuality || ratings.atmosphere || review.atmosphere_rating || 0)
+        };
+        
+        // Для каждой категории, если значение равно 0 или NaN, используем общий рейтинг
+        Object.keys(normalizedRatings).forEach(key => {
+            if (normalizedRatings[key] === 0 || isNaN(normalizedRatings[key])) {
+                normalizedRatings[key] = overallRating;
+            }
+        });
+        
+        console.log(`Отзыв ID=${review.id}, тип=${reviewType}, рейтинги:`, normalizedRatings);
         
         // Определяем категории в зависимости от типа отзыва
         if (isDelivery) {
             return [
-                { id: 'food', name: 'Качество блюд', value: ratings.food || 0 },
-                { id: 'deliverySpeed', name: 'Скорость доставки', value: ratings.deliverySpeed || ratings.service || 0 },
-                { id: 'deliveryQuality', name: 'Качество доставки', value: ratings.deliveryQuality || ratings.atmosphere || 0 },
-                { id: 'price', name: 'Цена/Качество', value: ratings.price || 0 }
+                { id: 'food', name: 'Качество блюд', value: normalizedRatings.food },
+                { id: 'deliverySpeed', name: 'Скорость доставки', value: normalizedRatings.deliverySpeed },
+                { id: 'deliveryQuality', name: 'Качество доставки', value: normalizedRatings.deliveryQuality },
+                { id: 'price', name: 'Цена/Качество', value: normalizedRatings.price }
             ];
         } else {
             return [
-                { id: 'food', name: 'Качество блюд', value: ratings.food || 0 },
-                { id: 'service', name: 'Уровень сервиса', value: ratings.service || 0 },
-                { id: 'atmosphere', name: 'Атмосфера', value: ratings.atmosphere || 0 },
-                { id: 'price', name: 'Цена/Качество', value: ratings.price || 0 },
-                { id: 'cleanliness', name: 'Чистота', value: ratings.cleanliness || 0 }
+                { id: 'food', name: 'Качество блюд', value: normalizedRatings.food },
+                { id: 'service', name: 'Уровень сервиса', value: normalizedRatings.service },
+                { id: 'atmosphere', name: 'Атмосфера', value: normalizedRatings.atmosphere },
+                { id: 'price', name: 'Цена/Качество', value: normalizedRatings.price },
+                { id: 'cleanliness', name: 'Чистота', value: normalizedRatings.cleanliness }
             ];
         }
     };
@@ -327,40 +349,95 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
             {/* Детальные рейтинги по категориям */}
             {showRatingDetails && (
                 <div className="mb-3 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                    <h5 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    <h5 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-2">
                         Рейтинги по категориям ({isDelivery ? 'Доставка' : 'В ресторане'}):
                     </h5>
-                    <div className="space-y-2">
-                        {ratingCategories.map((category) => (
-                            <div key={category.id} className="flex items-center">
-                                <div className="text-sm min-w-[150px] truncate text-gray-700 dark:text-gray-300">
-                                    {category.name}:
-                                </div>
-                                <div className="flex items-center">
-                                    {[1, 2, 3, 4, 5].map((star) => {
-                                        const isFilled = star <= Number(category.value);
-                                        return (
-                                            <span 
-                                                key={star} 
-                                                className={`text-sm ${isFilled ? 'text-yellow-400' : 'text-gray-300'}`}
-                                                style={{ 
-                                                    display: 'inline-block',
-                                                    width: '14px',
-                                                    height: '14px',
-                                                    lineHeight: '14px',
-                                                    textAlign: 'center'
-                                                }}
-                                            >
-                                                ★
+                    
+                    {/* Toggle buttons for review type */}
+                    <div className="flex mb-3 space-x-2">
+                        <button 
+                            onClick={() => setReviewTypeValue('inRestaurant')}
+                            className={`px-3 py-1 text-xs rounded-md ${
+                                !isDelivery 
+                                    ? 'bg-blue-500 text-white' 
+                                    : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                            }`}
+                        >
+                            В ресторане
+                        </button>
+                        <button 
+                            onClick={() => setReviewTypeValue('delivery')}
+                            className={`px-3 py-1 text-xs rounded-md ${
+                                isDelivery 
+                                    ? 'bg-green-500 text-white' 
+                                    : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                            }`}
+                        >
+                            Доставка
+                        </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        {ratingCategories.map((category) => {
+                            // Calculate color based on rating value
+                            let barColor = "bg-red-500";
+                            if (category.value >= 4.5) barColor = "bg-green-500";
+                            else if (category.value >= 4) barColor = "bg-teal-500";
+                            else if (category.value >= 3.5) barColor = "bg-blue-500";
+                            else if (category.value >= 3) barColor = "bg-yellow-500";
+                            else if (category.value >= 2) barColor = "bg-orange-500";
+                            
+                            return (
+                                <div key={category.id} className="flex flex-col">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            {category.name}:
+                                        </div>
+                                        <div className="flex items-center">
+                                            <span className="mr-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                {Number(category.value).toFixed(1)}
                                             </span>
-                                        );
-                                    })}
-                                    <span className="ml-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-                                        {Number(category.value).toFixed(1)}
-                                    </span>
+                                            <div className="flex">
+                                                {[1, 2, 3, 4, 5].map((star) => {
+                                                    // For partial stars
+                                                    const itemValue = category.value; // Используем локальную переменную
+                                                    const isFullStar = star <= Math.floor(itemValue);
+                                                    const isHalfStar = !isFullStar && star === Math.ceil(itemValue) && itemValue % 1 >= 0.5;
+                                                    
+                                                    return (
+                                                        <span 
+                                                            key={star} 
+                                                            className={`text-sm ${
+                                                                isFullStar 
+                                                                    ? 'text-yellow-400' 
+                                                                    : isHalfStar 
+                                                                        ? 'text-yellow-300' 
+                                                                        : 'text-gray-300'
+                                                            }`}
+                                                            style={{ 
+                                                                display: 'inline-block',
+                                                                width: '14px',
+                                                                height: '14px',
+                                                                lineHeight: '14px',
+                                                                textAlign: 'center'
+                                                            }}
+                                                        >
+                                                            {isHalfStar ? '★' : '★'}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                                        <div 
+                                            className={`${barColor} h-1.5 rounded-full transition-all duration-300`} 
+                                            style={{ width: `${(category.value / 5) * 100}%` }}
+                                        ></div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -845,165 +922,79 @@ const ManagerDashboard = () => {
             
             // Нормализуем данные отзывов
             const normalizedReviews = reviewsData.map(review => {
-                // Проверяем наличие ответа несколькими способами
-                const hasResponse = Boolean(review.response) || 
-                                   Boolean(review.has_response) || 
-                                   review.responded === true;
-                                   
-                // Обработка критериев оценки с принудительным преобразованием в числа
-                let ratings = {};
-                
-                // Проверяем наличие объекта ratings
-                if (review.ratings && typeof review.ratings === 'object') {
-                    // Если ratings передан как JSON-строка, парсим его
-                    let parsedRatings = review.ratings;
-                    if (typeof review.ratings === 'string') {
-                        try {
-                            parsedRatings = JSON.parse(review.ratings);
-                        } catch (e) {
-                            console.error('Ошибка парсинга ratings:', e);
-                            parsedRatings = {};
-                        }
-                    }
-                    
-                    ratings = parsedRatings;
-                }
-                
-                const food_rating = parseInt(review.food_rating) || parseInt(ratings.food) || 0;
-                const service_rating = parseInt(review.service_rating) || parseInt(ratings.service) || parseInt(ratings.deliverySpeed) || 0;
-                const atmosphere_rating = parseInt(review.atmosphere_rating) || parseInt(ratings.atmosphere) || parseInt(ratings.deliveryQuality) || 0;
-                const price_rating = parseInt(review.price_rating) || parseInt(ratings.price) || 0;
-                const cleanliness_rating = parseInt(review.cleanliness_rating) || parseInt(ratings.cleanliness) || 0;
-                
-                // Добавляем отладочную информацию для рейтингов
-                console.log(`Отзыв ID=${review.id}, обработанные рейтинги:`, {
-                    food_rating,
-                    service_rating,
-                    atmosphere_rating,
-                    price_rating,
-                    cleanliness_rating,
-                    rawRatings: ratings
-                });
-                
-                // Обработка фотографий
-                let photos = [];
-                
-                // Проверяем все возможные источники фотографий
-                if (review.photos) {
-                    if (Array.isArray(review.photos)) {
-                        photos = review.photos;
-                    } else if (typeof review.photos === 'string') {
-                        try {
-                            const parsed = JSON.parse(review.photos);
-                            if (Array.isArray(parsed)) {
-                                photos = parsed;
-                            } else if (parsed && parsed.url) {
-                                photos = [parsed];
-                            }
-                        } catch (e) {
-                            // Если не JSON, то считаем строку URL-ом
-                            photos = [{ url: review.photos }];
-                        }
-                    }
-                }
-                
-                // Если нет фотографий, проверяем другие источники
-                if (photos.length === 0) {
-                    // Проверяем другие возможные источники фотографий
-                    const photoSources = [
-                        review.images,
-                        review.attachments,
-                        review.photo_urls,
-                        review.photo,
-                        review.user_avatar
-                    ];
-                    
-                    for (const source of photoSources) {
-                        if (!source) continue;
-                        
-                        if (Array.isArray(source)) {
-                            photos = source.map(item => {
-                                if (typeof item === 'string') return { url: item };
-                                if (item && typeof item === 'object') return { url: item.url || item.path || item.src || item };
-                                return null;
-                            }).filter(Boolean);
-                            
-                            if (photos.length > 0) break;
-                        } else if (typeof source === 'string') {
-                            try {
-                                // Пробуем распарсить как JSON
-                                const parsed = JSON.parse(source);
-                                if (Array.isArray(parsed)) {
-                                    photos = parsed.map(item => {
-                                        if (typeof item === 'string') return { url: item };
-                                        if (item && typeof item === 'object') return { url: item.url || item.path || item.src || item };
-                                        return null;
-                                    }).filter(Boolean);
-                                } else if (parsed && typeof parsed === 'object') {
-                                    photos = [{ url: parsed.url || parsed.path || parsed.src || '' }].filter(p => p.url);
-                                }
-                            } catch (e) {
-                                // Если не JSON, то считаем строку URL-ом
-                                photos = [{ url: source }];
-                            }
-                            
-                            if (photos.length > 0) break;
-                        } else if (source && typeof source === 'object') {
-                            if (source.url || source.path || source.src) {
-                                photos = [{ url: source.url || source.path || source.src }];
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                // Добавляем отладочную информацию для фотографий
-                console.log(`Отзыв ID=${review.id}, обработанные фото:`, photos);
-                
-                // Улучшенное определение типа отзыва с более строгой логикой
-                let reviewType = 'inRestaurant'; // По умолчанию считаем отзыв о ресторане
+                // Определяем тип отзыва (доставка или в ресторане)
+                let reviewType = 'inRestaurant'; // По умолчанию - в ресторане
                 let isDelivery = false;
                 
-                // Проверяем явные поля isDelivery и delivery
-                if (review.isDelivery === true || review.delivery === true) {
+                // Проверяем различные поля для определения типа отзыва
+                if (review.type === 'delivery' || review.isDelivery === true || review.delivery === true) {
                     reviewType = 'delivery';
                     isDelivery = true;
-                    console.log(`Отзыв ID=${review.id} определен как доставка по флагу isDelivery/delivery`);
-                }
-                // Проверяем поле type
-                else if (review.type) {
-                    const type = String(review.type).toLowerCase();
-                    if (type === 'delivery' || type.includes('достав') || type.includes('deliv')) {
-                        reviewType = 'delivery';
-                        isDelivery = true;
-                        console.log(`Отзыв ID=${review.id} определен как доставка по полю type="${review.type}"`);
-                    }
-                }
-                // Проверяем поле reviewType
-                else if (review.reviewType) {
-                    const type = String(review.reviewType).toLowerCase();
-                    if (type === 'delivery' || type.includes('достав') || type.includes('deliv')) {
-                        reviewType = 'delivery';
-                        isDelivery = true;
-                        console.log(`Отзыв ID=${review.id} определен как доставка по полю reviewType="${review.reviewType}"`);
-                    }
                 }
                 
-                // Проверяем наличие специфичных для доставки рейтингов
-                if (!isDelivery && review.ratings) {
-                    if (review.ratings.deliverySpeed !== undefined || review.ratings.deliveryQuality !== undefined) {
-                        reviewType = 'delivery';
-                        isDelivery = true;
-                        console.log(`Отзыв ID=${review.id} определен как доставка по наличию специфичных рейтингов`);
-                    }
+                // Обрабатываем фотографии
+                let photos = [];
+                if (review.photos && Array.isArray(review.photos)) {
+                    photos = review.photos;
+                } else if (review.photo) {
+                    photos = [review.photo];
+                } else if (review.images && Array.isArray(review.images)) {
+                    photos = review.images;
+                } else if (review.image) {
+                    photos = [review.image];
                 }
                 
-                // Формируем нормализованный отзыв
+                // Проверяем наличие ответа
+                const hasResponse = Boolean(review.responded) || Boolean(review.response) || Boolean(review.hasResponse);
+                
+                // Обрабатываем рейтинги по категориям
+                const overallRating = parseFloat(review.rating) || 3;
+                
+                // Извлекаем рейтинги из различных форматов данных
+                let food_rating = parseFloat(
+                    review.food_rating || 
+                    (review.ratings && review.ratings.food) || 
+                    0
+                );
+                
+                let service_rating = parseFloat(
+                    review.service_rating || 
+                    (review.ratings && review.ratings.service) || 
+                    (isDelivery ? (review.ratings && review.ratings.deliverySpeed) : 0) || 
+                    0
+                );
+                
+                let atmosphere_rating = parseFloat(
+                    review.atmosphere_rating || 
+                    (review.ratings && review.ratings.atmosphere) || 
+                    (isDelivery ? (review.ratings && review.ratings.deliveryQuality) : 0) || 
+                    0
+                );
+                
+                let price_rating = parseFloat(
+                    review.price_rating || 
+                    (review.ratings && review.ratings.price) || 
+                    0
+                );
+                
+                let cleanliness_rating = parseFloat(
+                    review.cleanliness_rating || 
+                    (review.ratings && review.ratings.cleanliness) || 
+                    0
+                );
+                
+                // Если рейтинги равны 0 или NaN, используем общий рейтинг
+                if (food_rating === 0 || isNaN(food_rating)) food_rating = overallRating;
+                if (service_rating === 0 || isNaN(service_rating)) service_rating = overallRating;
+                if (atmosphere_rating === 0 || isNaN(atmosphere_rating)) atmosphere_rating = overallRating;
+                if (price_rating === 0 || isNaN(price_rating)) price_rating = overallRating;
+                if (cleanliness_rating === 0 || isNaN(cleanliness_rating)) cleanliness_rating = overallRating;
+                
                 return {
                     id: review.id,
                     text: review.comment || review.text || review.content || '',
                     comment: review.comment || review.text || review.content || '',
-                    rating: parseInt(review.rating) || 0,
+                    rating: overallRating,
                     created_at: review.created_at || review.createdAt || review.date || new Date().toISOString(),
                     createdAt: review.created_at || review.createdAt || review.date || new Date().toISOString(),
                     responded: hasResponse,
@@ -1024,17 +1015,17 @@ const ManagerDashboard = () => {
                         atmosphere: atmosphere_rating,
                         price: price_rating,
                         cleanliness: cleanliness_rating,
-                        deliverySpeed: review.type === 'delivery' ? service_rating : 0,
-                        deliveryQuality: review.type === 'delivery' ? atmosphere_rating : 0
+                        deliverySpeed: isDelivery ? service_rating : 0,
+                        deliveryQuality: isDelivery ? atmosphere_rating : 0
                     },
                     user_name: review.user_name || review.userName || review.username || review.name || 'Аноним',
                     restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан',
-                    type: reviewType, // Используем улучшенное определение типа
-                    reviewType: reviewType, // Дублируем для совместимости
-                    isDelivery: isDelivery, // Добавляем явный флаг
-                    delivery: isDelivery, // Дублируем для совместимости
+                    type: reviewType,
+                    reviewType: reviewType,
+                    isDelivery: isDelivery,
+                    delivery: isDelivery
                 };
-            }).filter(review => review.text && review.rating !== undefined); // Фильтруем невалидные отзывы
+            }).filter(review => review.text && review.rating !== undefined);
             
             // Добавляем отладочную информацию о распределении отзывов по типам
             const restaurantReviews = normalizedReviews.filter(r => r.type === 'inRestaurant');
@@ -1118,22 +1109,24 @@ const ManagerDashboard = () => {
     };
 
     // Обновляем функцию для расчета средних рейтингов по категориям
-    const calculateCategoryRatings = (reviews, reviewType) => {
-        console.log(`Начинаем расчет рейтингов для типа "${reviewType}"`);
+    const calculateCategoryRatings = (reviews) => {
         console.log(`Всего отзывов для анализа: ${reviews.length}`);
         
-        // Для общего расчета используем все отзывы
-        const filteredReviews = reviews;
+        // Разделяем отзывы по типам
+        const restaurantReviews = reviews.filter(review => 
+            review.type === 'inRestaurant' || 
+            (!review.type && !review.isDelivery)
+        );
         
-        console.log(`Используем ${filteredReviews.length} отзывов для расчета общих рейтингов`);
+        const deliveryReviews = reviews.filter(review => 
+            review.type === 'delivery' || 
+            review.isDelivery === true
+        );
         
-        if (filteredReviews.length === 0) {
-            console.log(`Не найдено отзывов для расчета рейтингов`);
-            return []; // Возвращаем пустой массив, если нет отзывов
-        }
+        console.log(`Разделение отзывов: В ресторане - ${restaurantReviews.length}, Доставка - ${deliveryReviews.length}`);
         
-        // Определяем все возможные категории
-        const categories = [
+        // Определяем категории для ресторана
+        const restaurantCategories = [
             { id: 'food', name: 'Качество блюд' },
             { id: 'service', name: 'Уровень сервиса' },
             { id: 'atmosphere', name: 'Атмосфера' },
@@ -1141,40 +1134,90 @@ const ManagerDashboard = () => {
             { id: 'cleanliness', name: 'Чистота' }
         ];
         
-        // Рассчитываем средний рейтинг для каждой категории
-        return categories.map(category => {
-            // Суммируем рейтинги по категории
-            let sum = 0;
-            let count = 0;
+        // Определяем категории для доставки
+        const deliveryCategories = [
+            { id: 'food', name: 'Качество блюд' },
+            { id: 'deliverySpeed', name: 'Скорость доставки' },
+            { id: 'deliveryQuality', name: 'Качество доставки' },
+            { id: 'price', name: 'Цена/Качество' }
+        ];
+        
+        // Функция для расчета рейтингов по категориям
+        const calculateRatings = (reviewsList, categories, isDelivery) => {
+            if (reviewsList.length === 0) {
+                // Если отзывов нет, возвращаем категории с дефолтными значениями
+                return categories.map(cat => ({
+                    criteria: cat.id,
+                    name: cat.name,
+                    value: 3.0, // Дефолтное значение вместо 0
+                    count: 0,
+                    type: isDelivery ? 'delivery' : 'restaurant'
+                }));
+            }
             
-            filteredReviews.forEach(review => {
-                let rating = null;
-                
-                // Проверяем различные форматы данных для рейтингов
-                if (review.ratings && review.ratings[category.id] !== undefined) {
-                    rating = review.ratings[category.id];
-                } else if (review[`${category.id}_rating`] !== undefined) {
-                    rating = review[`${category.id}_rating`];
-                }
-                
-                // Если нашли рейтинг, добавляем его в сумму
-                if (rating !== null && rating !== undefined && !isNaN(Number(rating))) {
-                    sum += Number(rating);
-                    count++;
-                }
+            // Создаем объект для хранения суммы и количества рейтингов по категориям
+            const ratingTotals = {};
+            categories.forEach(cat => {
+                ratingTotals[cat.id] = { sum: 0, count: 0 };
             });
             
-            // Рассчитываем средний рейтинг
-            const average = count > 0 ? sum / count : 0;
-            console.log(`Категория "${category.name}": сумма=${sum}, количество=${count}, среднее=${average.toFixed(1)}`);
+            // Обрабатываем каждый отзыв
+            reviewsList.forEach(review => {
+                const ratings = review.ratings || {};
+                const overallRating = parseFloat(review.rating) || 3.0;
+                
+                // Обрабатываем каждую категорию
+                categories.forEach(category => {
+                    let rating = null;
+                    
+                    // Проверяем различные форматы данных для рейтингов
+                    if (category.id === 'deliverySpeed' && isDelivery) {
+                        rating = parseFloat(ratings.deliverySpeed || ratings.service || review.service_rating || 0);
+                    } else if (category.id === 'deliveryQuality' && isDelivery) {
+                        rating = parseFloat(ratings.deliveryQuality || ratings.atmosphere || review.atmosphere_rating || 0);
+                    } else if (ratings[category.id] !== undefined) {
+                        rating = parseFloat(ratings[category.id] || 0);
+                    } else if (review[`${category.id}_rating`] !== undefined) {
+                        rating = parseFloat(review[`${category.id}_rating`] || 0);
+                    }
+                    
+                    // Если рейтинг отсутствует или равен 0, используем общий рейтинг
+                    if (!rating || rating === 0 || isNaN(rating)) {
+                        rating = overallRating;
+                    }
+                    
+                    // Добавляем рейтинг в сумму
+                    ratingTotals[category.id].sum += rating;
+                    ratingTotals[category.id].count++;
+                });
+            });
             
-            return {
-                criteria: category.id,
-                name: category.name,
-                value: average,
-                count: count
-            };
-        });
+            // Вычисляем средние значения
+            return categories.map(category => {
+                const total = ratingTotals[category.id];
+                const average = total.count > 0 ? total.sum / total.count : 3.0;
+                
+                console.log(`Категория "${category.name}" (${isDelivery ? 'доставка' : 'ресторан'}): сумма=${total.sum.toFixed(1)}, количество=${total.count}, среднее=${average.toFixed(1)}`);
+                
+                return {
+                    criteria: category.id,
+                    name: category.name,
+                    value: average,
+                    count: total.count,
+                    type: isDelivery ? 'delivery' : 'restaurant'
+                };
+            });
+        };
+        
+        // Рассчитываем рейтинги для обоих типов отзывов
+        const restaurantRatings = calculateRatings(restaurantReviews, restaurantCategories, false);
+        const deliveryRatings = calculateRatings(deliveryReviews, deliveryCategories, true);
+        
+        // Объединяем результаты и выводим для отладки
+        const combinedRatings = [...restaurantRatings, ...deliveryRatings];
+        console.log('Итоговые рейтинги по категориям:', combinedRatings);
+        
+        return combinedRatings;
     };
 
     const calculateTrends = (newStats) => {
@@ -1478,38 +1521,148 @@ const ManagerDashboard = () => {
                         )}
                     </ChartCard>
                     
-                    {/* Новая карточка с рейтингами по категориям */}
-                    <ChartCard title="Средний рейтинг по категориям" className="col-span-1 md:col-span-2">
-                        <div className="grid grid-cols-1 gap-6 h-full">
+                    {/* Новая карточка с аналитикой по категориям */}
+                    <ChartCard title="Аналитика рейтингов по категориям" className="col-span-1 md:col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Колонка для рейтингов в ресторане */}
                             <div>
+                                <h3 className="text-md font-medium mb-3 dark:text-white">В ресторане</h3>
                                 <div className="space-y-3">
-                                    {/* Объединяем все рейтинги в одну секцию */}
-                                    {chartData.restaurantCriteriaRatings && chartData.restaurantCriteriaRatings.map((item, index) => (
-                                        <div key={`restaurant-${index}`}>
+                                    {chartData.restaurantCriteriaRatings && chartData.restaurantCriteriaRatings
+                                        .filter(item => item.type === 'restaurant')
+                                        .sort((a, b) => parseFloat(b.value || 0) - parseFloat(a.value || 0))
+                                        .map((item, index) => {
+                                            const value = parseFloat(item.value || item.average || 0);
+                                            let colorClass = "bg-blue-500";
+                                            
+                                            // Определяем цвет на основе рейтинга
+                                            if (value >= 4.5) colorClass = "bg-green-500";
+                                            else if (value >= 4) colorClass = "bg-teal-500";
+                                            else if (value >= 3.5) colorClass = "bg-blue-500";
+                                            else if (value >= 3) colorClass = "bg-yellow-500";
+                                            else if (value >= 2) colorClass = "bg-orange-500";
+                                            else colorClass = "bg-red-500";
+                                            
+                                            return (
+                                                <div key={`restaurant-analytics-${index}`}>
                                             <div className="flex justify-between text-sm mb-1">
                                                 <span className="dark:text-gray-300">{item.name || getCriteriaName(item.criteria)}</span>
-                                                <span className="dark:text-gray-300">{parseFloat(item.value || item.average || 0).toFixed(1)}</span>
+                                                        <div className="flex items-center">
+                                                            <span className="dark:text-gray-300 mr-2">{value.toFixed(1)}</span>
+                                                            <div className="flex">
+                                                                {[1, 2, 3, 4, 5].map((star) => {
+                                                                    // For partial stars
+                                                                    const itemValue = value; // Используем локальную переменную
+                                                                    const isFullStar = star <= Math.floor(itemValue);
+                                                                    const isHalfStar = !isFullStar && star === Math.ceil(itemValue) && itemValue % 1 >= 0.5;
+                                                                    
+                                                                    return (
+                                                                        <span 
+                                                                            key={star} 
+                                                                            className={`text-xs ${
+                                                                                isFullStar 
+                                                                                    ? 'text-yellow-400' 
+                                                                                    : isHalfStar 
+                                                                                        ? 'text-yellow-300' 
+                                                                                        : 'text-gray-300'
+                                                                            }`}
+                                                                        >
+                                                                            ★
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
                                             </div>
                                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                                                 <div 
-                                                    className="bg-blue-500 h-2.5 rounded-full" 
-                                                    style={{ width: `${(parseFloat(item.value || item.average || 0) / 5) * 100}%` }}
+                                                            className={`${colorClass} h-2.5 rounded-full`} 
+                                                            style={{ width: `${(value / 5) * 100}%` }}
                                                 ></div>
                                             </div>
                                         </div>
-                                    ))}
-                                    {(!chartData.restaurantCriteriaRatings || chartData.restaurantCriteriaRatings.length === 0) && (
+                                            );
+                                        })}
+                                        
+                                    {(!chartData.restaurantCriteriaRatings || 
+                                      !chartData.restaurantCriteriaRatings.some(item => item.type === 'restaurant')) && (
                                         <div className="text-center text-gray-500 dark:text-gray-400 py-4">
-                                            Нет данных о рейтингах
+                                            Нет данных о рейтингах в ресторане
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {/* Колонка для рейтингов доставки */}
+                            <div>
+                                <h3 className="text-md font-medium mb-3 dark:text-white">Доставка</h3>
+                                <div className="space-y-3">
+                                    {chartData.restaurantCriteriaRatings && chartData.restaurantCriteriaRatings
+                                        .filter(item => item.type === 'delivery')
+                                        .sort((a, b) => parseFloat(b.value || 0) - parseFloat(a.value || 0))
+                                        .map((item, index) => {
+                                            const value = parseFloat(item.value || item.average || 0);
+                                            let colorClass = "bg-blue-500";
+                                            
+                                            // Определяем цвет на основе рейтинга
+                                            if (value >= 4.5) colorClass = "bg-green-500";
+                                            else if (value >= 4) colorClass = "bg-teal-500";
+                                            else if (value >= 3.5) colorClass = "bg-blue-500";
+                                            else if (value >= 3) colorClass = "bg-yellow-500";
+                                            else if (value >= 2) colorClass = "bg-orange-500";
+                                            else colorClass = "bg-red-500";
+                                            
+                                            return (
+                                                <div key={`delivery-analytics-${index}`}>
+                                                    <div className="flex justify-between text-sm mb-1">
+                                                        <span className="dark:text-gray-300">{item.name || getCriteriaName(item.criteria)}</span>
+                                                        <div className="flex items-center">
+                                                            <span className="dark:text-gray-300 mr-2">{value.toFixed(1)}</span>
+                                                            <div className="flex">
+                                                                {[1, 2, 3, 4, 5].map((star) => {
+                                                                    // For partial stars
+                                                                    const itemValue = value; // Используем локальную переменную
+                                                                    const isFullStar = star <= Math.floor(itemValue);
+                                                                    const isHalfStar = !isFullStar && star === Math.ceil(itemValue) && itemValue % 1 >= 0.5;
+                                                                    
+                                                                    return (
+                                                                        <span 
+                                                                            key={star} 
+                                                                            className={`text-xs ${
+                                                                                isFullStar 
+                                                                                    ? 'text-yellow-400' 
+                                                                                    : isHalfStar 
+                                                                                        ? 'text-yellow-300' 
+                                                                                        : 'text-gray-300'
+                                                                            }`}
+                                                                        >
+                                                                            ★
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                                        <div 
+                                                            className={`${colorClass} h-2.5 rounded-full`} 
+                                                            style={{ width: `${(value / 5) * 100}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        
+                                    {(!chartData.restaurantCriteriaRatings || 
+                                      !chartData.restaurantCriteriaRatings.some(item => item.type === 'delivery')) && (
+                                        <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                                            Нет данных о рейтингах доставки
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
                     </ChartCard>
-                    
-                    {/* Новая карточка с аналитикой по категориям */}
-                
                 </div>
             </div>
 

@@ -583,16 +583,18 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             // Создать JSON-объект для оценок, чтобы правильно структурировать данные
             const ratingsData = {};
             
-            // Добавляем общие рейтинги
-            ratingsData.food = parseInt(Math.round(ratings.food || 0), 10);
-            ratingsData.price = parseInt(Math.round(ratings.price || 0), 10);
-            
-            // Добавляем специфичные рейтинги в зависимости от типа
+            // Добавляем рейтинги в зависимости от типа отзыва
             if (reviewType === 'inRestaurant') {
+                // Рейтинги для отзыва о посещении ресторана
+                ratingsData.food = parseInt(Math.round(ratings.food || 0), 10);
                 ratingsData.service = parseInt(Math.round(ratings.service || 0), 10);
                 ratingsData.atmosphere = parseInt(Math.round(ratings.atmosphere || 0), 10);
+                ratingsData.price = parseInt(Math.round(ratings.price || 0), 10);
                 ratingsData.cleanliness = parseInt(Math.round(ratings.cleanliness || 0), 10);
             } else {
+                // Рейтинги для отзыва о доставке
+                ratingsData.food = parseInt(Math.round(ratings.food || 0), 10);
+                ratingsData.price = parseInt(Math.round(ratings.price || 0), 10);
                 ratingsData.deliverySpeed = parseInt(Math.round(ratings.deliverySpeed || 0), 10);
                 ratingsData.deliveryQuality = parseInt(Math.round(ratings.deliveryQuality || 0), 10);
             }

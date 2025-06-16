@@ -67,10 +67,10 @@ export const ReviewForm = ({
         e.preventDefault();
         
         if (validateForm()) {
-            // Convert the form data to the expected format for the API
+            // Конвертируем данные формы в ожидаемый формат для API
             const reviewData = {
                 ...formData,
-                comment: formData.text  // Backend expects 'comment' instead of 'text'
+                comment: formData.text  // Бекенд ожидает 'comment' вместо 'text'
             };
             
             console.log('Submitting review form data:', reviewData);

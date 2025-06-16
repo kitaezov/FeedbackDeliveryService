@@ -12,7 +12,7 @@ class ReviewModel {
     constructor() {
         this.initialized = false;
         this.initPromise = this.initializeTables().catch(error => {
-            console.error('Error initializing tables:', error);
+            console.error('Ошибка инициализации таблиц:', error);
             throw error;
         });
     }
@@ -23,7 +23,7 @@ class ReviewModel {
      */
     async initializeTables() {
         try {
-            // Check if reviews table already exists
+            // Проверяем, существует ли таблица отзывов
             const [reviewsExists] = await pool.execute(`
                 SELECT 1 FROM information_schema.tables 
                 WHERE table_schema = DATABASE() 
@@ -31,19 +31,19 @@ class ReviewModel {
             `);
             
             if (reviewsExists.length > 0) {
-                console.log('Reviews table already exists, skipping recreation');
+                console.log('Таблица отзывов уже существует, пропускаем создание');
                 
-                // Check if any columns need to be added
+                // Проверяем, существуют ли необходимые столбцы в таблице отзывов
                 await this.ensureColumnsExist();
                 
-                // Ensure deleted_reviews table exists
+                // Проверяем, существует ли таблица удаленных отзывов
                 await this.ensureDeletedReviewsTableExists();
                 
                 this.initialized = true;
                 return;
             }
             
-            // Create users table if it doesn't exist
+            // Создаем таблицу пользователей, если она не существует
             await pool.execute(`
                 CREATE TABLE IF NOT EXISTS users (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,9 +62,9 @@ class ReviewModel {
                     likes_received INT DEFAULT 0
                 )
             `);
-            console.log('Users table initialized');
+            console.log('Таблица пользователей инициализирована');
 
-            // Create reviews table if it doesn't exist
+            // Создаем таблицу отзывов, если она не существует
             await pool.execute(`
                 CREATE TABLE IF NOT EXISTS reviews (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -89,9 +89,9 @@ class ReviewModel {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             `);
-            console.log('Reviews table initialized');
+            console.log('Таблица отзывов инициализирована');
 
-            // Create review_votes table if it doesn't exist
+            // Создаем таблицу голосов за отзывы, если она не существует
             await pool.execute(`
                 CREATE TABLE IF NOT EXISTS review_votes (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -104,7 +104,7 @@ class ReviewModel {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             `);
-            console.log('Review votes table initialized');
+            console.log('Таблица голосов за отзывы инициализирована');
 
             // Create review_photos table if it doesn't exist
             await pool.execute(`
@@ -116,15 +116,15 @@ class ReviewModel {
                     FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
                 )
             `);
-            console.log('Review photos table initialized');
+            console.log('Таблица фотографий отзывов инициализирована');
 
             // Ensure deleted_reviews table exists
             await this.ensureDeletedReviewsTableExists();
 
             this.initialized = true;
         } catch (error) {
-            console.error('Error initializing tables:', error);
-            // Set initialized to true anyway to avoid blocking operations
+            console.error('Ошибка инициализации таблиц:', error);
+            // Устанавливаем initialized в true, чтобы избежать блокировки операций
             this.initialized = true;
         }
     }
@@ -140,15 +140,15 @@ class ReviewModel {
                 await pool.execute(`
                     SELECT responded_by FROM reviews LIMIT 1
                 `);
-                console.log('responded_by column already exists in reviews table');
+                console.log('Столбец responded_by уже существует в таблице отзывов');
             } catch (error) {
                 if (error.code === 'ER_BAD_FIELD_ERROR') {
-                    console.log('Adding responded_by column to reviews table');
+                    console.log('Добавление столбца responded_by в таблицу отзывов');
                     await pool.execute(`
                         ALTER TABLE reviews 
                         ADD COLUMN responded_by INT NULL
                     `);
-                    console.log('responded_by column added to reviews table');
+                    console.log('Столбец responded_by добавлен в таблицу отзывов');
                 } else {
                     throw error;
                 }
@@ -159,15 +159,15 @@ class ReviewModel {
                 await pool.execute(`
                     SELECT manager_name FROM reviews LIMIT 1
                 `);
-                console.log('manager_name column already exists in reviews table');
+                console.log('Столбец manager_name уже существует в таблице отзывов');
             } catch (error) {
                 if (error.code === 'ER_BAD_FIELD_ERROR') {
-                    console.log('Adding manager_name column to reviews table');
+                    console.log('Добавление столбца manager_name в таблицу отзывов');
                     await pool.execute(`
                         ALTER TABLE reviews 
                         ADD COLUMN manager_name VARCHAR(100) NULL
                     `);
-                    console.log('manager_name column added to reviews table');
+                    console.log('Столбец manager_name добавлен в таблицу отзывов');
                 } else {
                     throw error;
                 }
@@ -178,15 +178,15 @@ class ReviewModel {
                 await pool.execute(`
                     SELECT deleted FROM reviews LIMIT 1
                 `);
-                console.log('deleted column already exists in reviews table');
+                console.log('Столбец deleted уже существует в таблице отзывов');
             } catch (error) {
                 if (error.code === 'ER_BAD_FIELD_ERROR') {
-                    console.log('Adding deleted column to reviews table');
+                    console.log('Добавление столбца deleted в таблицу отзывов');
                     await pool.execute(`
                         ALTER TABLE reviews 
                         ADD COLUMN deleted BOOLEAN DEFAULT FALSE
                     `);
-                    console.log('deleted column added to reviews table');
+                    console.log('Столбец deleted добавлен в таблицу отзывов');
                 } else {
                     throw error;
                 }
@@ -196,9 +196,9 @@ class ReviewModel {
             await pool.execute(`
                 UPDATE reviews SET deleted = FALSE WHERE deleted IS NULL
             `);
-            console.log('Updated NULL deleted values to FALSE');
+            console.log('Обновлены значения NULL в столбце deleted на FALSE');
         } catch (error) {
-            console.error('Error ensuring columns exist:', error);
+            console.error('Ошибка при проверке наличия столбцов:', error);
         }
     }
 
@@ -260,7 +260,10 @@ class ReviewModel {
             serviceRating = 0,
             atmosphereRating = 0,
             priceRating = 0,
-            cleanlinessRating = 0
+            cleanlinessRating = 0,
+            deliverySpeedRating = 0,
+            deliveryQualityRating = 0,
+            reviewType = 'inRestaurant'
         } = reviewData;
         
         console.log('Creating new review:', reviewData);
@@ -290,6 +293,9 @@ class ReviewModel {
             restaurantId = result.insertId;
         }
 
+        // Проверяем, есть ли в таблице reviews необходимые столбцы для рейтингов доставки
+        await this.ensureDeliveryRatingColumnsExist();
+
         // Создаем отзыв
         const [result] = await pool.execute(
             `INSERT INTO reviews (
@@ -303,8 +309,11 @@ class ReviewModel {
                 atmosphere_rating, 
                 price_rating, 
                 cleanliness_rating,
+                delivery_speed_rating,
+                delivery_quality_rating,
+                review_type,
                 deleted
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
             [
                 userId,
                 restaurantId,
@@ -315,7 +324,10 @@ class ReviewModel {
                 serviceRating,
                 atmosphereRating,
                 priceRating,
-                cleanlinessRating
+                cleanlinessRating,
+                deliverySpeedRating,
+                deliveryQualityRating,
+                reviewType
             ]
         );
 
@@ -347,6 +359,59 @@ class ReviewModel {
     }
     
     /**
+     * Проверяет и добавляет столбцы для рейтингов доставки, если их нет
+     * @param {Object} connection - Опциональное соединение с базой данных
+     */
+    async ensureDeliveryRatingColumnsExist(connection = null) {
+        const db = connection || pool;
+        try {
+            // Проверяем наличие столбца delivery_speed_rating
+            try {
+                await db.execute('SELECT delivery_speed_rating FROM reviews LIMIT 1');
+                console.log('Столбец delivery_speed_rating уже существует');
+            } catch (error) {
+                if (error.code === 'ER_BAD_FIELD_ERROR') {
+                    console.log('Добавление столбца delivery_speed_rating в таблицу отзывов');
+                    await db.execute('ALTER TABLE reviews ADD COLUMN delivery_speed_rating INT DEFAULT 0');
+                    console.log('Столбец delivery_speed_rating добавлен');
+                } else {
+                    throw error;
+                }
+            }
+            
+            // Проверяем наличие столбца delivery_quality_rating
+            try {
+                await db.execute('SELECT delivery_quality_rating FROM reviews LIMIT 1');
+                console.log('Столбец delivery_quality_rating уже существует');
+            } catch (error) {
+                if (error.code === 'ER_BAD_FIELD_ERROR') {
+                    console.log('Добавление столбца delivery_quality_rating в таблицу отзывов');
+                    await db.execute('ALTER TABLE reviews ADD COLUMN delivery_quality_rating INT DEFAULT 0');
+                    console.log('Столбец delivery_quality_rating добавлен');
+                } else {
+                    throw error;
+                }
+            }
+            
+            // Проверяем наличие столбца review_type
+            try {
+                await db.execute('SELECT review_type FROM reviews LIMIT 1');
+                console.log('Столбец review_type уже существует');
+            } catch (error) {
+                if (error.code === 'ER_BAD_FIELD_ERROR') {
+                    console.log('Добавление столбца review_type в таблицу отзывов');
+                    await db.execute('ALTER TABLE reviews ADD COLUMN review_type VARCHAR(20) DEFAULT "inRestaurant"');
+                    console.log('Столбец review_type добавлен');
+                } else {
+                    throw error;
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка при проверке столбцов рейтингов доставки:', error);
+        }
+    }
+    
+    /**
      * Создать новый отзыв с фотографиями
      * @param {Object} reviewData - Данные отзыва, включая фотографии
      * @returns {Promise<Object>} - Информация о созданном отзыве
@@ -363,6 +428,9 @@ class ReviewModel {
             atmosphereRating = 0,
             priceRating = 0,
             cleanlinessRating = 0,
+            deliverySpeedRating = 0,
+            deliveryQualityRating = 0,
+            reviewType = 'inRestaurant',
             photos = []
         } = reviewData;
         
@@ -396,13 +464,17 @@ class ReviewModel {
                 restaurantId = result.insertId;
             }
             
+            // Проверяем, есть ли в таблице reviews необходимые столбцы для рейтингов доставки
+            await this.ensureDeliveryRatingColumnsExist(connection);
+            
             // Сначала вставляем отзыв
             const [reviewResult] = await connection.execute(
                 `INSERT INTO reviews 
                 (user_id, restaurant_id, restaurant_name, rating, comment, 
                 food_rating, service_rating, atmosphere_rating, 
-                price_rating, cleanliness_rating, deleted) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+                price_rating, cleanliness_rating, delivery_speed_rating, 
+                delivery_quality_rating, review_type, deleted) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
                 [
                     userId,
                     restaurantId,
@@ -413,7 +485,10 @@ class ReviewModel {
                     serviceRating,
                     atmosphereRating,
                     priceRating,
-                    cleanlinessRating
+                    cleanlinessRating,
+                    deliverySpeedRating,
+                    deliveryQualityRating,
+                    reviewType
                 ]
             );
             
@@ -444,7 +519,7 @@ class ReviewModel {
             };
         } catch (error) {
             await connection.rollback();
-            console.error('Error creating review with photos:', error);
+            console.error('Ошибка при создании отзыва с фотографиями:', error);
             throw error;
         } finally {
             connection.release();

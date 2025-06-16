@@ -15,14 +15,14 @@ async function updateRoles() {
     try {
         console.log('Starting role system update...');
         
-        // 1. Update schema to support role hierarchy
+        // 1. Обновляем схему пользователей для поддержки иерархии ролей
         console.log('Updating user schema...');
         await pool.query(`
             ALTER TABLE users 
             MODIFY COLUMN role ENUM('user', 'manager', 'admin', 'head_admin') NOT NULL DEFAULT 'user'
         `);
         
-        // 2. Ensure head_admin exists
+        // 2. Убеждаемся, что head_admin существует
         console.log('Ensuring head_admin exists...');
         const [headAdminRows] = await pool.query(
             'SELECT * FROM users WHERE email = ?',
@@ -30,7 +30,7 @@ async function updateRoles() {
         );
         
         if (headAdminRows.length === 0) {
-            // Create head admin
+            // Создаем head admin
             const hashedPassword = await bcrypt.hash('admin123', 10);
             
             await pool.query(
@@ -40,7 +40,7 @@ async function updateRoles() {
             
             console.log('Created head_admin user: ajdasjd@gamail.com');
         } else if (headAdminRows[0].role !== 'head_admin') {
-            // Update existing admin@yandex.ru to head_admin
+            // Обновляем существующего admin@yandex.ru до head_admin
             await pool.query(
                 'UPDATE users SET role = ? WHERE email = ?',
                 ['head_admin', 'ajdasjd@gamail.com']
@@ -51,10 +51,10 @@ async function updateRoles() {
             console.log('head_admin already exists and has correct role');
         }
         
-        // 3. Migrate legacy roles
+        // 3. Мигрируем устаревшие роли
         console.log('Migrating legacy roles...');
         
-        // Map legacy roles to new roles
+        // Сопоставляем устаревшие роли с новыми ролями
         const legacyRoleMappings = {
             'глав_админ': 'head_admin',
             'модератор': 'manager',
@@ -62,7 +62,7 @@ async function updateRoles() {
             'администратор': 'admin'
         };
         
-        // Update each legacy role
+        // Обновляем каждую устаревшую роль
         for (const [legacyRole, newRole] of Object.entries(legacyRoleMappings)) {
             const [result] = await pool.query(
                 'UPDATE users SET role = ? WHERE role = ?',
@@ -74,7 +74,7 @@ async function updateRoles() {
             }
         }
         
-        // Set any remaining non-standard roles to 'user'
+        // Устанавливаем любые оставшиеся нестандартные роли в 'user'
         const [cleanupResult] = await pool.query(`
             UPDATE users 
             SET role = 'user'
@@ -85,10 +85,10 @@ async function updateRoles() {
             console.log(`Reset ${cleanupResult.affectedRows} users with non-standard roles to 'user'`);
         }
         
-        console.log('Role system update completed successfully!');
+        console.log('Ролевая система обновлена успешно!');
         process.exit(0);
     } catch (error) {
-        console.error('Error updating role system:', error);
+        console.error('Ошибка при обновлении ролевой системы:', error);
         process.exit(1);
     }
 }

@@ -10,15 +10,13 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { RESTAURANT_CATEGORIES } from './constants/categories';
 import { restaurantService } from './services/restaurantService';
-
-// Define API base URL
+ 
 const API_BASE_URL = 'http://localhost:5000/api';
 
-// Mock restaurants data for fallback
-const mockRestaurants = [
+ const mockRestaurants = [
 ];
 
-// Animation variants
+// Анимация вариантов
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -96,11 +94,11 @@ const imageVariants = {
 
 
 
-// Categories for filtering
+// Категории для фильтрации
 const categories = [
     { id: 'all', name: 'Все рестораны' },
     ...Object.entries(RESTAURANT_CATEGORIES)
-        .filter(([id]) => id !== 'all') // Remove 'all' from RESTAURANT_CATEGORIES since we add it manually
+        .filter(([id]) => id !== 'all') // Удаляем 'all' из RESTAURANT_CATEGORIES, так как мы добавляем его вручную
         .map(([id, name]) => ({
             id,
             name,
@@ -186,17 +184,17 @@ const CustomPagination = ({ currentPage, totalPages, onPageChange, isDarkMode })
     </div>
 );
 
-// Функция отладки для диагностики проблем загрузки отзывов
+// Функция отладки для диагностики проблем загрузки отзывов (debugging function for reviewing loading issues)
 const logReviewData = (source, data) => {
     console.log(`[ОТЛАДКА] Отзывы из ${source}:`, data);
     return data;
 };
 
-// Функция форматирования даты на русском языке
+// Функция форматирования даты на русском языке (function for formatting date in Russian)
 const formatDate = (dateString) => {
     const date = new Date(dateString || Date.now());
     
-    // Названия месяцев в родительном падеже
+    // Названия месяцев в родительном падеже (months in the genitive case)
     const months = [
         'января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 
         'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
@@ -231,14 +229,14 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredRestaurants.slice(indexOfFirstItem, indexOfLastItem);
 
-    // Function to normalize cuisine name to category ID
+    // Функция для нормализации названия кухни к ID категории (function to normalize cuisine name to category ID)
     const normalizeCuisineToCategory = (cuisine) => {
         if (!cuisine) return null;
         
-        // Remove "кухня" from name and convert to lowercase
+        // Удаляем "кухня" из названия и преобразуем в нижний регистр (remove "кухня" from name and convert to lowercase)
         const normalizedCuisine = cuisine.toLowerCase().replace(' кухня', '').trim();
         
-        // Find matching category
+        // Находим соответствующую категорию (find matching category)
         const category = Object.entries(RESTAURANT_CATEGORIES).find(([id, name]) => 
             name.toLowerCase().replace(' кухня', '').trim() === normalizedCuisine
         );
@@ -256,7 +254,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                     }
                 });
                 
-                // Ensure we're working with an array of restaurants
+                // Убеждаемся, что мы работаем с массивом ресторанов (Ensure we're working with an array of restaurants)
                 const restaurantsData = Array.isArray(response.data) ? response.data : 
                                       (response.data.data || response.data.restaurants || []);
                 
@@ -264,7 +262,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                     ...restaurant,
                     avgRating: typeof restaurant.avg_rating === 'number' ? restaurant.avg_rating : 0,
                     reviewCount: typeof restaurant.review_count === 'number' ? restaurant.review_count : 0,
-                    // Ensure category is properly set
+                    // Убеждаемся, что категория установлена правильно (Ensure category is properly set)
                     category: restaurant.category || normalizeCuisineToCategory(restaurant.cuisine_type || restaurant.cuisineType)
                 }));
                 
@@ -274,12 +272,12 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                 console.error('Failed to fetch restaurants:', err);
                 setError('Не удалось загрузить рестораны. Пожалуйста, попробуйте позже.');
                 
-                // For demo purposes, use mock data if API fails
+                // Для демонстрационных целей, используем mock данные, если API не работает (For demo purposes, use mock data if API fails)
                 const mocksWithValidRatings = mockRestaurants.map(restaurant => ({
                     ...restaurant,
                     avgRating: typeof restaurant.avgRating === 'number' ? restaurant.avgRating : 0,
                     reviewCount: typeof restaurant.reviewCount === 'number' ? restaurant.reviewCount : 0,
-                    // Normalize category for mock data
+                    // Нормализуем категорию для mock данных (Normalize category for mock data)
                     category: normalizeCuisineToCategory(restaurant.cuisine)
                 }));
                 setRestaurants(mocksWithValidRatings);
@@ -291,24 +289,24 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
 
         fetchRestaurants();
         
-        // Update page title
+        // Обновляем заголовок страницы (Update page title)
         document.title = "Рейтинги ресторанов | FeedbackDelivery";
         
-        // Cleanup on unmount
+        // Очищаем на unmount (Cleanup on unmount)
         return () => {
             document.title = "FeedbackDelivery";
         };
-    }, [activeCategory]); // Add activeCategory as dependency
+    }, [activeCategory]); // Добавляем activeCategory в зависимости (Add activeCategory as dependency)
 
     const handleSearch = (e) => {
         const term = e.target.value.toLowerCase().trim();
         setSearchTerm(term);
-        setCurrentPage(1); // Reset to first page when searching
+        setCurrentPage(1); // Сбрасываем на первую страницу при поиске (Reset to first page when searching)
         
-        // Apply both category and search filters
+        // Применяем оба фильтра категории и поиска (Apply both category and search filters)
         let filtered = restaurants;
         
-        // First apply category filter if not "all"
+        // Сначала применяем фильтр категории, если не "all" (First apply category filter if not "all")
         if (activeCategory !== 'all') {
             filtered = filtered.filter(restaurant => 
                 restaurant.category === activeCategory || 
@@ -317,7 +315,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
             );
         }
         
-        // Then apply search filter if there's a search term
+        // Затем применяем фильтр поиска, если есть поисковый запрос (Then apply search filter if there's a search term)
         if (term) {
             filtered = filtered.filter(restaurant => {
                 const restaurantName = (restaurant.name || '').toLowerCase();
@@ -335,15 +333,15 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
     
     const handleCategoryChange = (categoryId) => {
         setActiveCategory(categoryId);
-        setCurrentPage(1); // Reset to first page when changing category
+        setCurrentPage(1); // Сбрасываем на первую страницу при смене категории (Reset to first page when changing category)
         
         if (categoryId === 'all') {
-            // Show all restaurants when "All" is selected
+            // Показываем все рестораны, когда выбрана категория "Все" (Show all restaurants when "All" is selected)
             setFilteredRestaurants(restaurants);
         } else {
-            // Filter restaurants by selected category
+            // Фильтруем рестораны по выбранной категории (Filter restaurants by selected category)
             const filtered = restaurants.filter(restaurant => {
-                // Check both category and cuisine_type fields
+                // Проверяем оба поля категории и cuisine_type (Check both category and cuisine_type fields)
                 const matchesCategory = 
                     restaurant.category === categoryId || 
                     restaurant.cuisine_type === RESTAURANT_CATEGORIES[categoryId] ||
@@ -367,12 +365,12 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Function to handle showing reviews for a specific restaurant
+    // Функция для отображения отзывов для конкретного ресторана (function to handle showing reviews for a specific restaurant)
     const handleShowReviews = (restaurantId) => {
         setShowReviewsFor(prevId => prevId === restaurantId ? null : restaurantId);
     };
 
-    // Update the refresh reviews function to use the restaurantService instead of apiService
+    // Обновляем функцию обновления отзывов, чтобы использовать restaurantService вместо apiService (Update the refresh reviews function to use the restaurantService instead of apiService)
     const refreshReviews = async (restaurantId) => {
         try {
             console.log(`Fetching reviews for restaurant ${restaurantId}...`);
@@ -388,13 +386,13 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                 return;
             }
             
-            // Log raw reviews for debugging
+            // Логируем сырые отзывы для отладки (Log raw reviews for debugging)
             console.log('Raw reviews data:', JSON.stringify(response.reviews, null, 2));
             
-            // Normalize the review data to ensure consistency
+            // Нормализуем данные отзывов, чтобы обеспечить согласованность (Normalize the review data to ensure consistency)
             const normalizedReviews = response.reviews.map(review => ({
                 ...review,
-                // Ensure all necessary fields exist for rendering
+                // Убеждаемся, что все необходимые поля существуют для отображения (Ensure all necessary fields exist for rendering)
                 user_name: review.user_name || review.userName || review.author?.name || 'Неизвестный пользователь',
                 restaurant_id: review.restaurant_id || restaurantId,
                 restaurantId: review.restaurant_id || restaurantId,
@@ -416,11 +414,11 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
         }
     };
 
-    // Update the RestaurantReviews component to always link to the restaurant of the review
+    // Обновляем компонент RestaurantReviews, чтобы всегда ссылаться на ресторан отзыва (Update the RestaurantReviews component to always link to the restaurant of the review)
     const RestaurantReviews = ({ restaurantId, isDarkMode }) => {
         const reviews = restaurantReviews[restaurantId] || [];
         
-        // Add explicit logging to help debug
+        // Добавляем явное логирование для отладки (Add explicit logging to help debug)
         console.log(`RestaurantReviews component for restaurant ${restaurantId}:`, {
             reviewsAvailable: reviews.length > 0,
             reviewsCount: reviews.length,
@@ -478,7 +476,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
             }
         };
         
-        // If reviews not fetched yet, fetch them
+        // Если отзывы еще не загружены, загружаем их (If reviews not fetched yet, fetch them)
         if (!restaurantReviews[restaurantId]) {
             console.log(`No reviews loaded yet for restaurant ${restaurantId}, fetching...`);
             refreshReviews(restaurantId);
@@ -491,7 +489,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
             );
         }
         
-        // If reviews array exists but is empty (after fetching)
+        // Если массив отзывов существует, но пуст (после загрузки) (If reviews array exists but is empty (after fetching))
         if (reviews.length === 0) {
             console.log(`No reviews found for restaurant ${restaurantId} after fetching`);
             
@@ -520,7 +518,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
         
         console.log(`Rendering ${reviews.length} reviews for restaurant ${restaurantId}`);
         
-        // If we have reviews, display them
+        // Если у нас есть отзывы, отображаем их (If we have reviews, display them)
         return (
             <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -549,14 +547,14 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                 </div>
                 <div className="space-y-3">
                     {reviews.slice(0, 3).map((review, index) => {
-                        // Get the actual restaurant ID this review belongs to
+                        // Получаем фактический ID ресторана, к которому принадлежит этот отзыв (Get the actual restaurant ID this review belongs to)
                         const reviewRestaurantId = review.restaurant_id || review.restaurantId || restaurantId;
                         
-                        // Find the restaurant object from our list of restaurants
+                        // Находим объект ресторана из нашего списка ресторанов (Find the restaurant object from our list of restaurants)
                         const reviewRestaurant = restaurants.find(r => r.id === reviewRestaurantId) || 
                                                { id: reviewRestaurantId, slug: reviewRestaurantId };
                         
-                        // Determine the URL for this restaurant
+                        // Определяем URL для этого ресторана (Determine the URL for this restaurant)
                         const restaurantUrl = `/restaurant/${reviewRestaurant.slug || reviewRestaurant.id}`;
                         
                         return (
@@ -575,7 +573,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                                             {review.user_name || review.userName || review.username || review.name || review.author?.name || 'Гость'}
                                         </span>
                                         
-                                        {/* Always show which restaurant this review is for */}
+                                        {/* Всегда показываем, для какого ресторана этот отзыв */}
                                         <Link 
                                             to={restaurantUrl}
                                             className={`ml-2 text-xs hover:underline ${
@@ -610,7 +608,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                                         {formatDate(review.created_at || review.date || review.timestamp || Date.now())}
                                     </Link>
                                     
-                                    {/* Add a clickable like counter similar to the image */}
+                                    {/* Добавляем кликабельный счетчик лайков, аналогичный изображению */}
                                     <motion.button
                                         onClick={() => handleLike(review.id)}
                                         whileHover={{ scale: 1.1 }}
@@ -657,9 +655,9 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                 </div>
             </motion.div>
         );
-    };
+    };  
 
-    // Render a restaurant card
+    // Рендерим карточку ресторана (Render a restaurant card)
     const renderRestaurantCard = (restaurant, index) => {
         const { id, name, address, image_url, rating, slug, cuisine, hasReviews } = restaurant;
         const reviews = restaurantReviews[id] || [];
@@ -729,7 +727,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                             </div>
                         )}
                         
-                        {/* Reviews section - shows when button is clicked */}
+                        {/* Раздел отзывов - показывается при нажатии кнопки */}
                         <AnimatePresence>
                             {showReviewsFor === id && (
                                 <RestaurantReviews restaurantId={id} isDarkMode={isDarkMode} />
@@ -820,7 +818,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
         );
     }
 
-    // Render section showing top restaurants
+    // Рендерим раздел с топ ресторанами 
     const renderTopRestaurants = () => {
         if (filteredRestaurants.length === 0) {
             return <EmptyRestaurants isDarkMode={isDarkMode} />;

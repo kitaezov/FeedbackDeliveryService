@@ -10,12 +10,12 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Path for storing review photos
+// Путь для хранения фотографий отзывов
 const uploadsDir = path.join(__dirname, '../../public/uploads');
 const reviewsDir = path.join(uploadsDir, 'reviews');
 const receiptsDir = path.join(uploadsDir, 'receipts');
 
-// Check if directories exist and create them if they don't
+// Проверяем, существуют ли директории, и создаем их, если они не существуют
 if (!fs.existsSync(path.join(__dirname, '../../public'))) {
     fs.mkdirSync(path.join(__dirname, '../../public'), { recursive: true });
 }
@@ -32,10 +32,10 @@ if (!fs.existsSync(receiptsDir)) {
     fs.mkdirSync(receiptsDir, { recursive: true });
 }
 
-// Configure storage for different types of files
+// Настраиваем хранилище для разных типов файлов
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
-        // Different destination paths depending on the field name
+        // Разные пути назначения в зависимости от имени поля
         const destination = file.fieldname === 'receiptPhoto' 
             ? receiptsDir 
             : reviewsDir;
@@ -54,7 +54,7 @@ const storage = multer.diskStorage({
     }
 });
 
-// Filter for checking file type
+// Фильтр для проверки типа файла
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -64,12 +64,12 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Configure uploader with simpler settings
+// Настраиваем загрузчик с простыми настройками
 const upload = multer({ 
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5 MB
+        fileSize: 5 * 1024 * 1024 // 5 МБ
     }
 });
 
@@ -92,19 +92,19 @@ const handleMulterError = (err, req, res, next) => {
         }
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
             return res.status(400).json({
-                message: 'Unexpected field', 
+                message: 'Неожиданное поле', 
                 details: `Поле не соответствует ожидаемой структуре формы: ${err.field}`
             });
         }
         return res.status(400).json({
-            message: 'Ошибка при загрузке файла',
+            message: 'Ошибка при загрузке файлов',
             details: err.message
         });
     }
     if (err) {
         // Обработка других ошибок
         return res.status(500).json({
-            message: 'Ошибка сервера при обработке файлов', 
+            message: 'Ошибка сервера при загрузке файлов', 
             details: err.message
         });
     }
@@ -113,7 +113,7 @@ const handleMulterError = (err, req, res, next) => {
 
 /**
  * @route POST /api/reviews/with-photos
- * @desc Create a review with photos
+ * @desc Создать отзыв с фотографиями
  * @access Private
  */
 router.post('/with-photos', authenticateToken, (req, res, next) => {
@@ -131,42 +131,42 @@ router.post('/with-photos', authenticateToken, (req, res, next) => {
 
 /**
  * @route POST /api/reviews
- * @desc Create a new review
+ * @desc Создать новый отзыв
  * @access Private
  */
 router.post('/', authenticateToken, reviewController.createReview);
 
 /**
  * @route GET /api/reviews
- * @desc Get all reviews
+ * @desc Получить все отзывы
  * @access Public
  */
 router.get('/', reviewController.getAllReviews);
 
 /**
  * @route POST /api/reviews/vote
- * @desc Vote on a review (up/down)
+ * @desc Голосование за отзыв (вверх/вниз)
  * @access Private
  */
 router.post('/vote', authenticateToken, reviewController.voteReview);
 
 /**
  * @route GET /api/reviews/:id
- * @desc Get review by ID
+ * @desc Получить отзыв по ID
  * @access Public
  */
 router.get('/:id', reviewController.getReviewById);
 
 /**
  * @route PUT /api/reviews/:id
- * @desc Update review
+ * @desc Обновить отзыв
  * @access Private
  */
 router.put('/:id', authenticateToken, reviewController.updateReview);
 
 /**
  * @route DELETE /api/reviews/:id
- * @desc Delete review
+ * @desc Удалить отзыв
  * @access Private
  */
 router.delete('/:id', authenticateToken, reviewController.deleteReview);

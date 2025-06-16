@@ -25,7 +25,7 @@ async function initializeUserTables() {
             )
         `);
         
-        // Check if role column exists, add if it doesn't
+        // Проверяем, существует ли колонка role, и добавляем её, если она не существует 
         const [roleColumns] = await pool.query(`
             SHOW COLUMNS FROM users LIKE 'role'
         `);
@@ -37,7 +37,7 @@ async function initializeUserTables() {
             `);
         }
 
-        // Get current role enum type
+        // Получаем текущий тип ENUM для колонки role
         const [roleTypeResult] = await pool.query(`
             SHOW COLUMNS FROM users WHERE Field = 'role'
         `);
@@ -46,7 +46,7 @@ async function initializeUserTables() {
             console.log('Current role enum type:', roleTypeResult[0].Type);
         }
 
-        // Check if updated_at column exists
+        // Проверяем, существует ли колонка updated_at
         const [updatedAtColumns] = await pool.query(`
             SHOW COLUMNS FROM users LIKE 'updated_at'
         `);

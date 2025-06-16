@@ -13,6 +13,8 @@ import { restaurantService } from '../services/restaurantService';
  * @param {Object} props
  * @param {Object} props.restaurant - Данные ресторана
  * @param {Function} props.onAddReview - Функция для добавления отзыва
+ * @param {string} props.activeTab - Активная вкладка ('details' или 'reviews')
+ * @param {Function} props.onTabChange - Функция для переключения вкладок
  * @returns {JSX.Element}
  */
 
@@ -95,11 +97,16 @@ const getImageUrl = (image) => {
     return `${process.env.REACT_APP_API_URL || ''}${image}`;
 };
 
-export const RestaurantDetails = ({ restaurant, onAddReview }) => {
-    const [activeTab, setActiveTab] = useState('details');
+export const RestaurantDetails = ({ restaurant, onAddReview, activeTab = 'details', onTabChange }) => {
+    const [localActiveTab, setLocalActiveTab] = useState(activeTab);
     const [reviews, setReviews] = useState([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [reviewError, setReviewError] = useState(null);
+    
+    // Синхронизируем локальное состояние с пропсом
+    useEffect(() => {
+        setLocalActiveTab(activeTab);
+    }, [activeTab]);
     
     // Fetch reviews when the component mounts or when the restaurant ID changes
     useEffect(() => {
@@ -138,7 +145,10 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
     };
     
     const handleTabChange = (tab) => {
-        setActiveTab(tab);
+        setLocalActiveTab(tab);
+        if (onTabChange) {
+            onTabChange(tab);
+        }
         if (tab === 'reviews' && reviews.length === 0) {
             fetchRestaurantReviews();
         }
@@ -379,7 +389,7 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
                 <nav className="flex">
                     <button
                         className={`px-4 py-3 text-sm font-medium border-b-2 ${
-                            activeTab === 'details'
+                            localActiveTab === 'details'
                                 ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                         }`}
@@ -389,7 +399,7 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
                     </button>
                     <button
                         className={`px-4 py-3 text-sm font-medium border-b-2 ${
-                            activeTab === 'reviews'
+                            localActiveTab === 'reviews'
                                 ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                         }`}
@@ -402,7 +412,7 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
             
             {/* Содержимое вкладок */}
             <div className="p-4">
-                {activeTab === 'details' ? (
+                {localActiveTab === 'details' ? (
                     <div className="space-y-6">
                         {/* Описание */}
                         <div>
@@ -428,6 +438,27 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
                                     <FileText size={20} />
                                 </motion.div>
                                 Посмотреть меню
+                            </motion.button>
+                        </motion.div>
+                        
+                        {/* Кнопка отзывов */}
+                        <motion.div
+                            className="flex justify-center"
+                            initial="hidden"
+                            animate="visible"
+                            variants={cardVariants}
+                        >
+                            <motion.button
+                                className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium shadow-sm transition-colors w-full justify-center"
+                                onClick={() => handleTabChange('reviews')}
+                                variants={buttonVariants}
+                                whileHover="hover"
+                                whileTap="tap"
+                            >
+                                <motion.div variants={iconVariants}>
+                                    <Star size={20} />
+                                </motion.div>
+                                Посмотреть отзывы о ресторане
                             </motion.button>
                         </motion.div>
                         
@@ -644,6 +675,19 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
                     </div>
                 )}
             </div>
+            
+            {/* Кнопка для отзывов внизу страницы */}
+            {localActiveTab === 'details' && (
+                <div className="mt-6 flex justify-center">
+                    <button
+                        onClick={() => handleTabChange('reviews')}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow-md transition-colors w-full justify-center"
+                    >
+                        <Star size={20} />
+                        Посмотреть отзывы о ресторане
+                    </button>
+                </div>
+            )}
         </div>
     );
 }; 

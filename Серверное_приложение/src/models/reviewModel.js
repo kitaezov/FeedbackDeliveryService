@@ -425,14 +425,14 @@ class ReviewModel {
      * @param {Object} options - Параметры фильтрации и пагинации
      * @returns {Promise<Array>} - Список отзывов
      */
-    async getAll({ page = 1, limit = 10, userId, restaurantName, currentUserId, sortBy = 'latest' } = {}) {
+    async getAll({ page = 1, limit = 10, userId, restaurantName, restaurantId, currentUserId, sortBy = 'latest' } = {}) {
         try {
             // Wait for tables to be initialized
             if (!this.initialized) {
                 await this.initPromise;
             }
 
-            console.log('getAll called with params:', { page, limit, userId, restaurantName, currentUserId, sortBy });
+            console.log('getAll called with params:', { page, limit, userId, restaurantName, restaurantId, currentUserId, sortBy });
 
             // Добавляем прямой запрос для проверки наличия отзывов в базе данных
             try {
@@ -444,6 +444,11 @@ class ReviewModel {
                     console.log(`Reviews for user ${userId} in database:`, userReviews[0].total);
                 }
                 
+                if (restaurantId) {
+                    const [restaurantReviews] = await pool.execute('SELECT COUNT(*) as total FROM reviews WHERE restaurant_id = ?', [restaurantId]);
+                    console.log(`Reviews for restaurant ${restaurantId} in database:`, restaurantReviews[0].total);
+                }
+                
                 const [deletedReviewsCount] = await pool.execute('SELECT COUNT(*) as total FROM reviews WHERE deleted = 1');
                 console.log('Deleted reviews in database:', deletedReviewsCount[0].total);
                 
@@ -451,7 +456,7 @@ class ReviewModel {
                 console.log('Non-deleted reviews in database:', nonDeletedReviewsCount[0].total);
                 
                 // Проверяем все отзывы в базе данных
-                const [allReviewsData] = await pool.execute('SELECT id, user_id, restaurant_name, rating, deleted FROM reviews');
+                const [allReviewsData] = await pool.execute('SELECT id, user_id, restaurant_id, restaurant_name, rating, deleted FROM reviews');
                 console.log('All reviews in database:', allReviewsData);
             } catch (error) {
                 console.error('Error checking database reviews:', error);
@@ -485,6 +490,10 @@ class ReviewModel {
             if (restaurantName) {
                 conditions.push('r.restaurant_name LIKE ?');
                 params.push(`%${restaurantName}%`);
+            }
+            if (restaurantId) {
+                conditions.push('r.restaurant_id = ?');
+                params.push(restaurantId);
             }
 
             if (conditions.length > 0) {
@@ -541,6 +550,10 @@ class ReviewModel {
             if (restaurantName) {
                 countQuery += ' AND r.restaurant_name LIKE ?';
                 countParams.push(`%${restaurantName}%`);
+            }
+            if (restaurantId) {
+                countQuery += ' AND r.restaurant_id = ?';
+                countParams.push(restaurantId);
             }
 
             const [countResult] = await pool.execute(countQuery, countParams);

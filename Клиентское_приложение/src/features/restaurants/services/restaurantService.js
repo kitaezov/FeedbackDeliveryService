@@ -70,43 +70,38 @@ export const restaurantService = {
                 return { reviews: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
             }
             
-            // Use direct API call to get reviews instead
-            // Changed to use /reviews?restaurantName= for more reliable results
-            const encodedName = encodeURIComponent("Итальянский дворик");
-            const response = await api.get(`/reviews?restaurantName=${encodedName}`, { params });
+            // Используем ID ресторана для получения отзывов
+            const response = await api.get(`/reviews`, { 
+                params: { 
+                    ...params,
+                    restaurantId: restaurantId 
+                } 
+            });
             console.log('Restaurant reviews raw response:', response);
             
             // Normalize response format - try to handle different API response structures
             let normalizedResponse = { reviews: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
             
-            if (response.data && response.data.reviews) {
-                // Format 1: { reviews: [...], pagination: {...} }
-                normalizedResponse = response.data;
-            } else if (response.data && Array.isArray(response.data)) {
-                // Format 2: Direct array of reviews
+            if (response.data && Array.isArray(response.data)) {
+                // Если сервер вернул массив отзывов напрямую
                 normalizedResponse.reviews = response.data;
-            } else if (response.data && response.data.success && response.data.reviews) {
-                // Format 3: { success: true, reviews: [...], pagination: {...} }
-                normalizedResponse.reviews = response.data.reviews;
-                if (response.data.pagination) {
-                    normalizedResponse.pagination = response.data.pagination;
+                console.log('Server returned direct array of reviews');
+            } else if (response.data && response.data.reviews && Array.isArray(response.data.reviews)) {
+                // Если сервер вернул объект с массивом отзывов
+                normalizedResponse = response.data;
+                console.log('Server returned object with reviews array');
+            } else if (response.data && typeof response.data === 'object') {
+                // Попытка найти массив отзывов в любом объекте
+                console.log('Trying to find reviews in response object');
+                for (const key in response.data) {
+                    if (Array.isArray(response.data[key])) {
+                        normalizedResponse.reviews = response.data[key];
+                        console.log(`Found reviews array in response.data.${key}`);
+                        break;
+                    }
                 }
             } else {
                 console.warn('Unexpected API response format:', response.data);
-                // Try to extract reviews from any object structure
-                if (response.data && typeof response.data === 'object') {
-                    // Look for arrays that might contain reviews
-                    for (const key in response.data) {
-                        if (Array.isArray(response.data[key]) && 
-                            response.data[key].length > 0 && 
-                            response.data[key][0] && 
-                            (response.data[key][0].rating || response.data[key][0].comment)) {
-                            console.log(`Found potential reviews array in response.data.${key}`);
-                            normalizedResponse.reviews = response.data[key];
-                            break;
-                        }
-                    }
-                }
             }
             
             // Make sure we have a valid array of reviews

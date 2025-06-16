@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { User, MapPin, DollarSign, Award, Smile, Star, Clock, Phone, Globe, ChevronLeft, X, Heart, ThumbsUp, Check, FileText, Camera, ThumbsDown, ImagePlus, Trash2, Utensils, Receipt, MessageCircle, Eye, EyeOff } from 'lucide-react';
+import { User, MapPin, DollarSign, Award, Smile, Star, Clock, Phone, Globe, ChevronLeft, X, Heart, ThumbsUp, Check, FileText, Camera, ThumbsDown, ImagePlus, Trash2, Utensils, Receipt } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import api from '../../utils/api';
@@ -623,6 +623,133 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         }
     };
 
+    // Компонент для отображения отзывов в модальном окне
+    const RestaurantReviewsList = ({ restaurant, maxReviews = 3 }) => {
+        const [reviews, setReviews] = useState([]);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState(null);
+
+        useEffect(() => {
+            const fetchReviews = async () => {
+                if (!restaurant?.id) return;
+                
+                try {
+                    setLoading(true);
+                    const response = await restaurantService.getRestaurantReviews(restaurant.id);
+                    
+                    if (response && Array.isArray(response.reviews)) {
+                        setReviews(response.reviews);
+                    } else {
+                        setReviews([]);
+                    }
+                    setError(null);
+                } catch (err) {
+                    console.error('Error fetching reviews:', err);
+                    setError('Не удалось загрузить отзывы');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            fetchReviews();
+        }, [restaurant?.id]);
+
+        if (loading) {
+            return (
+                <div className="py-4 text-center">
+                    <div className="animate-spin h-6 w-6 border-2 border-gray-500 rounded-full border-t-transparent mx-auto"></div>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Загрузка отзывов...</p>
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="py-4 text-center">
+                    <p className="text-sm text-red-500">{error}</p>
+                </div>
+            );
+        }
+
+        if (reviews.length === 0) {
+            return (
+                <div className="py-4 text-center bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <Star className="w-8 h-8 text-gray-300 dark:text-gray-500 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">У этого ресторана пока нет отзывов</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Будьте первым, кто оставит отзыв!</p>
+                </div>
+            );
+        }
+
+        // Показываем только первые maxReviews отзывов
+        const displayedReviews = reviews.slice(0, maxReviews);
+
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">Последние отзывы</h3>
+                
+                {displayedReviews.map((review) => (
+                    <div 
+                        key={review.id} 
+                        className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600"
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center mr-2">
+                                    {review.author?.avatar ? (
+                                        <img 
+                                            src={review.author.avatar} 
+                                            alt={review.author.name || review.user_name || "User"} 
+                                            className="w-8 h-8 rounded-full"
+                                        />
+                                    ) : (
+                                        <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        {review.author?.name || review.user_name || review.userName || "Пользователь"}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        {new Date(review.date || review.created_at).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star
+                                        key={i}
+                                        size={14}
+                                        fill={i < review.rating ? "#FFB800" : "none"}
+                                        stroke={i < review.rating ? "#FFB800" : "#94a3b8"}
+                                        className="mr-0.5"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                            {review.comment || review.text || "Пользователь не оставил комментарий"}
+                        </p>
+                    </div>
+                ))}
+                
+                {reviews.length > maxReviews && (
+                    <div className="text-center mt-2">
+                        <button 
+                            onClick={() => {
+                                handleClose();
+                                window.location.href = `/restaurants/${restaurant.id}?tab=reviews`;
+                            }}
+                            className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                        >
+                            Показать все отзывы ({reviews.length})
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
@@ -823,6 +950,16 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 <FileText className="w-4 h-4 mr-2"/>
                                 Посмотреть меню
                             </motion.button>
+
+                            {/* Секция с отзывами */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm"
+                            >
+                                <RestaurantReviewsList restaurant={restaurant} />
+                            </motion.div>
 
                             {user ? (
                                 <motion.button

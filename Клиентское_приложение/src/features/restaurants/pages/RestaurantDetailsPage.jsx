@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Container, Breadcrumb, Button, Modal } from '../../../common/components/ui';
 import { RestaurantDetails } from '../components/RestaurantDetails';
 import { ReviewForm } from '../components/ReviewForm';
@@ -14,6 +14,7 @@ import { useScrollToTop } from '../../../common/hooks';
 export const RestaurantDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { isAuthenticated, user } = useAuthContext();
     const { showToast } = useToast();
     
@@ -25,6 +26,16 @@ export const RestaurantDetailsPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('details');
+    
+    // Проверяем URL на наличие параметра tab
+    useEffect(() => {
+        const searchParams = new URLSearchParams(location.search);
+        const tabParam = searchParams.get('tab');
+        if (tabParam === 'reviews') {
+            setActiveTab('reviews');
+        }
+    }, [location.search]);
     
     // Загрузка данных ресторана
     useEffect(() => {
@@ -68,6 +79,13 @@ export const RestaurantDetailsPage = () => {
     // Обработчик закрытия модального окна
     const handleCloseModal = () => {
         setIsReviewModalOpen(false);
+    };
+    
+    // Обработчик переключения вкладок
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        // Обновляем URL без перезагрузки страницы
+        navigate(`/restaurants/${id}${tab === 'reviews' ? '?tab=reviews' : ''}`, { replace: true });
     };
     
     // Обработчик отправки формы отзыва
@@ -115,6 +133,9 @@ export const RestaurantDetailsPage = () => {
                 description: 'Ваш отзыв успешно опубликован',
                 type: 'success'
             });
+            
+            // Переключаемся на вкладку с отзывами после успешного добавления
+            handleTabChange('reviews');
         } catch (error) {
             console.error('Error submitting review:', error);
             showToast({
@@ -175,6 +196,28 @@ export const RestaurantDetailsPage = () => {
                     ]}
                     className="mb-6"
                 />
+                
+                {/* Детали ресторана */}
+                <RestaurantDetails 
+                    restaurant={restaurant} 
+                    onAddReview={handleAddReviewClick}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                />
+                
+                {/* Модальное окно для добавления отзыва */}
+                <Modal
+                    isOpen={isReviewModalOpen}
+                    onClose={handleCloseModal}
+                    title={`Оставить отзыв о ресторане ${restaurant?.name}`}
+                >
+                    <ReviewForm 
+                        restaurantId={id}
+                        restaurantName={restaurant?.name}
+                        onSubmit={handleSubmitReview}
+                        onCancel={handleCloseModal}
+                    />
+                </Modal>
             </Container>
         </div>
     );

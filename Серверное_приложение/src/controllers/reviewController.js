@@ -159,10 +159,10 @@ const createReview = async (req, res) => {
  */
 const getAllReviews = async (req, res) => {
     try {
-        const { page = 1, limit = 10, userId, restaurantName } = req.query;
+        const { page = 1, limit = 10, userId, restaurantName, restaurantId } = req.query;
         const currentUserId = req.user ? req.user.id : null;
         
-        console.log('getAllReviews called with params:', { page, limit, userId, restaurantName, currentUserId });
+        console.log('getAllReviews called with params:', { page, limit, userId, restaurantName, restaurantId, currentUserId });
         
         // Проверяем, есть ли отзывы в базе данных
         const [checkResult] = await pool.execute('SELECT COUNT(*) as count FROM reviews WHERE deleted = 0 OR deleted IS NULL');
@@ -176,6 +176,7 @@ const getAllReviews = async (req, res) => {
             limit: parseInt(limit),
             userId: userId ? parseInt(userId) : undefined,
             restaurantName,
+            restaurantId: restaurantId ? parseInt(restaurantId) : undefined,
             currentUserId
         });
         

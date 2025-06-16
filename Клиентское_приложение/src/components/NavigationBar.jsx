@@ -7,6 +7,7 @@ import api from '../utils/api';
 import notificationService from '../services/notificationService';
 import { useNotification } from './NotificationContext';
 import { useAuth } from '../common/hooks/useAuth';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Получает полный URL аватара пользователя
@@ -126,9 +127,8 @@ const menuItemVariants = {
 /**
  * Компонент навигационной панели с адаптивным дизайном и анимациями
  */
-const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick, onProfileUpdate }) => {
-    // Состояния компонента
-    const [isDarkMode, setIsDarkMode] = useState(false);
+const NavigationBar = ({ user, onLogout, onLogin, onProfileClick, onProfileUpdate }) => {
+    const { isDarkMode, toggleDarkMode } = useTheme();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [hasScrolled, setHasScrolled] = useState(false);
@@ -245,8 +245,7 @@ const NavigationBar = ({ user, onLogout, onLogin, onThemeToggle, onProfileClick,
 
     // Переключение темы
     const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        onThemeToggle(!isDarkMode);
+        toggleDarkMode();
     };
 
     // Обработчик выхода из системы

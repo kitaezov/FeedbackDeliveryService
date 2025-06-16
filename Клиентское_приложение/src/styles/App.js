@@ -7,6 +7,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import api from '../utils/api';
 import { useAuth } from '../features/auth/AuthContext';
 import { API_URL } from '../config';
+import { useTheme } from '../contexts/ThemeContext';
 
 import LoginModal from '../features/auth/LoginForm';
 import {ProfilePage} from '../features/auth/ProfilePage';
@@ -30,13 +31,13 @@ const App = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, isAuthenticated, logout, setUser } = useAuth();
+    const { isDarkMode, toggleDarkMode } = useTheme();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isRegistration, setIsRegistration] = useState(false);
     const [error, setError] = useState(null);
     const [reviews, setReviews] = useState([]);
-    const [isDarkMode, setIsDarkMode] = useState(false);
     
     const wsRef = useRef(null);
     const [wsConnected, setWsConnected] = useState(false);
@@ -44,9 +45,12 @@ const App = () => {
     useEffect(() => {
         const apiUrlObj = new URL(API_URL || window.location.origin);
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${apiUrlObj.host}`;
+        const wsUrl = `${wsProtocol}//${apiUrlObj.hostname}:${apiUrlObj.port || 5000}`;
         
         wsRef.current = new WebSocket(wsUrl);
+        
+        // Сохраняем соединение в глобальном объекте для доступа из других компонентов
+        window.webSocket = wsRef.current;
         
         wsRef.current.addEventListener('open', (event) => {
             console.log('WebSocket соединение установлено');
@@ -84,6 +88,14 @@ const App = () => {
         
         wsRef.current.addEventListener('error', (error) => {
             console.error('Ошибка WebSocket:', error);
+            setWsConnected(false);
+            
+            setTimeout(() => {
+                if (document.visibilityState === 'visible') {
+                    console.log('Попытка переподключения после ошибки...');
+                    setupWebSocket();
+                }
+            }, 5000);
         });
         
         return () => {
@@ -100,16 +112,46 @@ const App = () => {
         
         const apiUrlObj = new URL(API_URL || window.location.origin);
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${apiUrlObj.host}`;
+        const wsUrl = `${wsProtocol}//${apiUrlObj.hostname}:${apiUrlObj.port || 5000}`;
         
         wsRef.current = new WebSocket(wsUrl);
+        
+        // Обновляем глобальную ссылку
+        window.webSocket = wsRef.current;
         
         wsRef.current.addEventListener('open', () => {
             console.log('WebSocket соединение восстановлено');
             setWsConnected(true);
         });
         
-        // Добавьте другие слушатели событий...
+        wsRef.current.addEventListener('message', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('Получено сообщение через WebSocket:', data);
+                
+                if (data.type === 'new_review') {
+                    setReviews(prevReviews => {
+                        const exists = prevReviews.some(r => r.id === data.review.id);
+                        if (exists) return prevReviews;
+                        return [data.review, ...prevReviews];
+                    });
+                }
+            } catch (error) {
+                console.error('Ошибка при обработке сообщения WebSocket:', error);
+            }
+        });
+        
+        wsRef.current.addEventListener('close', (event) => {
+            console.log('WebSocket соединение закрыто');
+            setWsConnected(false);
+            
+            setTimeout(() => {
+                if (document.visibilityState === 'visible') {
+                    console.log('Попытка восстановления WebSocket соединения...');
+                    setupWebSocket();
+                }
+            }, 3000);
+        });
     };
     
     // Обработчик изменения видимости страницы для переподключения
@@ -216,10 +258,8 @@ const App = () => {
         fetchReviews();
     };
 
-    const handleThemeToggle = (darkMode) => {
-        setIsDarkMode(darkMode);
-        // Дополнительная логика переключения темы
-        document.documentElement.classList.toggle('dark', darkMode);
+    const handleThemeToggle = () => {
+        toggleDarkMode();
     };
 
     const handleProfileClick = () => {

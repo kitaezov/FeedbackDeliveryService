@@ -4,11 +4,12 @@
  * Объединяет компоненты Header, Footer и основное содержимое
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { useTheme } from '../../contexts/ThemeContext';
 
 /**
  * Компонент основной разметки приложения
@@ -24,8 +25,8 @@ export const Layout = ({
     user,
     onLogout
 }) => {
-    // Состояние для темного режима
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    // Используем контекст темы вместо локального состояния
+    const { isDarkMode, toggleDarkMode } = useTheme();
     
     // Получаем текущий маршрут
     const location = useLocation();
@@ -36,28 +37,6 @@ export const Layout = ({
     const isProfilePage = location.pathname.includes('/profile');
     const isSettingsPage = location.pathname.includes('/settings');
     const shouldShowFooter = isExactHomePage && !isAdminPage && !isProfilePage && !isSettingsPage;
-    
-    // Загрузка настроек темы из localStorage при монтировании
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('darkMode');
-        if (savedTheme) {
-            setIsDarkMode(JSON.parse(savedTheme));
-        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            // Если пользователь предпочитает темную тему в системе
-            setIsDarkMode(true);
-        }
-    }, []);
-    
-    // Обновление настроек темы в localStorage при изменении
-    useEffect(() => {
-        document.body.classList.toggle('dark-mode', isDarkMode);
-        localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-    }, [isDarkMode]);
-    
-    // Переключение темного режима
-    const toggleDarkMode = () => {
-        setIsDarkMode(!isDarkMode);
-    };
     
     return (
         <div className={`flex flex-col min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>

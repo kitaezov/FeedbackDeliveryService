@@ -274,7 +274,7 @@ const ReviewsSection = ({ reviews: initialReviews = [], user, onRefresh, onNewRe
         <div className="mb-8">
             <div className={`
                 border rounded-lg shadow-md overflow-hidden
-                ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800'}
+                ${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-800'}
             `}>
                 <div className="p-4">
                     <div className="flex items-center justify-between mb-3">

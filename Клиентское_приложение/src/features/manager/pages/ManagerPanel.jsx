@@ -8,7 +8,7 @@ import {
     Star, TrendingUp, Users, Clock, DollarSign, 
     Filter, Search, ChevronDown, Award, Smile,
     MapPin, ThumbsUp, ThumbsDown, Calendar, MessageSquare,
-    BarChart2, PieChart as PieChartIcon, LineChart as LineChartIcon
+    BarChart2, PieChart as PieChartIcon, LineChart as LineChartIcon, AlertCircle
 } from 'lucide-react';
 import api from '../../../utils/api';
 
@@ -127,7 +127,7 @@ const ManagerPanel = () => {
             <div className="max-w-7xl mx-auto">
                 {/* Заголовок и фильтры */}
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Админ панель</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Панель менеджера</h1>
                     <div className="flex items-center space-x-4">
                         <select
                             value={timeRange}
@@ -142,7 +142,7 @@ const ManagerPanel = () => {
                 </div>
 
                 {/* Статистика */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     <StatCard 
                         title="Всего отзывов" 
                         value={stats.totalReviews} 
@@ -156,30 +156,42 @@ const ManagerPanel = () => {
                         color="text-yellow-500"
                     />
                     <StatCard 
-                        title="Активных пользователей" 
-                        value={stats.activeUsers} 
-                        icon={Users} 
+                        title="Рестораны" 
+                        value={stats.totalRestaurants} 
+                        icon={MapPin} 
                         color="text-green-500"
-                    />
-                    <StatCard 
-                        title="Процент ответов" 
-                        value={`${stats.responseRate}%`} 
-                        icon={ThumbsUp} 
-                        color="text-purple-500"
                     />
                 </div>
 
-                {/* Графики */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Аналитика */}
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Аналитика</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     {/* График рейтингов */}
                     <ChartCard 
-                        title="Распределение рейтингов"
+                        title="Средний рейтинг за период"
+                        icon={LineChartIcon}
+                    >
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={chartData.ratings}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="date" />
+                                <YAxis domain={[0, 5]} />
+                                <Tooltip />
+                                <Legend />
+                                <Line type="monotone" dataKey="rating" stroke="#8884d8" activeDot={{ r: 8 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+
+                    {/* График количества отзывов */}
+                    <ChartCard 
+                        title="Количество отзывов по дням"
                         icon={BarChart2}
                     >
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={chartData.ratings}>
+                            <BarChart data={chartData.reviews}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="rating" />
+                                <XAxis dataKey="date" />
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
@@ -188,117 +200,122 @@ const ManagerPanel = () => {
                         </ResponsiveContainer>
                     </ChartCard>
 
-                    {/* График типов отзывов */}
-                    <ChartCard 
-                        title="Типы отзывов"
-                        icon={PieChartIcon}
-                    >
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={chartData.reviews}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                >
-                                    {chartData.reviews.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </ChartCard>
-
-                    {/* График ответов */}
-                    <ChartCard 
-                        title="Динамика ответов"
-                        icon={LineChartIcon}
-                    >
-                        <ResponsiveContainer width="100%" height={300}>
-                            <AreaChart data={chartData.responses}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip />
-                                <Area type="monotone" dataKey="count" stroke="#8884d8" fill="#8884d8" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </ChartCard>
+                    {/* Критерии оценивания */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg">
+                            <h3 className="text-lg font-medium mb-4">Критерии оценивания</h3>
+                            
+                            <div className="mb-4">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">По количеству отзывов:</p>
+                                <div className="flex items-center mt-1">
+                                    <div className="w-5 h-5 rounded-full bg-pink-300 flex items-center justify-center mr-2">
+                                        <Star className="w-3 h-3 text-white" />
+                                    </div>
+                                    <span className="text-sm">5 звезд: {stats.totalReviews || 1}</span>
+                                </div>
+                            </div>
+                            
+                            <div className="mb-2">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Основные критерии оценки:</p>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <div>
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>Качество еды:</span>
+                                        <span>5.0</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>Обслуживание:</span>
+                                        <span>5.0</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>Интерьер:</span>
+                                        <span>5.0</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>Соотношение цена/качество:</span>
+                                        <span>5.0</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>Скорость обслуживания:</span>
+                                        <span>5.0</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Список ресторанов */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Рестораны</h2>
-                    <div className="overflow-x-auto">
-                        {restaurants.length > 0 ? (
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="text-left border-b border-gray-200 dark:border-gray-700">
-                                        <th className="pb-4 text-gray-500 dark:text-gray-400">Название</th>
-                                        <th className="pb-4 text-gray-500 dark:text-gray-400">Рейтинг</th>
-                                        <th className="pb-4 text-gray-500 dark:text-gray-400">Отзывы</th>
-                                        <th className="pb-4 text-gray-500 dark:text-gray-400">Тип</th>
-                                        <th className="pb-4 text-gray-500 dark:text-gray-400">Статус</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {restaurants.map(restaurant => (
-                                        <tr key={restaurant.id} className="border-b border-gray-200 dark:border-gray-700">
-                                            <td className="py-4 text-gray-900 dark:text-white">{restaurant.name || 'Без названия'}</td>
-                                            <td className="py-4">
-                                                <div className="flex items-center">
-                                                    <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                                                    <span className="text-gray-900 dark:text-white">
-                                                        {typeof restaurant.rating === 'number' ? restaurant.rating.toFixed(1) : '0.0'}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 text-gray-900 dark:text-white">{restaurant.reviews || restaurant.reviewCount || '0'}</td>
-                                            <td className="py-4">
-                                                <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                    {restaurant.type || restaurant.category || restaurant.cuisine || 'Общий'}
-                                                </span>
-                                            </td>
-                                            <td className="py-4">
-                                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                                    restaurant.status === 'active' || 
-                                                    restaurant.status === 'открыт' || 
-                                                    restaurant.status === 1 ||
-                                                    restaurant.status === '1' ||
-                                                    restaurant.status === true ||
-                                                    restaurant.status === 'true' ||
-                                                    restaurant.status === null // Если статус не указан, считаем ресторан активным
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                }`}>
-                                                    {restaurant.status === 1 || 
-                                                     restaurant.status === '1' || 
-                                                     restaurant.status === true || 
-                                                     restaurant.status === 'true' || 
-                                                     restaurant.status === 'active' || 
-                                                     restaurant.status === 'открыт' ||
-                                                     restaurant.status === null
-                                                        ? 'активен' 
-                                                        : 'неактивен'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="text-center py-8">
-                                <p className="text-gray-500 dark:text-gray-400">Рестораны не найдены</p>
-                                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                                    Попробуйте изменить фильтры или критерии поиска
-                                </p>
-                            </div>
-                        )}
+                {/* Управление отзывами */}
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Управление отзывами</h2>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="relative flex-1 max-w-md">
+                            <input 
+                                type="text" 
+                                placeholder="Поиск отзывов..." 
+                                className="w-full px-4 py-2 pl-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            />
+                            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        </div>
+                        <div className="flex space-x-2">
+                            <select className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                                <option>Все статусы</option>
+                                <option>Новые</option>
+                                <option>Отвеченные</option>
+                            </select>
+                            <select className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                                <option>Все рейтинги</option>
+                                <option>5 звезд</option>
+                                <option>4 звезды</option>
+                                <option>3 звезды</option>
+                                <option>2 звезды</option>
+                                <option>1 звезда</option>
+                            </select>
+                            <select className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                                <option>Все типы</option>
+                                <option>В ресторане</option>
+                                <option>Доставка</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div className="text-center py-16">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
+                            <AlertCircle className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-medium mb-2">Отзывы не найдены</h3>
+                        <p className="text-gray-500 dark:text-gray-400">
+                            Попробуйте изменить фильтры или критерии поиска
+                        </p>
                     </div>
                 </div>
             </div>

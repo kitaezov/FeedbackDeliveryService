@@ -4,6 +4,7 @@
  */
 
 const db = require('../db');
+const pool = require('../config/database');
 
 /**
  * Получить все уведомления пользователя
@@ -98,17 +99,48 @@ const createNotification = async (req, res) => {
 };
 
 /**
- * Создать стандартное уведомление о новом отзыве
+ * Создать стандартное уведомление о новом отзыве для пользователя
  */
 const createReviewNotification = async (userId, restaurantName) => {
     try {
         await db.query(
             'INSERT INTO notifications (user_id, message, type, is_read, created_at) VALUES (?, ?, ?, false, NOW())',
-            [userId, `Новый отзыв на ресторан ${restaurantName}`, 'info']
+            [userId, `Ваш отзыв для ресторана ${restaurantName} был успешно опубликован!`, 'info']
         );
         return true;
     } catch (err) {
         console.error('Ошибка при создании уведомления о новом отзыве:', err);
+        return false;
+    }
+};
+
+/**
+ * Создать уведомление для менеджера о новом отзыве на его ресторан
+ */
+const createManagerReviewNotification = async (restaurantName, restaurantId) => {
+    try {
+        // Получаем всех менеджеров, привязанных к ресторану
+        const [managers] = await pool.query(
+            'SELECT id FROM users WHERE role = "manager" AND restaurant_id = ?',
+            [restaurantId]
+        );
+        
+        if (managers.length === 0) {
+            console.log(`Для ресторана ${restaurantName} (ID: ${restaurantId}) не найдены менеджеры`);
+            return false;
+        }
+        
+        // Создаем уведомление для каждого менеджера
+        for (const manager of managers) {
+            await db.query(
+                'INSERT INTO notifications (user_id, message, type, is_read, created_at) VALUES (?, ?, ?, false, NOW())',
+                [manager.id, `Новый отзыв на ваш ресторан ${restaurantName}`, 'info']
+            );
+        }
+        
+        return true;
+    } catch (err) {
+        console.error('Ошибка при создании уведомления для менеджера о новом отзыве:', err);
         return false;
     }
 };
@@ -290,6 +322,7 @@ module.exports = {
     markAsRead,
     deleteNotification,
     createReviewNotification,
+    createManagerReviewNotification,
     createProfileUpdateNotification,
     createDeliveryRatingNotification,
     sendDeliveryRatingRequest,

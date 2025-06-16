@@ -210,19 +210,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         >
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg sm:text-xl font-semibold dark:text-gray-200">Управление пользователями</h2>
-                <motion.button
-                    variants={buttonVariants}
-                    whileHover="hover"
-                    whileTap="tap"
-                    onClick={() => {
-                        // Implement refresh logic
-                    }}
-                    className="flex items-center text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                    title="Обновить список"
-                >
-                    <RefreshCw size={14} className="mr-1" />
-                    Обновить
-                </motion.button>
+
             </div>
             
                 <div className="overflow-x-auto">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/Card';
-import { MessageSquare, Star, Clock, CheckCircle2, AlertCircle, Filter, Search } from 'lucide-react';
+import { MessageSquare, Star, Clock, CheckCircle2, AlertCircle, Filter, Search, MapPin } from 'lucide-react';
 import api from '../../utils/api';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -16,7 +16,8 @@ const ManagerDashboard = () => {
         totalReviews: 0,
         respondedReviews: 0,
         pendingReviews: 0,
-        averageRating: 0
+        averageRating: 0,
+        totalRestaurants: 0
     });
     const [filters, setFilters] = useState({
         status: 'all',
@@ -32,7 +33,9 @@ const ManagerDashboard = () => {
                 data: [0, 0, 0, 0, 0, 0, 0],
                 borderColor: 'rgb(59, 130, 246)',
                 backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            }]
+            }],
+            ratingsByDate: [],
+            reviewsByDate: []
         },
         volumeByDay: {
             labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
@@ -40,7 +43,9 @@ const ManagerDashboard = () => {
                 label: 'Количество отзывов',
                 data: [0, 0, 0, 0, 0, 0, 0],
                 backgroundColor: 'rgba(99, 102, 241, 0.5)',
-            }]
+            }],
+            ratingsByDate: [],
+            reviewsByDate: []
         },
         categoryDistribution: {
             labels: [],
@@ -143,10 +148,26 @@ const ManagerDashboard = () => {
                     data: ratings?.datasets?.[0]?.data.map((value, index) => ({
                         date: ratings.labels[index],
                         value: value
+                    })) || [],
+                    ratingsByDate: ratings?.datasets?.[0]?.data.map((value, index) => ({
+                        date: ratings.labels[index],
+                        rating: value
+                    })) || [],
+                    reviewsByDate: volumeByDay?.datasets?.[0]?.data.map((value, index) => ({
+                        date: volumeByDay.labels[index],
+                        count: value
                     })) || []
                 },
                 volumeByDay: {
                     data: volumeByDay?.datasets?.[0]?.data.map((value, index) => ({
+                        date: volumeByDay.labels[index],
+                        count: value
+                    })) || [],
+                    ratingsByDate: ratings?.datasets?.[0]?.data.map((value, index) => ({
+                        date: ratings.labels[index],
+                        rating: value
+                    })) || [],
+                    reviewsByDate: volumeByDay?.datasets?.[0]?.data.map((value, index) => ({
                         date: volumeByDay.labels[index],
                         count: value
                     })) || []
@@ -301,6 +322,18 @@ const ManagerDashboard = () => {
                             </div>
                         </CardContent>
                     </Card>
+
+                    <Card className="bg-green-500/20 backdrop-blur-sm border border-green-500/30">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-white/60 text-sm">Рестораны</p>
+                                    <p className="text-2xl font-bold text-white">{stats.totalRestaurants}</p>
+                                </div>
+                                <MapPin className="w-8 h-8 text-green-400" />
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Аналитика */}
@@ -334,7 +367,21 @@ const ManagerDashboard = () => {
                                         </div>
                                     ) : (
                                         <div className="h-64">
-                                            <RatingChart data={chartData.ratings} />
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={chartData.ratings.ratingsByDate}>
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="date" />
+                                                    <YAxis domain={[0, 5]} />
+                                                    <Tooltip />
+                                                    <Line 
+                                                        type="monotone" 
+                                                        dataKey="rating" 
+                                                        stroke="#3b82f6" 
+                                                        activeDot={{ r: 8 }} 
+                                                        name="Средний рейтинг"
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
                                         </div>
                                     )}
                                 </div>
@@ -353,13 +400,101 @@ const ManagerDashboard = () => {
                                         </div>
                                     ) : (
                                         <div className="h-64">
-                                            <ReviewCountChart data={chartData.volumeByDay} />
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={chartData.ratings.reviewsByDate}>
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="date" />
+                                                    <YAxis />
+                                                    <Tooltip />
+                                                    <Bar 
+                                                        dataKey="count" 
+                                                        fill="#3b82f6" 
+                                                        name="Количество отзывов"
+                                                    />
+                                                </BarChart>
+                                            </ResponsiveContainer>
                                         </div>
                                     )}
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
+
+                    {/* Критерии оценивания */}
+                    <Card className="mb-8">
+                        <CardContent className="p-0">
+                            <div className="p-4 border-b">
+                                <h3 className="text-lg font-semibold">Критерии оценивания</h3>
+                            </div>
+                            <div className="p-4">
+                                <div className="mb-4">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">По количеству отзывов:</p>
+                                    <div className="flex items-center mt-1">
+                                        <div className="w-5 h-5 rounded-full bg-pink-300 flex items-center justify-center mr-2">
+                                            <Star className="w-3 h-3 text-white" />
+                                        </div>
+                                        <span className="text-sm">5 звезд: {stats.totalReviews || 1}</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="mb-2">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Основные критерии оценки:</p>
+                                </div>
+                                
+                                <div className="space-y-3">
+                                    <div>
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span>Качество еды:</span>
+                                            <span>5.0</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span>Обслуживание:</span>
+                                            <span>5.0</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span>Интерьер:</span>
+                                            <span>5.0</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span>Соотношение цена/качество:</span>
+                                            <span>5.0</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span>Скорость обслуживания:</span>
+                                            <span>5.0</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Фильтры */}

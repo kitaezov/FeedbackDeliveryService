@@ -212,9 +212,10 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
             className="w-full"
         >
             <Card className={`w-full overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -402,7 +403,9 @@ const ReviewCard = ({ review, user, onDelete = () => {}, isDarkMode = false }) =
                                 className={`p-1.5 rounded-full ${
                                     isDeleting 
                                         ? 'opacity-50' 
-                                        : 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100'
+                                        : isDarkMode
+                                            ? 'text-red-400 hover:text-red-300 bg-gray-700 hover:bg-gray-600'
+                                            : 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100'
                                 } transition-all shadow-sm hover:shadow`}
                                 title="Удалить отзыв"
                             >

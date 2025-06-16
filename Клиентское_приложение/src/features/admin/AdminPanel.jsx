@@ -548,31 +548,6 @@ const AdminPanel = ({ user }) => {
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 gap-2">
                     <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Управление ресторанами</h2>
                     <div className="flex space-x-2">
-                        <motion.button 
-                            onClick={fetchRestaurants}
-                            className="bg-gray-700 text-white hover:bg-gray-600 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md flex items-center overflow-hidden text-xs sm:text-sm"
-                            variants={{
-                                hover: {
-                                    backgroundColor: '#4B5563',
-                                    transition: { 
-                                        duration: 0.2
-                                    }
-                                },
-                                tap: {
-                                    scale: 0.97,
-                                    transition: { 
-                                        duration: 0.1 
-                                    }
-                                }
-                            }}
-                            whileHover="hover"
-                            whileTap="tap"
-                            disabled={loading.restaurants}
-                        >
-                            <RefreshCw size={14} className={`mr-1 ${loading.restaurants ? 'animate-spin' : ''}`} />
-                            Обновить
-                        </motion.button>
-                        
                         <Link to="/admin/restaurant/new">
                             <motion.button
                                 className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-md flex items-center overflow-hidden text-xs sm:text-sm"

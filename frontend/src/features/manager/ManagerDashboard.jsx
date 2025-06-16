@@ -318,16 +318,16 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
             <div className="mb-3 grid grid-cols-2 gap-2">
                 {/* Для отзывов о доставке показываем одни критерии, для отзывов в ресторане - другие */}
                 {(isDelivery ? [
-                    {key: 'food', name: 'Еда', value: review.food_rating},
-                    {key: 'delivery', name: 'Скорость доставки', value: review.service_rating}, // Переименовываем для доставки
-                    {key: 'packaging', name: 'Упаковка', value: review.atmosphere_rating}, // Переименовываем для доставки
-                    {key: 'price', name: 'Цена/качество', value: review.price_rating}
+                    {key: 'food', name: 'Еда', value: review.food_rating || review.ratings?.food || 0},
+                    {key: 'delivery', name: 'Скорость доставки', value: review.service_rating || review.ratings?.deliverySpeed || 0}, 
+                    {key: 'packaging', name: 'Упаковка', value: review.atmosphere_rating || review.ratings?.deliveryQuality || 0}, 
+                    {key: 'price', name: 'Цена/качество', value: review.price_rating || review.ratings?.price || 0}
                 ] : [
-                    {key: 'food', name: 'Еда', value: review.food_rating},
-                    {key: 'service', name: 'Обслуживание', value: review.service_rating},
-                    {key: 'atmosphere', name: 'Атмосфера', value: review.atmosphere_rating},
-                    {key: 'price', name: 'Цена/качество', value: review.price_rating},
-                    {key: 'cleanliness', name: 'Чистота', value: review.cleanliness_rating}
+                    {key: 'food', name: 'Еда', value: review.food_rating || review.ratings?.food || 0},
+                    {key: 'service', name: 'Обслуживание', value: review.service_rating || review.ratings?.service || 0},
+                    {key: 'atmosphere', name: 'Атмосфера', value: review.atmosphere_rating || review.ratings?.atmosphere || 0},
+                    {key: 'price', name: 'Цена/качество', value: review.price_rating || review.ratings?.price || 0},
+                    {key: 'cleanliness', name: 'Чистота', value: review.cleanliness_rating || review.ratings?.cleanliness || 0}
                 ]).map(({key, name, value}) => {
                     // Принудительно преобразуем значение в число от 0 до 5
                     const ratingValue = Math.max(0, Math.min(5, parseInt(value) || 0));
@@ -844,11 +844,29 @@ const ManagerDashboard = () => {
                                    review.responded === true;
                                    
                 // Обработка критериев оценки с принудительным преобразованием в числа
-                const food_rating = parseInt(review.food_rating) || 0;
-                const service_rating = parseInt(review.service_rating) || 0;
-                const atmosphere_rating = parseInt(review.atmosphere_rating) || 0;
-                const price_rating = parseInt(review.price_rating) || 0;
-                const cleanliness_rating = parseInt(review.cleanliness_rating) || 0;
+                let ratings = {};
+                
+                // Проверяем наличие объекта ratings
+                if (review.ratings && typeof review.ratings === 'object') {
+                    // Если ratings передан как JSON-строка, парсим его
+                    let parsedRatings = review.ratings;
+                    if (typeof review.ratings === 'string') {
+                        try {
+                            parsedRatings = JSON.parse(review.ratings);
+                        } catch (e) {
+                            console.error('Ошибка парсинга ratings:', e);
+                            parsedRatings = {};
+                        }
+                    }
+                    
+                    ratings = parsedRatings;
+                }
+                
+                const food_rating = parseInt(review.food_rating) || parseInt(ratings.food) || 0;
+                const service_rating = parseInt(review.service_rating) || parseInt(ratings.service) || parseInt(ratings.deliverySpeed) || 0;
+                const atmosphere_rating = parseInt(review.atmosphere_rating) || parseInt(ratings.atmosphere) || parseInt(ratings.deliveryQuality) || 0;
+                const price_rating = parseInt(review.price_rating) || parseInt(ratings.price) || 0;
+                const cleanliness_rating = parseInt(review.cleanliness_rating) || parseInt(ratings.cleanliness) || 0;
                 
                 // Добавляем отладочную информацию для рейтингов
                 console.log(`Отзыв ID=${review.id}, обработанные рейтинги:`, {
@@ -856,7 +874,8 @@ const ManagerDashboard = () => {
                     service_rating,
                     atmosphere_rating,
                     price_rating,
-                    cleanliness_rating
+                    cleanliness_rating,
+                    rawRatings: ratings
                 });
                 
                 // Обработка фотографий
@@ -953,6 +972,16 @@ const ManagerDashboard = () => {
                     atmosphere_rating,
                     price_rating,
                     cleanliness_rating,
+                    // Добавляем объект ratings для использования в компоненте
+                    ratings: {
+                        food: food_rating,
+                        service: service_rating,
+                        atmosphere: atmosphere_rating,
+                        price: price_rating,
+                        cleanliness: cleanliness_rating,
+                        deliverySpeed: review.type === 'delivery' ? service_rating : 0,
+                        deliveryQuality: review.type === 'delivery' ? atmosphere_rating : 0
+                    },
                     user_name: review.user_name || review.userName || review.username || review.name || 'Аноним',
                     restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан',
                     type: review.type || 'inRestaurant' // Добавляем тип отзыва с дефолтным значением

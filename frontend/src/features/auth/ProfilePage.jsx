@@ -18,7 +18,8 @@ import {
     Key,
     ArrowLeft,
     CircleAlert,
-    CircleCheck
+    CircleCheck,
+    Phone
 } from "lucide-react";
 import { useAuth } from './AuthContext';
 import { useTheme } from '../../common/contexts/ThemeContext';
@@ -345,6 +346,24 @@ const ProfilePage = ({ onLogout }) => {
         // Валидация email
         if (!editedUser.email || !VALIDATION_RULES.EMAIL_REGEX.test(editedUser.email)) {
             newErrors.email = 'Некорректный email адрес';
+        }
+        
+        // Валидация номера телефона
+        if (editedUser.phoneNumber) {
+            const phoneRegex = /^[0-9+]+$/;
+            if (!phoneRegex.test(editedUser.phoneNumber)) {
+                newErrors.phoneNumber = 'Номер телефона может содержать только цифры и символ +';
+            }
+            
+            // Проверка минимальной длины (например, +7 и 10 цифр)
+            if (editedUser.phoneNumber.length < 8) {
+                newErrors.phoneNumber = 'Введите полный номер телефона';
+            }
+            
+            // Проверка максимальной длины (+ и 11 цифр максимум)
+            if (editedUser.phoneNumber.length > 12) {
+                newErrors.phoneNumber = 'Номер телефона не может быть длиннее 12 символов';
+            }
         }
 
         // Валидация нового пароля, если он указан
@@ -677,6 +696,39 @@ const ProfilePage = ({ onLogout }) => {
                                             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                                         </div>
 
+                                        {/* Поле ввода номера телефона */}
+                                        <div className="space-y-1">
+                                            <label 
+                                                htmlFor="phoneNumber" 
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                            >
+                                                Номер телефона
+                                            </label>
+                                            <div className="relative">
+                                                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                                <input
+                                                    id="phoneNumber"
+                                                    type="tel"
+                                                    value={editedUser.phoneNumber || ''}
+                                                    onChange={(e) => {
+                                                        // Разрешаем только цифры и символ +
+                                                        const value = e.target.value;
+                                                        const isValidInput = /^[0-9+]*$/.test(value);
+                                                        // Проверяем длину (максимум 12 символов: + и 11 цифр)
+                                                        if (isValidInput && value.length <= 12) {
+                                                            handleInputChange('phoneNumber', value);
+                                                        }
+                                                    }}
+                                                    className="block w-full pl-10 pr-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:ring-1 focus:ring-gray-500 focus:border-gray-500 dark:focus:border-gray-400"
+                                                    placeholder="+7XXXXXXXXXX"
+                                                    pattern="^[0-9+]{8,12}$"
+                                                    title="Только цифры и символ + (макс. длина 12 символов)"
+                                                    maxLength="12"
+                                                />
+                                            </div>
+                                            {errors.phoneNumber && <p className="text-red-500 text-xs mt-1">{errors.phoneNumber}</p>}
+                                        </div>
+
                                         {/* Поле ввода текущего пароля */}
                                         <div className="space-y-1">
                                             <label 
@@ -773,6 +825,10 @@ const ProfilePage = ({ onLogout }) => {
                                             <p className="text-gray-600 dark:text-gray-400 mb-2 flex items-center">
                                                 <Mail className="w-4 h-4 mr-2 text-gray-400" />
                                                 {user.email}
+                                            </p>
+                                            <p className="text-gray-600 dark:text-gray-400 mb-2 flex items-center">
+                                                <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                                                {user.phoneNumber || 'Номер телефона не указан'}
                                             </p>
                                             {user.role === 'admin' && (
                                                 <span className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-800 dark:text-gray-300 text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center">

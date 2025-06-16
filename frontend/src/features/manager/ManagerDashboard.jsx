@@ -249,34 +249,8 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
         >
             <div className="flex justify-between items-start mb-2">
                 <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center">
                         <h4 className="font-medium dark:text-white">{getUserName()}</h4>
-                        <div className="flex items-center gap-1">
-                            <button 
-                                onClick={() => reviewType !== "inRestaurant" && setReviewTypeValue("inRestaurant")}
-                                disabled={isTypeLoading || reviewType === "inRestaurant"}
-                                className={`px-2 py-0.5 text-xs rounded-full transition-all
-                                ${reviewType === "inRestaurant" 
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 ring-2 ring-blue-400 font-bold" 
-                                    : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}
-                                ${isTypeLoading || reviewType === "inRestaurant" ? "cursor-not-allowed" : "cursor-pointer hover:bg-blue-50"}`}
-                                title={reviewType === "inRestaurant" ? "Текущий тип отзыва" : "Изменить тип отзыва"}
-                            >
-                                {isTypeLoading && reviewType === "delivery" ? "..." : "В ресторане"}
-                            </button>
-                            <button 
-                                onClick={() => reviewType !== "delivery" && setReviewTypeValue("delivery")}
-                                disabled={isTypeLoading || reviewType === "delivery"}
-                                className={`px-2 py-0.5 text-xs rounded-full transition-all
-                                ${reviewType === "delivery" 
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 ring-2 ring-green-400 font-bold" 
-                                    : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}
-                                ${isTypeLoading || reviewType === "delivery" ? "cursor-not-allowed" : "cursor-pointer hover:bg-green-50"}`}
-                                title={reviewType === "delivery" ? "Текущий тип отзыва" : "Изменить тип отзыва"}
-                            >
-                                {isTypeLoading && reviewType === "inRestaurant" ? "..." : "Доставка"}
-                            </button>
-                        </div>
                     </div>
                     <div className="flex items-center">
                         <div className="flex items-center mr-3">
@@ -314,49 +288,7 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
             
             <p className="text-gray-700 dark:text-gray-300 mb-2">{review.comment || review.text}</p>
             
-            {/* Отображение критериев оценки в зависимости от типа отзыва */}
-            <div className="mb-3 grid grid-cols-2 gap-2">
-                {/* Для отзывов о доставке показываем одни критерии, для отзывов в ресторане - другие */}
-                {(isDelivery ? [
-                    {key: 'food', name: 'Еда', value: review.food_rating || review.ratings?.food || 0},
-                    {key: 'delivery', name: 'Скорость доставки', value: review.service_rating || review.ratings?.deliverySpeed || 0}, 
-                    {key: 'packaging', name: 'Упаковка', value: review.atmosphere_rating || review.ratings?.deliveryQuality || 0}, 
-                    {key: 'price', name: 'Цена/качество', value: review.price_rating || review.ratings?.price || 0}
-                ] : [
-                    {key: 'food', name: 'Еда', value: review.food_rating || review.ratings?.food || 0},
-                    {key: 'service', name: 'Обслуживание', value: review.service_rating || review.ratings?.service || 0},
-                    {key: 'atmosphere', name: 'Атмосфера', value: review.atmosphere_rating || review.ratings?.atmosphere || 0},
-                    {key: 'price', name: 'Цена/качество', value: review.price_rating || review.ratings?.price || 0},
-                    {key: 'cleanliness', name: 'Чистота', value: review.cleanliness_rating || review.ratings?.cleanliness || 0}
-                ]).map(({key, name, value}) => {
-                    // Принудительно преобразуем значение в число от 0 до 5
-                    const ratingValue = Math.max(0, Math.min(5, parseInt(value) || 0));
-                    
-                    return (
-                        <div key={key} className="bg-gray-50 dark:bg-gray-700 p-2 rounded flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">{name}:</span>
-                            <div className="flex items-center">
-                                {/* Используем простые span элементы с символами звезд для более надежного отображения */}
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <span 
-                                        key={star} 
-                                        className={`text-lg ${star <= ratingValue ? 'text-yellow-400' : 'text-gray-300'}`}
-                                        style={{ 
-                                            display: 'inline-block',
-                                            width: '16px',
-                                            height: '16px',
-                                            lineHeight: '16px',
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        ★
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+            {/* Убрали детальные критерии оценки, оставив только общий рейтинг */}
             
             {/* Отображение фотографий с улучшенной обработкой ошибок */}
             <div className="mb-3">

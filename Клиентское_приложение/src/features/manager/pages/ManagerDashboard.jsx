@@ -255,6 +255,21 @@ const ManagerDashboard = () => {
         </ResponsiveContainer>
     );
 
+    // Добавим функцию для получения названий критериев
+    const getCriteriaName = (criteria) => {
+        const criteriaNames = {
+            food: 'Качество блюд',
+            service: 'Уровень сервиса',
+            atmosphere: 'Атмосфера',
+            price: 'Цена/Качество',
+            cleanliness: 'Чистота',
+            deliverySpeed: 'Скорость доставки',
+            deliveryQuality: 'Качество доставки'
+        };
+        
+        return criteriaNames[criteria] || criteria;
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -413,6 +428,76 @@ const ManagerDashboard = () => {
                                                     />
                                                 </BarChart>
                                             </ResponsiveContainer>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
+                        {/* Новая карточка с рейтингами по категориям */}
+                        <Card className="col-span-1 md:col-span-2">
+                            <CardContent className="p-0">
+                                <div className="p-4 border-b">
+                                    <h3 className="text-lg font-semibold">Рейтинги по категориям</h3>
+                                </div>
+                                <div className="p-4">
+                                    {isChartLoading ? (
+                                        <div className="flex justify-center items-center h-64">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* В ресторане */}
+                                            <div>
+                                                <h4 className="text-base font-medium mb-4 text-center">В ресторане</h4>
+                                                <div className="space-y-3">
+                                                    {chartData.restaurantCriteriaRatings && chartData.restaurantCriteriaRatings.map((item, index) => (
+                                                        <div key={`restaurant-${index}`}>
+                                                            <div className="flex justify-between text-sm mb-1">
+                                                                <span>{item.name || getCriteriaName(item.criteria)}</span>
+                                                                <span>{parseFloat(item.value || item.average || 0).toFixed(1)}</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                                                <div 
+                                                                    className="bg-blue-500 h-2.5 rounded-full" 
+                                                                    style={{ width: `${(parseFloat(item.value || item.average || 0) / 5) * 100}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {(!chartData.restaurantCriteriaRatings || chartData.restaurantCriteriaRatings.length === 0) && (
+                                                        <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                                                            Нет данных о рейтингах в ресторане
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Доставка */}
+                                            <div>
+                                                <h4 className="text-base font-medium mb-4 text-center">Доставка</h4>
+                                                <div className="space-y-3">
+                                                    {chartData.deliveryCriteriaRatings && chartData.deliveryCriteriaRatings.map((item, index) => (
+                                                        <div key={`delivery-${index}`}>
+                                                            <div className="flex justify-between text-sm mb-1">
+                                                                <span>{item.name || getCriteriaName(item.criteria)}</span>
+                                                                <span>{parseFloat(item.value || item.average || 0).toFixed(1)}</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                                                <div 
+                                                                    className="bg-green-500 h-2.5 rounded-full" 
+                                                                    style={{ width: `${(parseFloat(item.value || item.average || 0) / 5) * 100}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {(!chartData.deliveryCriteriaRatings || chartData.deliveryCriteriaRatings.length === 0) && (
+                                                        <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                                                            Нет данных о рейтингах доставки
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

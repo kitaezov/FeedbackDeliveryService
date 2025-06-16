@@ -885,6 +885,44 @@ const ManagerDashboard = () => {
                 // Добавляем отладочную информацию для фотографий
                 console.log(`Отзыв ID=${review.id}, обработанные фото:`, photos);
                 
+                // Улучшенное определение типа отзыва с более строгой логикой
+                let reviewType = 'inRestaurant'; // По умолчанию считаем отзыв о ресторане
+                let isDelivery = false;
+                
+                // Проверяем явные поля isDelivery и delivery
+                if (review.isDelivery === true || review.delivery === true) {
+                    reviewType = 'delivery';
+                    isDelivery = true;
+                    console.log(`Отзыв ID=${review.id} определен как доставка по флагу isDelivery/delivery`);
+                }
+                // Проверяем поле type
+                else if (review.type) {
+                    const type = String(review.type).toLowerCase();
+                    if (type === 'delivery' || type.includes('достав') || type.includes('deliv')) {
+                        reviewType = 'delivery';
+                        isDelivery = true;
+                        console.log(`Отзыв ID=${review.id} определен как доставка по полю type="${review.type}"`);
+                    }
+                }
+                // Проверяем поле reviewType
+                else if (review.reviewType) {
+                    const type = String(review.reviewType).toLowerCase();
+                    if (type === 'delivery' || type.includes('достав') || type.includes('deliv')) {
+                        reviewType = 'delivery';
+                        isDelivery = true;
+                        console.log(`Отзыв ID=${review.id} определен как доставка по полю reviewType="${review.reviewType}"`);
+                    }
+                }
+                
+                // Проверяем наличие специфичных для доставки рейтингов
+                if (!isDelivery && review.ratings) {
+                    if (review.ratings.deliverySpeed !== undefined || review.ratings.deliveryQuality !== undefined) {
+                        reviewType = 'delivery';
+                        isDelivery = true;
+                        console.log(`Отзыв ID=${review.id} определен как доставка по наличию специфичных рейтингов`);
+                    }
+                }
+                
                 // Формируем нормализованный отзыв
                 return {
                     id: review.id,
@@ -916,11 +954,28 @@ const ManagerDashboard = () => {
                     },
                     user_name: review.user_name || review.userName || review.username || review.name || 'Аноним',
                     restaurant_name: review.restaurant_name || review.restaurantName || 'Ресторан',
-                    type: review.type || 'inRestaurant' // Добавляем тип отзыва с дефолтным значением
+                    type: reviewType, // Используем улучшенное определение типа
+                    reviewType: reviewType, // Дублируем для совместимости
+                    isDelivery: isDelivery, // Добавляем явный флаг
+                    delivery: isDelivery, // Дублируем для совместимости
                 };
             }).filter(review => review.text && review.rating !== undefined); // Фильтруем невалидные отзывы
             
-            console.log(`Обработано ${normalizedReviews.length} валидных отзывов`);
+            // Добавляем отладочную информацию о распределении отзывов по типам
+            const restaurantReviews = normalizedReviews.filter(r => r.type === 'inRestaurant');
+            const deliveryReviews = normalizedReviews.filter(r => r.type === 'delivery');
+            console.log(`Распределение отзывов: В ресторане - ${restaurantReviews.length}, Доставка - ${deliveryReviews.length}`);
+            
+            // Для отладки выводим все отзывы доставки
+            if (deliveryReviews.length > 0) {
+                console.log('Отзывы доставки:', deliveryReviews.map(r => ({
+                    id: r.id,
+                    type: r.type,
+                    reviewType: r.reviewType,
+                    isDelivery: r.isDelivery,
+                    ratings: r.ratings
+                })));
+            }
             
             setReviews(normalizedReviews);
             return normalizedReviews;
@@ -958,6 +1013,14 @@ const ManagerDashboard = () => {
             const data = await fetchData(`manager/analytics/charts?period=${chartPeriod}`);
             console.log('Получены данные для графиков:', data);
             
+            // Получаем все отзывы для расчета рейтингов по категориям
+            const reviewsData = await fetchReviewsFromDatabase();
+            
+            // Рассчитываем общие средние рейтинги по категориям
+            const combinedRatings = calculateCategoryRatings(reviewsData);
+            
+            console.log('Рассчитанные общие рейтинги:', combinedRatings);
+            
             if (data.success) {
                 setChartData({
                     ratings: data.ratings,
@@ -966,8 +1029,8 @@ const ManagerDashboard = () => {
                         ...data.ratingDistribution,
                         criteriaRatings: data.criteriaRatings
                     },
-                    restaurantCriteriaRatings: data.restaurantCriteriaRatings,
-                    deliveryCriteriaRatings: data.deliveryCriteriaRatings,
+                    // Используем только общие рейтинги
+                    restaurantCriteriaRatings: combinedRatings,
                     reviewCount: data.reviewCount || 0
                 });
             }
@@ -977,6 +1040,66 @@ const ManagerDashboard = () => {
             console.error('Ошибка при получении данных для графиков:', error);
             return chartData;
         }
+    };
+
+    // Обновляем функцию для расчета средних рейтингов по категориям
+    const calculateCategoryRatings = (reviews, reviewType) => {
+        console.log(`Начинаем расчет рейтингов для типа "${reviewType}"`);
+        console.log(`Всего отзывов для анализа: ${reviews.length}`);
+        
+        // Для общего расчета используем все отзывы
+        const filteredReviews = reviews;
+        
+        console.log(`Используем ${filteredReviews.length} отзывов для расчета общих рейтингов`);
+        
+        if (filteredReviews.length === 0) {
+            console.log(`Не найдено отзывов для расчета рейтингов`);
+            return []; // Возвращаем пустой массив, если нет отзывов
+        }
+        
+        // Определяем все возможные категории
+        const categories = [
+            { id: 'food', name: 'Качество блюд' },
+            { id: 'service', name: 'Уровень сервиса' },
+            { id: 'atmosphere', name: 'Атмосфера' },
+            { id: 'price', name: 'Цена/Качество' },
+            { id: 'cleanliness', name: 'Чистота' }
+        ];
+        
+        // Рассчитываем средний рейтинг для каждой категории
+        return categories.map(category => {
+            // Суммируем рейтинги по категории
+            let sum = 0;
+            let count = 0;
+            
+            filteredReviews.forEach(review => {
+                let rating = null;
+                
+                // Проверяем различные форматы данных для рейтингов
+                if (review.ratings && review.ratings[category.id] !== undefined) {
+                    rating = review.ratings[category.id];
+                } else if (review[`${category.id}_rating`] !== undefined) {
+                    rating = review[`${category.id}_rating`];
+                }
+                
+                // Если нашли рейтинг, добавляем его в сумму
+                if (rating !== null && rating !== undefined && !isNaN(Number(rating))) {
+                    sum += Number(rating);
+                    count++;
+                }
+            });
+            
+            // Рассчитываем средний рейтинг
+            const average = count > 0 ? sum / count : 0;
+            console.log(`Категория "${category.name}": сумма=${sum}, количество=${count}, среднее=${average.toFixed(1)}`);
+            
+            return {
+                criteria: category.id,
+                name: category.name,
+                value: average,
+                count: count
+            };
+        });
     };
 
     const calculateTrends = (newStats) => {
@@ -1178,6 +1301,21 @@ const ManagerDashboard = () => {
         }
     };
 
+    // Add getCriteriaName function if it doesn't exist
+    const getCriteriaName = (criteria) => {
+        const criteriaNames = {
+            food: 'Качество блюд',
+            service: 'Уровень сервиса',
+            atmosphere: 'Атмосфера',
+            price: 'Цена/Качество',
+            cleanliness: 'Чистота',
+            deliverySpeed: 'Скорость доставки',
+            deliveryQuality: 'Качество доставки'
+        };
+        
+        return criteriaNames[criteria] || criteria;
+    };
+
     if (loading) {
         return <LoadingSpinner />;
     }
@@ -1263,6 +1401,36 @@ const ManagerDashboard = () => {
                         {chartData.volumeByDay && (
                             <ReviewCountChart data={chartData.volumeByDay} />
                         )}
+                    </ChartCard>
+                    
+                    {/* Новая карточка с рейтингами по категориям */}
+                    <ChartCard title="Средний рейтинг по категориям" className="col-span-1 md:col-span-2">
+                        <div className="grid grid-cols-1 gap-6 h-full">
+                            <div>
+                                <div className="space-y-3">
+                                    {/* Объединяем все рейтинги в одну секцию */}
+                                    {chartData.restaurantCriteriaRatings && chartData.restaurantCriteriaRatings.map((item, index) => (
+                                        <div key={`restaurant-${index}`}>
+                                            <div className="flex justify-between text-sm mb-1">
+                                                <span className="dark:text-gray-300">{item.name || getCriteriaName(item.criteria)}</span>
+                                                <span className="dark:text-gray-300">{parseFloat(item.value || item.average || 0).toFixed(1)}</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                                <div 
+                                                    className="bg-blue-500 h-2.5 rounded-full" 
+                                                    style={{ width: `${(parseFloat(item.value || item.average || 0) / 5) * 100}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(!chartData.restaurantCriteriaRatings || chartData.restaurantCriteriaRatings.length === 0) && (
+                                        <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                                            Нет данных о рейтингах
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </ChartCard>
                 </div>
             </div>

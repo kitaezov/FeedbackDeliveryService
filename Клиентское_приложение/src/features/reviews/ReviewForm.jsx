@@ -124,6 +124,26 @@ const buttonVariants = {
     }
 };
 
+// Анимации для кнопки меню - с менее интенсивной анимацией
+const menuButtonVariants = {
+    initial: { opacity: 0, y: 5 },
+    animate: { opacity: 1, y: 0 },
+    hover: {
+        scale: 1.02, // Уменьшенный эффект масштабирования
+        transition: { 
+            duration: 0.15,
+            type: "spring", 
+            stiffness: 300 
+        }
+    },
+    tap: {
+        scale: 0.98,
+        transition: { 
+            duration: 0.1 
+        }
+    }
+};
+
 // Измененный компонент RestaurantDetailModal для включения формы отзыва непосредственно
 const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user }) => {
     const [showReviewForm, setShowReviewForm] = useState(false);
@@ -164,6 +184,25 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
     // Получаем статус открытия
     const isOpen = checkIfOpen(restaurant.hours || restaurant.workingHours);
+
+    // Функция для блокировки скролла на заднем фоне
+    useEffect(() => {
+        // Сохраняем текущую позицию прокрутки
+        const scrollY = window.scrollY;
+        
+        // Блокируем прокрутку на body
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        
+        // Восстанавливаем прокрутку при размонтировании
+        return () => {
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            window.scrollTo(0, scrollY);
+        };
+    }, []);
 
     // Функция для закрытия формы
     const handleClose = () => {
@@ -439,7 +478,11 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                 rating: response.data.review?.rating || 5,
                 comment: feedback,
                 photos: photos.length,
-                hasReceipt: !!receiptPhoto
+                hasReceipt: !!receiptPhoto,
+                type: reviewType, // Добавляем тип отзыва в возвращаемые данные
+                reviewType: reviewType, // Дублируем для совместимости
+                isDelivery: reviewType === 'delivery', // Добавляем явный флаг для доставки
+                delivery: reviewType === 'delivery' // Дублируем для совместимости
             });
         }
 
@@ -492,6 +535,14 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         document.dispatchEvent(event);
     };
 
+    // Обработчик выбора типа отзыва
+    const handleReviewTypeChange = (type) => {
+        console.log(`Выбран тип отзыва: ${type}`);
+        setReviewType(type);
+        // Сбросить оценки при изменении типа
+        setRatings({});
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -530,18 +581,21 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
             const averageRating = Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length;
 
             // Создать JSON-объект для оценок, чтобы правильно структурировать данные
-            const ratingsData = {
-                food: parseInt(Math.round(ratings.food || 0), 10),
-                price: parseInt(Math.round(ratings.price || 0), 10),
-                ...(reviewType === 'inRestaurant' ? {
-                    service: parseInt(Math.round(ratings.service || 0), 10),
-                    atmosphere: parseInt(Math.round(ratings.atmosphere || 0), 10),
-                    cleanliness: parseInt(Math.round(ratings.cleanliness || 0), 10)
-                } : {
-                    deliverySpeed: parseInt(Math.round(ratings.deliverySpeed || 0), 10),
-                    deliveryQuality: parseInt(Math.round(ratings.deliveryQuality || 0), 10)
-                })
-            };
+            const ratingsData = {};
+            
+            // Добавляем общие рейтинги
+            ratingsData.food = parseInt(Math.round(ratings.food || 0), 10);
+            ratingsData.price = parseInt(Math.round(ratings.price || 0), 10);
+            
+            // Добавляем специфичные рейтинги в зависимости от типа
+            if (reviewType === 'inRestaurant') {
+                ratingsData.service = parseInt(Math.round(ratings.service || 0), 10);
+                ratingsData.atmosphere = parseInt(Math.round(ratings.atmosphere || 0), 10);
+                ratingsData.cleanliness = parseInt(Math.round(ratings.cleanliness || 0), 10);
+            } else {
+                ratingsData.deliverySpeed = parseInt(Math.round(ratings.deliverySpeed || 0), 10);
+                ratingsData.deliveryQuality = parseInt(Math.round(ratings.deliveryQuality || 0), 10);
+            }
             
             // Создать структурированный объект отзыва, который соответствует ожиданиям бэкенда
             const reviewData = {
@@ -552,12 +606,16 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                 rating: parseInt(Math.round(averageRating), 10),
                 comment: feedback,
                 ratings: ratingsData,
-                reviewType: reviewType,
-                hasReceipt: !!receiptPhoto
+                reviewType: reviewType, // Убедимся, что тип отзыва передается корректно
+                type: reviewType, // Добавляем дублирующее поле для совместимости с разными API
+                hasReceipt: !!receiptPhoto,
+                isDelivery: reviewType === 'delivery', // Добавляем явный флаг для доставки
+                delivery: reviewType === 'delivery' // Дублируем для совместимости
             };
             
             // Преобразовать в JSON для отладки
             console.log('Структурированные данные отзыва:', JSON.stringify(reviewData));
+            console.log('Тип отзыва:', reviewType); // Добавляем явный лог типа отзыва
             
             // Отправка на сервер
             setSubmitting(true);
@@ -572,6 +630,12 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                 
                 // Добавьте данные JSON как строку
                 formData.append('reviewData', JSON.stringify(reviewData));
+                
+                // Добавляем тип отзыва как отдельное поле для надежности
+formData.append('reviewType', reviewType);
+// Используем другое имя поля для избежания дублирования
+formData.append('reviewTypeAlt', reviewType);
+formData.append('isDelivery', reviewType === 'delivery' ? 'true' : 'false');
                 
                 try {
                     // Добавьте обычные фото - убедитесь, что имя поля точно 'photos'
@@ -591,7 +655,8 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                     console.log('FormData prepared with:', { 
                         hasPhotos: photos.length > 0, 
                         hasReceipt: !!receiptPhoto,
-                        fieldNames: [...formData.keys()] // Логирование всех имен полей
+                        fieldNames: [...formData.keys()], // Логирование всех имен полей
+                        reviewType: reviewType // Добавляем тип отзыва в логи
                     });
                     
                     // Используйте тип содержимого FormData - пусть браузер установит его автоматически
@@ -607,7 +672,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                     handleErrorResponse(error);
                 }
             } else {
-                // Если нет фото, используйте простой JSON-запрос - не изменяйте эту часть
+                // Если нет фото, используйте простой JSON-запрос
                 axios.post(`${API_URL}/api/reviews`, reviewData, {
                     headers: {
                         'Content-Type': 'application/json',
@@ -757,8 +822,12 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         >
             <div 
                 ref={modalRef}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative custom-scrollbar"
                 onClick={e => e.stopPropagation()}
+                style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
+                }}
             >
                 {/* Кнопка закрытия в правом верхнем углу */}
                 <button
@@ -943,7 +1012,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                     }
                                 }}
                                 className="flex items-center justify-center bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white py-3 px-5 rounded-lg font-medium w-full transition-colors shadow-sm"
-                                variants={buttonVariants}
+                                variants={menuButtonVariants}
                                 whileHover="hover"
                                 whileTap="tap"
                             >
@@ -1036,10 +1105,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                 <div className="flex space-x-2">
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            setReviewType('inRestaurant');
-                                            setRatings({}); // Сбросить оценки при изменении типа
-                                        }}
+                                        onClick={() => handleReviewTypeChange('inRestaurant')}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                             reviewType === 'inRestaurant'
                                                 ? 'bg-gray-800 text-white dark:bg-gray-700'
@@ -1050,10 +1116,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            setReviewType('delivery');
-                                            setRatings({}); // Сбросить оценки при изменении типа
-                                        }}
+                                        onClick={() => handleReviewTypeChange('delivery')}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                             reviewType === 'delivery'
                                                 ? 'bg-gray-800 text-white dark:bg-gray-700'
@@ -1475,3 +1538,36 @@ ReviewForm.propTypes = {
 };
 
 export default ReviewForm;
+
+// Добавляем глобальные стили для кастомного скроллбара в конец файла
+// Эти стили будут применяться к элементам с классом custom-scrollbar
+const style = document.createElement('style');
+style.textContent = `
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(156, 163, 175, 0.5);
+        border-radius: 20px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(156, 163, 175, 0.7);
+    }
+    
+    /* Для темной темы */
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(75, 85, 99, 0.5);
+    }
+    
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(75, 85, 99, 0.7);
+    }
+`;
+document.head.appendChild(style);

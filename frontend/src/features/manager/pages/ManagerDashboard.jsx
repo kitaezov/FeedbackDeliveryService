@@ -321,8 +321,8 @@ const ManagerDashboard = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                        <Card className="col-span-1 lg:col-span-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <Card className="col-span-1">
                             <CardContent className="p-0">
                                 <div className="p-4 border-b">
                                     <h3 className="text-lg font-semibold">Средний рейтинг за период</h3>
@@ -341,10 +341,10 @@ const ManagerDashboard = () => {
                             </CardContent>
                         </Card>
 
-                        <Card className="col-span-1 lg:col-span-1">
+                        <Card className="col-span-1">
                             <CardContent className="p-0">
                                 <div className="p-4 border-b">
-                                    <h3 className="text-lg font-semibold">Количество отзывов</h3>
+                                    <h3 className="text-lg font-semibold">Количество отзывов по дням</h3>
                                 </div>
                                 <div className="p-4">
                                     {isChartLoading ? (
@@ -355,41 +355,6 @@ const ManagerDashboard = () => {
                                         <div className="h-64">
                                             <ReviewCountChart data={chartData.volumeByDay} />
                                         </div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="col-span-1 lg:col-span-1">
-                            <CardContent className="p-0">
-                                <div className="p-4 border-b">
-                                    <h3 className="text-lg font-semibold">Критерии оценивания</h3>
-                                </div>
-                                <div className="p-0 h-64 overflow-hidden">
-                                    {isChartLoading ? (
-                                        <div className="flex justify-center items-center h-full">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                        </div>
-                                    ) : (
-                                        chartData.restaurantCriteriaRatings && chartData.deliveryCriteriaRatings && (
-                                            <RatingCriteria 
-                                                restaurantRatings={{
-                                                    food: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Качество еды')?.score || 0),
-                                                    service: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Обслуживание')?.score || 0),
-                                                    interior: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Интерьер')?.score || 0),
-                                                    price: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Соотношение цена/качество')?.score || 0),
-                                                    speed: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Скорость обслуживания')?.score || 0)
-                                                }}
-                                                deliveryRatings={{
-                                                    food: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Качество еды')?.score || 0),
-                                                    packaging: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Упаковка')?.score || 0),
-                                                    delivery: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Скорость доставки')?.score || 0),
-                                                    price: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Соотношение цена/качество')?.score || 0)
-                                                }}
-                                                reviewCount={chartData.reviewCount}
-                                                showHeading={false}
-                                            />
-                                        )
                                     )}
                                 </div>
                             </CardContent>

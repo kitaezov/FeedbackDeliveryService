@@ -9,7 +9,7 @@ import useBackendApi from '../../hooks/useBackendApi';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, BarChart, Bar } from 'recharts';
 import { toast } from 'react-hot-toast';
-import { RatingCriteria } from '../restaurants/components/RatingCriteria';
+// RatingCriteria import removed
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -1252,41 +1252,17 @@ const ManagerDashboard = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <ChartCard title="Средний рейтинг за период" className="col-span-1 lg:col-span-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <ChartCard title="Средний рейтинг за период" className="col-span-1">
                         {chartData.ratings && (
                             <RatingChart data={chartData.ratings} />
                         )}
                     </ChartCard>
                     
-                    <ChartCard title="Количество отзывов по дням" className="col-span-1 lg:col-span-1">
+                    <ChartCard title="Количество отзывов по дням" className="col-span-1">
                         {chartData.volumeByDay && (
                             <ReviewCountChart data={chartData.volumeByDay} />
                         )}
-                    </ChartCard>
-                    
-                    <ChartCard title="Критерии оценивания" className="col-span-1 lg:col-span-1">
-                        <div className="h-64 overflow-hidden">
-                            {chartData.restaurantCriteriaRatings && chartData.deliveryCriteriaRatings && (
-                                <RatingCriteria 
-                                    restaurantRatings={{
-                                        food: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Качество еды')?.score || 0),
-                                        service: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Обслуживание')?.score || 0),
-                                        interior: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Интерьер')?.score || 0),
-                                        price: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Соотношение цена/качество')?.score || 0),
-                                        speed: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Скорость обслуживания')?.score || 0)
-                                    }}
-                                    deliveryRatings={{
-                                        food: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Качество еды')?.score || 0),
-                                        packaging: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Упаковка')?.score || 0),
-                                        delivery: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Скорость доставки')?.score || 0),
-                                        price: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Соотношение цена/качество')?.score || 0)
-                                    }}
-                                    reviewCount={chartData.reviewCount}
-                                    showHeading={false}
-                                />
-                            )}
-                        </div>
                     </ChartCard>
                 </div>
             </div>

@@ -15,21 +15,21 @@ export const RatingCriteria = ({
 }) => {
     const [activeTab, setActiveTab] = useState('restaurant');
     
-    // Данные для критериев в ресторане
+    // Данные для критериев в ресторане - обеспечиваем числовой тип и точность до одного знака
     const inRestaurantCriteria = [
-        { id: 'food', name: 'Качество еды', value: restaurantRatings.food || 0 },
-        { id: 'service', name: 'Обслуживание', value: restaurantRatings.service || 0 },
-        { id: 'interior', name: 'Интерьер', value: restaurantRatings.interior || 0 },
-        { id: 'price', name: 'Соотношение цена/качество', value: restaurantRatings.price || 0 },
-        { id: 'speed', name: 'Скорость обслуживания', value: restaurantRatings.speed || 0 }
+        { id: 'food', name: 'Качество еды', value: parseFloat(parseFloat(restaurantRatings.food || 0).toFixed(1)) },
+        { id: 'service', name: 'Обслуживание', value: parseFloat(parseFloat(restaurantRatings.service || 0).toFixed(1)) },
+        { id: 'interior', name: 'Интерьер', value: parseFloat(parseFloat(restaurantRatings.interior || 0).toFixed(1)) },
+        { id: 'price', name: 'Соотношение цена/качество', value: parseFloat(parseFloat(restaurantRatings.price || 0).toFixed(1)) },
+        { id: 'speed', name: 'Скорость обслуживания', value: parseFloat(parseFloat(restaurantRatings.speed || 0).toFixed(1)) }
     ];
     
-    // Данные для критериев доставки
+    // Данные для критериев доставки - обеспечиваем числовой тип и точность до одного знака
     const deliveryCriteria = [
-        { id: 'food', name: 'Качество еды', value: deliveryRatings.food || 0 },
-        { id: 'packaging', name: 'Упаковка', value: deliveryRatings.packaging || 0 },
-        { id: 'delivery', name: 'Скорость доставки', value: deliveryRatings.delivery || 0 },
-        { id: 'price', name: 'Соотношение цена/качество', value: deliveryRatings.price || 0 }
+        { id: 'food', name: 'Качество еды', value: parseFloat(parseFloat(deliveryRatings.food || 0).toFixed(1)) },
+        { id: 'packaging', name: 'Упаковка', value: parseFloat(parseFloat(deliveryRatings.packaging || 0).toFixed(1)) },
+        { id: 'delivery', name: 'Скорость доставки', value: parseFloat(parseFloat(deliveryRatings.delivery || 0).toFixed(1)) },
+        { id: 'price', name: 'Соотношение цена/качество', value: parseFloat(parseFloat(deliveryRatings.price || 0).toFixed(1)) }
     ];
     
     const activeCriteria = activeTab === 'restaurant' ? inRestaurantCriteria : deliveryCriteria;
@@ -96,7 +96,7 @@ export const RatingCriteria = ({
                         <div className="flex-grow h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-2">
                             <div 
                                 className="h-full bg-blue-500 rounded-full"
-                                style={{ width: `${(criterion.value / 5) * 100}%` }}
+                                style={{ width: `${Math.max(2, (criterion.value / 5) * 100)}%` }}
                             ></div>
                         </div>
                         <div className="text-sm font-medium text-gray-700 dark:text-gray-300 w-8 text-right">

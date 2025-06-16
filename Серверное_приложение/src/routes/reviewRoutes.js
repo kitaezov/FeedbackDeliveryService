@@ -73,17 +73,17 @@ const upload = multer({
     }
 });
 
-// Create fields configuration for handling both regular photos and receipt photos
+// Создает конфигурацию полей для обработки как обычных фотографий, так и фотографий чеков
 const uploadFields = upload.fields([
     { name: 'photos', maxCount: 5 },
     { name: 'receiptPhoto', maxCount: 1 }
 ]);
 
-// Error handling middleware for multer
+// Обработка ошибок для multer
 const handleMulterError = (err, req, res, next) => {
     console.error('Multer error details:', err);
     if (err instanceof multer.MulterError) {
-        // A Multer error occurred when uploading
+        // Произошла ошибка при загрузке
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
                 message: 'Превышен размер файла',
@@ -102,7 +102,7 @@ const handleMulterError = (err, req, res, next) => {
         });
     }
     if (err) {
-        // Handle other errors
+        // Обработка других ошибок
         return res.status(500).json({
             message: 'Ошибка сервера при обработке файлов', 
             details: err.message

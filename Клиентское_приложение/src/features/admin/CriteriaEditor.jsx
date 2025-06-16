@@ -13,14 +13,14 @@ const CriteriaEditor = ({ user }) => {
     const [restaurant, setRestaurant] = useState(null);
     const [criteria, setCriteria] = useState([]);
 
-    // Check if user is admin
+    // Проверяем, является ли пользователь администратором
     useEffect(() => {
         if (!user || !user.token || !['admin', 'head_admin'].includes(user.role)) {
             navigate('/');
         }
     }, [user, navigate]);
 
-    // Load restaurant data
+    // Загружаем данные ресторана
     useEffect(() => {
         const fetchRestaurant = async () => {
             setLoading(true);
@@ -29,7 +29,7 @@ const CriteriaEditor = ({ user }) => {
                 const restaurantData = response.data.restaurant;
                 setRestaurant(restaurantData);
                 
-                // Initialize criteria from restaurant data
+                // Инициализируем критерии из данных ресторана
                 let initialCriteria = [];
                 if (restaurantData && restaurantData.criteria) {
                     try {
@@ -47,7 +47,7 @@ const CriteriaEditor = ({ user }) => {
                     }
                 }
                 
-                // Add at least one empty criterion if none exist
+                // Добавляем по крайней мере один пустой критерий, если их нет
                 if (initialCriteria.length === 0) {
                     initialCriteria = [{ name: '', weight: 1, isNew: true }];
                 }
@@ -64,44 +64,44 @@ const CriteriaEditor = ({ user }) => {
         fetchRestaurant();
     }, [id]);
 
-    // Add new criterion
+    // Добавляем новый критерий
     const handleAddCriterion = () => {
         setCriteria([...criteria, { name: '', weight: 1, isNew: true }]);
     };
 
-    // Remove criterion
+    // Удаляем критерий
     const handleRemoveCriterion = (index) => {
         const newCriteria = [...criteria];
         newCriteria.splice(index, 1);
         setCriteria(newCriteria);
     };
 
-    // Update criterion name
+    // Обновляем название критерия
     const handleChangeCriterionName = (index, value) => {
         const newCriteria = [...criteria];
         newCriteria[index].name = value;
         setCriteria(newCriteria);
     };
 
-    // Update criterion weight
+    // Обновляем вес критерия
     const handleChangeCriterionWeight = (index, value) => {
         const newCriteria = [...criteria];
         const numValue = parseFloat(value);
-        // Ensure weight is between 0.1 and 10, and is a number
+        // Убеждаемся, что вес находится между 0.1 и 10, и является числом
         if (!isNaN(numValue) && numValue >= 0.1 && numValue <= 10) {
             newCriteria[index].weight = numValue;
             setCriteria(newCriteria);
         }
     };
 
-    // Save changes
+    // Сохраняем изменения
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
         setError(null);
 
         try {
-            // Check if all criteria have names
+            // Проверяем, все ли критерии имеют названия
             const emptyNameIndex = criteria.findIndex(c => !c.name.trim());
             if (emptyNameIndex !== -1) {
                 setError('Все критерии должны иметь название');
@@ -109,13 +109,13 @@ const CriteriaEditor = ({ user }) => {
                 return;
             }
 
-            // Convert criteria array to object format expected by API
+            // Преобразуем массив критериев в формат, ожидаемый API
             const criteriaObject = criteria.reduce((obj, criterion) => {
                 obj[criterion.name.trim()] = criterion.weight;
                 return obj;
             }, {});
 
-            // Update restaurant criteria
+            // Обновляем критерии ресторана
             await api.put(`/restaurants/${id}/criteria`, { criteria: criteriaObject });
             
             navigate('/admin');

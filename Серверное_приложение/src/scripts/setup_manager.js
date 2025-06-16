@@ -12,7 +12,7 @@ async function setupManagerTables() {
     try {
         console.log('Setting up manager tables...');
         
-        // Create manager_responses table if it doesn't exist
+        // Создаем таблицу manager_responses, если она не существует
         await pool.query(`
             CREATE TABLE IF NOT EXISTS manager_responses (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -27,7 +27,7 @@ async function setupManagerTables() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
-        // Check and add columns to reviews table
+        // Проверяем и добавляем столбцы в таблицу reviews
         const [reviewColumns] = await pool.query(`
             SELECT COLUMN_NAME 
             FROM INFORMATION_SCHEMA.COLUMNS 
@@ -48,7 +48,7 @@ async function setupManagerTables() {
             `);
         }
 
-        // Check and add columns to restaurants table
+        // Проверяем и добавляем столбцы в таблицу restaurants
         const [restaurantColumns] = await pool.query(`
             SELECT COLUMN_NAME 
             FROM INFORMATION_SCHEMA.COLUMNS 
@@ -66,7 +66,7 @@ async function setupManagerTables() {
             await pool.query(`ALTER TABLE restaurants ADD COLUMN image_url VARCHAR(255)`);
         }
 
-        // Check and add columns to users table
+        // Проверяем и добавляем столбцы в таблицу users
         const [userColumns] = await pool.query(`
             SELECT COLUMN_NAME 
             FROM INFORMATION_SCHEMA.COLUMNS 
@@ -80,10 +80,10 @@ async function setupManagerTables() {
             await pool.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE`);
         }
         
-        console.log('Manager tables set up successfully');
+        console.log('Менеджерские таблицы успешно установлены');
         return true;
     } catch (error) {
-        console.error('Error setting up manager tables:', error);
+        console.error('Ошибка установки менеджерских таблиц:', error);
         throw error;
     }
 }

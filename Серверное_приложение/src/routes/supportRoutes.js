@@ -1,6 +1,6 @@
 /**
- * Support Routes
- * Endpoints for support ticket operations
+ * Маршруты поддержки
+ * Маршруты для операций с тикетами поддержки
  */
 
 const express = require('express');
@@ -8,42 +8,42 @@ const router = express.Router();
 const supportController = require('../controllers/supportController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-// Get user's support tickets
+// Выводит пользовательские тикеты
 router.get('/user/tickets', authenticateToken, (req, res) => {
   supportController.getUserTickets(req, res);
 });
 
-// Create a new support ticket
+// Создает новый тикет
 router.post('/tickets', authenticateToken, (req, res) => {
   supportController.createTicket(req, res);
 });
 
-// Get all support tickets (staff only)
+// Выводит все тикеты (только для персонала)
 router.get('/tickets', authenticateToken, (req, res) => {
   supportController.getAllTickets(req, res);
 });
 
-// Get specific ticket by ID
+// Выводит конкретный тикет по ID
 router.get('/tickets/:id', authenticateToken, (req, res) => {
   supportController.getTicketById(req, res);
 });
 
-// Add a message to a ticket
+// Добавляет сообщение к тикету
 router.post('/tickets/:id/messages', authenticateToken, (req, res) => {
   supportController.addMessage(req, res);
 });
 
-// Update ticket status (staff only)
+// Обновляет статус тикета (только для персонала)
 router.patch('/tickets/:id/status', authenticateToken, (req, res) => {
   supportController.updateTicketStatus(req, res);
 });
 
-// Update ticket priority (staff only)
+// Обновляет приоритет тикета (только для персонала)
 router.patch('/tickets/:id/priority', authenticateToken, (req, res) => {
   supportController.updateTicketPriority(req, res);
 });
 
-// Delete a ticket
+// Удаляет тикет
 router.delete('/tickets/:id', authenticateToken, (req, res) => {
   supportController.deleteTicket(req, res);
 });

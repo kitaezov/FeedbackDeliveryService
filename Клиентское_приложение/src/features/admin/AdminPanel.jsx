@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../utils/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import UserList from './UserList';
+import { toast } from 'react-hot-toast';
 
 // Анимация для контейнеров
 const containerVariants = {
@@ -149,14 +150,14 @@ const AdminPanel = ({ user }) => {
         }
     }, [user, navigate]);
 
-    // Set initial active tab based on user role
+    // Поставить начальную вкладку на основе роли пользователя
     useEffect(() => {
         if (user?.role === 'manager') {
             setActiveTab('reviews');
         }
     }, [user?.role]);
 
-    // Fetch restaurants data
+    // Получить данные ресторанов
     const fetchRestaurants = async () => {
         setLoading(prev => ({ ...prev, restaurants: true }));
         try {
@@ -175,7 +176,7 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    // Fetch users data
+    // Получить данные пользователей
     const fetchUsers = async () => {
         setLoading(prev => ({ ...prev, users: true }));
         try {
@@ -188,28 +189,28 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    // Fetch reviews data
+    // Получить данные отзывов
     const fetchReviews = async () => {
         setLoading(prev => ({ ...prev, reviews: true }));
         try {
             const response = await api.get('/reviews');
             console.log('Reviews API response:', response.data);
             
-            // Handle different response formats
+            // Обработка различных форматов ответов
             let reviewsData = [];
             
             if (response.data && Array.isArray(response.data)) {
-                // Direct array format
+                // Прямой формат массива
                 reviewsData = response.data;
             } else if (response.data && response.data.reviews) {
                 if (Array.isArray(response.data.reviews)) {
-                    // Format: { reviews: [...] }
+                    // Формат: { reviews: [...] }
                     reviewsData = response.data.reviews;
                 } else if (response.data.reviews && response.data.reviews.reviews && Array.isArray(response.data.reviews.reviews)) {
-                    // Format: { reviews: { reviews: [...] } }
+                    // Формат: { reviews: { reviews: [...] } }
                     reviewsData = response.data.reviews.reviews;
                 } else {
-                    // Unknown format but not null
+                    // Неизвестный формат, но не null
                     console.warn('Unknown reviews format:', response.data);
                     reviewsData = [];
                 }
@@ -219,20 +220,20 @@ const AdminPanel = ({ user }) => {
             setReviews(reviewsData);
         } catch (error) {
             console.error('Error fetching reviews:', error);
-            setReviews([]); // Set empty array on error
+            setReviews([]); // Устанавливаем пустой массив при ошибке
         } finally {
             setLoading(prev => ({ ...prev, reviews: false }));
         }
     };
 
-    // Fetch deleted reviews data
+    // Получить данные удаленных отзывов
     const fetchDeletedReviews = async () => {
         setLoading(prev => ({ ...prev, deletedReviews: true }));
         try {
             const response = await api.get('/admin/deleted-reviews');
             console.log('Deleted reviews API response:', response.data);
             
-            // Handle different response formats
+            // Обработка различных форматов ответов
             let deletedReviewsData = [];
             
             if (response.data && Array.isArray(response.data)) {
@@ -250,13 +251,13 @@ const AdminPanel = ({ user }) => {
             setDeletedReviews(deletedReviewsData);
         } catch (error) {
             console.error('Error fetching deleted reviews:', error);
-            setDeletedReviews([]); // Set empty array on error
+            setDeletedReviews([]); // Устанавливаем пустой массив при ошибке
         } finally {
             setLoading(prev => ({ ...prev, deletedReviews: false }));
         }
     };
 
-    // Fetch blocked users data
+    // Получить данные заблокированных пользователей
     const fetchBlockedUsers = async () => {
         setLoading(prev => ({ ...prev, blockedUsers: true }));
         try {
@@ -296,7 +297,7 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    // Load data on tab change
+    // Загрузка данных при смене вкладки
     useEffect(() => {
         if (activeTab === 'restaurants') {
             fetchRestaurants();
@@ -311,21 +312,21 @@ const AdminPanel = ({ user }) => {
         }
     }, [activeTab]);
 
-    // Handle delete restaurant
+    // Обработка удаления ресторана
     const handleDeleteRestaurant = async (id) => {
-        // Instead of using window.confirm, we'll set the restaurant ID to delete and show our modal
+        // Вместо использования window.confirm, мы будем устанавливать ID ресторана для удаления и показывать наш модальный окно
         const restaurant = restaurants.find(r => r.id === id);
         setRestaurantToDelete(restaurant);
         setShowDeleteRestaurantModal(true);
     };
 
-    // Confirm delete restaurant
+    // Подтверждение удаления ресторана
     const confirmDeleteRestaurant = async () => {
         if (!restaurantToDelete) return;
         
         try {
             await api.delete(`/restaurants/${restaurantToDelete.id}`);
-            // Close the modal and refresh the restaurants list
+            // Закрываем модальное окно и обновляем список ресторанов
             setShowDeleteRestaurantModal(false);
             setRestaurantToDelete(null);
             fetchRestaurants();
@@ -335,15 +336,15 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    // Cancel delete restaurant
+    // Отмена удаления ресторана
     const cancelDeleteRestaurant = () => {
         setShowDeleteRestaurantModal(false);
         setRestaurantToDelete(null);
     };
 
-    // Update user role with proper role hierarchy
+    // Обновление роли пользователя с правильной иерархией ролей
     const handleUpdateRole = async (userId, newRole, restaurant_id = null) => {
-        // Don't allow role changes to same or higher level roles
+        // Не разрешаем изменение роли на те же или более высокие роли
         const roleHierarchy = {
             'head_admin': 100,
             'admin': 80,
@@ -359,7 +360,7 @@ const AdminPanel = ({ user }) => {
             return;
         }
 
-        // If selecting manager role, show restaurant selection
+        // Если выбираем роль менеджера, показываем выбор ресторана
         if (newRole === 'manager' && !restaurant_id) {
             setSelectedUserId(userId);
             setShowRestaurantSelect(true);
@@ -384,7 +385,7 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    // Show delete modal for review
+    // Показываем модальное окно для удаления отзыва
     const openDeleteModal = (reviewId) => {
         setDeleteReviewId(reviewId);
         setDeleteReason('');
@@ -392,7 +393,7 @@ const AdminPanel = ({ user }) => {
         setShowDeleteModal(true);
     };
 
-    // Handle delete review
+    // Обработка удаления отзыва
     const handleDeleteReview = async () => {
         let finalReason = deleteReason;
         
@@ -409,22 +410,48 @@ const AdminPanel = ({ user }) => {
         }
 
         try {
-            await api.delete(`/admin/reviews/${deleteReviewId}`, {
+            // Show loading toast
+            toast.loading('Удаление отзыва...', { id: 'delete-review-toast' });
+            
+            const response = await api.delete(`/admin/reviews/${deleteReviewId}`, {
                 data: { reason: finalReason }
             });
+            
+            // Success toast
+            toast.success('Отзыв успешно удален', { id: 'delete-review-toast' });
+            
             setShowDeleteModal(false);
             fetchReviews();
-            // If on the deleted reviews tab, also refresh that data
+            // Если на вкладке удаленных отзывов, также обновляем эти данные
             if (activeTab === 'deletedReviews') {
                 fetchDeletedReviews();
             }
         } catch (error) {
             console.error('Error deleting review:', error);
-            alert(error.response?.data?.details || 'Ошибка удаления отзыва');
+            
+            // Get detailed error message
+            let errorMessage = 'Ошибка удаления отзыва';
+            if (error.response) {
+                if (error.response.data && error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                    if (error.response.data.details) {
+                        errorMessage += `: ${error.response.data.details}`;
+                    }
+                } else if (error.response.status === 404) {
+                    errorMessage = 'Отзыв не найден или уже был удален';
+                } else if (error.response.status === 500) {
+                    errorMessage = 'Внутренняя ошибка сервера. Пожалуйста, попробуйте позже.';
+                }
+            } else if (error.request) {
+                errorMessage = 'Не удалось соединиться с сервером. Проверьте подключение к интернету.';
+            }
+            
+            // Error toast
+            toast.error(errorMessage, { id: 'delete-review-toast' });
         }
     };
 
-    // Handle user block
+    // Обработка блокировки пользователя
     const handleBlockUser = (userId) => {
         const userObj = users.find(u => u.id === userId);
         if (!userObj) {
@@ -438,7 +465,7 @@ const AdminPanel = ({ user }) => {
         setShowBlockModal(true);
     };
     
-    // Confirm block user
+    // Подтверждение блокировки пользователя
     const confirmBlockUser = async () => {
         if (!userToBlock || !blockReason.trim()) return;
         
@@ -499,14 +526,14 @@ const AdminPanel = ({ user }) => {
         }
     };
     
-    // Handle user unblock
+    // Обработка разблокировки пользователя
     const handleUnblockUser = (userId) => {
         const userObj = users.find(u => u.id === userId);
         setUserToUnblock(userObj);
         setShowUnblockModal(true);
     };
     
-    // Confirm unblock user
+    // Подтверждение разблокировки пользователя
     const confirmUnblockUser = async () => {
         if (!userToUnblock) return;
         
@@ -540,7 +567,7 @@ const AdminPanel = ({ user }) => {
         }
     };
 
-    // Render restaurant table с обычными кнопками без анимации
+    // Рендеринг таблицы ресторанов с обычными кнопками без анимации
     const renderRestaurantTable = () => {
         console.log('Рендеринг таблицы, restaurants:', restaurants);
         return (
@@ -701,7 +728,7 @@ const AdminPanel = ({ user }) => {
         );
     };
 
-    // Render users table with proper role permissions
+    // Рендеринг таблицы пользователей с правильными разрешениями ролей
     const renderUsersTable = () => (
         <UserList 
             user={user}
@@ -713,7 +740,7 @@ const AdminPanel = ({ user }) => {
 
     // Рендеринг таблицы отзывов (аналогичные анимации)
     const renderReviewsTable = () => {
-        // Ensure reviews is always an array
+        // Убеждаемся, что reviews всегда является массивом
         const reviewsArray = Array.isArray(reviews) ? reviews : [];
         
         return (
@@ -793,7 +820,7 @@ const AdminPanel = ({ user }) => {
 
     // Рендеринг таблицы удаленных отзывов (аналогичные анимации)
     const renderDeletedReviewsTable = () => {
-        // Ensure deletedReviews is always an array
+        // Убеждаемся, что deletedReviews всегда является массивом
         const deletedReviewsArray = Array.isArray(deletedReviews) ? deletedReviews : [];
         
         return (
@@ -867,7 +894,7 @@ const AdminPanel = ({ user }) => {
         );
     };
 
-    // Render blocked users table
+    // Рендеринг таблицы заблокированных пользователей
     const renderBlockedUsersTable = () => (
         <motion.div
             variants={containerVariants}
@@ -1020,7 +1047,6 @@ const AdminPanel = ({ user }) => {
         </div>
     );
 
-    // Modals
     const renderDeleteRestaurantModal = () => (
         <AnimatePresence>
             {showDeleteRestaurantModal && restaurantToDelete && (
@@ -1173,7 +1199,7 @@ const AdminPanel = ({ user }) => {
         </AnimatePresence>
     );
 
-    // Add block user modal
+    // Добавляем модальное окно блокировки пользователя
     const renderBlockUserModal = () => (
         <AnimatePresence>
             {showBlockModal && (
@@ -1237,7 +1263,7 @@ const AdminPanel = ({ user }) => {
         </AnimatePresence>
     );
     
-    // Add unblock user modal
+    // Добавляем модальное окно разблокировки пользователя
     const renderUnblockUserModal = () => (
         <AnimatePresence>
             {showUnblockModal && (
@@ -1287,7 +1313,7 @@ const AdminPanel = ({ user }) => {
         </AnimatePresence>
     );
 
-    // Add restaurant selection modal component
+    // Добавляем модальное окно выбора ресторана
     const RestaurantSelectModal = ({ isOpen, onClose, onSelect }) => {
         const [modalRestaurants, setModalRestaurants] = useState([]);
         const [loading, setLoading] = useState(false);

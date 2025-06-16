@@ -5,7 +5,7 @@ import api from '../../utils/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import RestaurantSelector from '../../components/RestaurantSelector';
 
-// Animation variants
+// Анимация для контейнера
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -22,6 +22,7 @@ const containerVariants = {
     }
 };
 
+// Анимация для элементов
 const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: { 
@@ -35,6 +36,7 @@ const itemVariants = {
     }
 };
 
+// Анимация для кнопок
 const buttonVariants = {
     hover: {
         scale: 1.03,
@@ -52,7 +54,7 @@ const buttonVariants = {
     }
 };
 
-// Helper function to get restaurant initials
+// Вспомогательная функция для получения инициалов ресторана
 const getRestaurantInitials = (name) => {
     if (!name) return '';
     return name
@@ -72,6 +74,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
     const [pendingRole, setPendingRole] = useState(null);
     const [restaurants, setRestaurants] = useState([]);
 
+    // Загружаем данные
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -102,7 +105,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         fetchData();
     }, []);
 
-    // Filter users based on search query
+    // Фильтруем пользователей на основе поискового запроса
     const filteredUsers = users.filter(user => {
         const query = searchQuery.toLowerCase();
         return (
@@ -112,12 +115,12 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         );
     });
 
-    // Sort users
+    // Сортируем пользователей
     const sortedUsers = [...filteredUsers].sort((a, b) => {
         let aValue = a[sortField];
         let bValue = b[sortField];
         
-        // Handle string comparison
+        // Обработка строкового сравнения
         if (typeof aValue === 'string') {
             aValue = aValue.toLowerCase();
             bValue = bValue.toLowerCase();
@@ -130,7 +133,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         }
     });
 
-    // Handle sort change
+    // Обработка изменения сортировки
     const handleSort = (field) => {
         if (field === sortField) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -140,6 +143,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         }
     };
 
+    // Обработка изменения роли
     const handleRoleChange = (userId, newRole) => {
         if (newRole === 'manager') {
             setSelectedUserId(userId);
@@ -150,6 +154,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         }
     };
 
+    // Обработка выбора ресторана
     const handleRestaurantSelect = (restaurant) => {
         if (selectedUserId && pendingRole) {
             onUpdateRole(selectedUserId, pendingRole, restaurant.id);
@@ -159,7 +164,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
         }
     };
 
-    // Format role display with restaurant name for managers
+// Форматируем отображение роли с названием ресторана для менеджеров
     const formatRoleDisplay = (userItem) => {
         if (userItem.role === 'manager' && userItem.restaurant) {
             return (

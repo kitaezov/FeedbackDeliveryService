@@ -10,7 +10,7 @@ async function makeUserAdmin() {
   try {
     console.log('Connecting to database...');
     
-    // First, check if the user exists
+    // Сначала проверяем, существует ли пользователь
     const [userRows] = await pool.execute(
       'SELECT * FROM users WHERE id = ? AND email = ?',
       [1, 'admin@yandex.ru']
@@ -24,7 +24,7 @@ async function makeUserAdmin() {
     const user = userRows[0];
     console.log(`Found user: ${user.name} (${user.email}), current role: ${user.role}`);
     
-    // Update the user role to admin
+    // Обновляем роль пользователя на admin
     await pool.execute(
       'UPDATE users SET role = ? WHERE id = ?',
       ['admin', 1]
@@ -32,7 +32,7 @@ async function makeUserAdmin() {
     
     console.log(`Success! User ${user.name} has been updated to role: admin`);
     
-    // Verify the update
+    // Проверяем обновление
     const [updatedRows] = await pool.execute(
       'SELECT * FROM users WHERE id = ?',
       [1]
@@ -45,11 +45,11 @@ async function makeUserAdmin() {
   } catch (error) {
     console.error('Error updating user:', error);
   } finally {
-    // Close the connection pool
+    // Закрываем пул соединений
     pool.end();
     process.exit(0);
   }
 }
 
-// Run the function
+// Запускаем функцию
 makeUserAdmin(); 

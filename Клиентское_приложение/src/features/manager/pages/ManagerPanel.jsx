@@ -220,53 +220,114 @@ const ManagerPanel = () => {
                             </div>
                             
                             <div className="space-y-3">
+                                {/* Категории для оценки в ресторане */}
                                 <div>
                                     <div className="flex justify-between text-sm mb-1">
                                         <span>Качество еды:</span>
-                                        <span>5.0</span>
+                                        <div className="flex items-center">
+                                            <span className="mr-2">4.5</span>
+                                            <div className="flex">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <span 
+                                                        key={star} 
+                                                        className={`text-xs ${star <= 4.5 ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                    >
+                                                        ★
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                        <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '90%' }}></div>
                                     </div>
                                 </div>
                                 
                                 <div>
                                     <div className="flex justify-between text-sm mb-1">
                                         <span>Обслуживание:</span>
-                                        <span>5.0</span>
+                                        <div className="flex items-center">
+                                            <span className="mr-2">4.2</span>
+                                            <div className="flex">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <span 
+                                                        key={star} 
+                                                        className={`text-xs ${star <= 4.2 ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                    >
+                                                        ★
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                        <div className="bg-teal-500 h-2.5 rounded-full" style={{ width: '84%' }}></div>
                                     </div>
                                 </div>
                                 
                                 <div>
                                     <div className="flex justify-between text-sm mb-1">
                                         <span>Интерьер:</span>
-                                        <span>5.0</span>
+                                        <div className="flex items-center">
+                                            <span className="mr-2">3.8</span>
+                                            <div className="flex">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <span 
+                                                        key={star} 
+                                                        className={`text-xs ${star <= 3.8 ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                    >
+                                                        ★
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '76%' }}></div>
                                     </div>
                                 </div>
                                 
                                 <div>
                                     <div className="flex justify-between text-sm mb-1">
-                                        <span>Соотношение цена/качество:</span>
-                                        <span>5.0</span>
+                                        <span>Цена/Качество:</span>
+                                        <div className="flex items-center">
+                                            <span className="mr-2">3.5</span>
+                                            <div className="flex">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <span 
+                                                        key={star} 
+                                                        className={`text-xs ${star <= 3.5 ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                    >
+                                                        ★
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '70%' }}></div>
                                     </div>
                                 </div>
                                 
                                 <div>
                                     <div className="flex justify-between text-sm mb-1">
-                                        <span>Скорость обслуживания:</span>
-                                        <span>5.0</span>
+                                        <span>Чистота:</span>
+                                        <div className="flex items-center">
+                                            <span className="mr-2">4.0</span>
+                                            <div className="flex">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <span 
+                                                        key={star} 
+                                                        className={`text-xs ${star <= 4.0 ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                    >
+                                                        ★
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                        <div className="bg-teal-500 h-2.5 rounded-full" style={{ width: '80%' }}></div>
                                     </div>
                                 </div>
                             </div>
@@ -275,7 +336,7 @@ const ManagerPanel = () => {
                 </div>
 
                 {/* Управление отзывами */}
-                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Управление отзывами</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Управление отзывами11111</h2>
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm mb-8">
                     <div className="flex justify-between items-center mb-4">
                         <div className="relative flex-1 max-w-md">

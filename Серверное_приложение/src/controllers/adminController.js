@@ -214,6 +214,8 @@ const deleteReview = async (req, res) => {
         const { id } = req.params;
         const { reason } = req.body;
         
+        console.log(`Attempting to delete review ${id} with reason: ${reason}`);
+        
         // Проверьте причину
         if (!reason) {
             return res.status(400).json({
@@ -231,15 +233,25 @@ const deleteReview = async (req, res) => {
             });
         }
         
+        console.log(`Found review to delete:`, { id: review.id, userId: review.user_id });
+        
         // Сохранить отзыв в таблицу deleted_reviews перед удалением
-        await reviewModel.saveDeletedReview(review, {
-            deletedBy: req.user.id,
-            reason,
-            adminName: req.user.name
-        });
+        try {
+            await reviewModel.saveDeletedReview(review, {
+                deletedBy: req.user.id,
+                reason,
+                adminName: req.user.name
+            });
+            console.log(`Review ${id} saved to deleted_reviews table`);
+        } catch (saveError) {
+            // If there's an error saving to deleted_reviews, log it but continue with deletion
+            console.error(`Error saving review ${id} to deleted_reviews:`, saveError);
+            // Don't return here, continue with deletion
+        }
         
         // Удалить отзыв
         await reviewModel.delete(id);
+        console.log(`Review ${id} deleted successfully`);
         
         res.json({
             message: 'Отзыв успешно удален',
@@ -252,7 +264,8 @@ const deleteReview = async (req, res) => {
         console.error('Ошибка удаления отзыва:', error);
         res.status(500).json({
             message: 'Ошибка удаления отзыва',
-            details: 'Произошла внутренняя ошибка сервера'
+            details: 'Произошла внутренняя ошибка сервера',
+            error: error.message
         });
     }
 };

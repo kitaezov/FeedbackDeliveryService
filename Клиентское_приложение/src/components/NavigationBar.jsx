@@ -21,7 +21,7 @@ const getAvatarUrl = (avatarPath) => {
     // Добавляем временную метку для обхода кэша браузера
     const cacheParam = `?t=${new Date().getTime()}`;
     
-    // If the avatar path is already a full URL, return it
+    // Если путь к аватару уже является полным URL, возвращаем его
     if (avatarPath.startsWith('http')) {
         // Если URL уже содержит параметры запроса, добавляем к ним временную метку
         if (avatarPath.includes('?')) {
@@ -31,17 +31,17 @@ const getAvatarUrl = (avatarPath) => {
         return `${avatarPath}${cacheParam}`;
     }
     
-    // For paths starting with /uploads, add the server base URL
+    // Для путей, начинающихся с /uploads, добавляем базовый URL сервера
     if (avatarPath.startsWith('/uploads')) {
         return `${API_URL}${avatarPath}${cacheParam}`;
     }
     
-    // For paths without leading slash
+    // Для путей без начального слеша
     if (!avatarPath.startsWith('/')) {
         return `${API_URL}/${avatarPath}${cacheParam}`;
     }
     
-    // Otherwise, prepend the server base URL
+    // Иначе добавляем базовый URL сервера
     return `${API_URL}${avatarPath}${cacheParam}`;
 };
 

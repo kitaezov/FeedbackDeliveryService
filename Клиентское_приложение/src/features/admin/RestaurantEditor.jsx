@@ -49,18 +49,18 @@ const RestaurantEditor = ({ user }) => {
     // Получаем список категорий из констант
     const categories = getCategoriesList();
 
-    // Function to validate and process image URL
+    // Функция для валидации и обработки URL изображения
     const processImageUrl = (url) => {
         if (!url) return '';
         
-        // If it's already a valid URL, return it
+        // Если это уже действительный URL, возвращаем его
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/uploads/')) {
             return url;
         }
         
-        // Try to convert to a valid URL
+        // Пытаемся преобразовать в действительный URL
         try {
-            // If it contains a valid URL without protocol, add the protocol
+            // Если он содержит действительный URL без протокола, добавляем протокол
             if (url.includes('.') && !url.includes(' ')) {
                 if (!url.match(/^[a-zA-Z]+:\/\//)) {
                     return 'https://' + url;
@@ -73,14 +73,14 @@ const RestaurantEditor = ({ user }) => {
         return url;
     };
 
-    // Check if user is admin
+    // Проверяем, является ли пользователь администратором
     useEffect(() => {
         if (!user || !user.token || !['admin', 'head_admin'].includes(user.role)) {
             navigate('/');
         }
     }, [user, navigate]);
 
-    // Load restaurant data if editing
+    // Загружаем данные ресторана, если редактируем
     useEffect(() => {
         if (isNew) return;
         
@@ -122,20 +122,20 @@ const RestaurantEditor = ({ user }) => {
         fetchRestaurant();
     }, [id, isNew]);
 
-    // Handle input changes
+    // Обработка изменений ввода
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         
-        // Special handling for imageUrl field
+        // Обработка специально для поля imageUrl
         if (name === 'imageUrl') {
             setRestaurant(prev => ({
                 ...prev,
-                [name]: value // Store raw value for editing
+                [name]: value // Сохраняем исходное значение для редактирования
             }));
             return;
         }
 
-        // Special handling for deliveryTime field
+        // Обработка специально для поля deliveryTime
         if (name === 'deliveryTimeMin' || name === 'deliveryTimeMax') {
             // Разрешаем вводить только цифры
             if (value === '' || /^[\d]*$/.test(value)) {
@@ -153,7 +153,7 @@ const RestaurantEditor = ({ user }) => {
         }));
     };
 
-    // Handle image upload success
+    // Обработка успешной загрузки изображения
     const handleImageUploaded = (imageUrl) => {
         setRestaurant(prev => ({
             ...prev,
@@ -161,21 +161,21 @@ const RestaurantEditor = ({ user }) => {
         }));
     };
 
-    // Handle form submission
+    // Обработка отправки формы
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
         setError(null);
 
         try {
-        // Validate restaurant name
+        // Валидация названия ресторана
         if (!restaurant.name.trim()) {
             setError('Название ресторана обязательно для заполнения');
             setSaving(false);
             return;
         }
 
-        // Validate restaurant name format
+        // Валидация формата названия ресторана
         const nameRegex = /^[А-Яа-яA-Za-z0-9\s\-&№]+$/;
         if (!nameRegex.test(restaurant.name)) {
             setError('Название ресторана может содержать только русские и английские буквы, цифры, пробелы и дефисы');
@@ -183,7 +183,7 @@ const RestaurantEditor = ({ user }) => {
             return;
         }
 
-        // Generate slug from restaurant name
+        // Генерация slug из названия ресторана
         let slug = restaurant.autoGenerateLink 
             ? restaurant.name
                 .toLowerCase()
@@ -192,12 +192,12 @@ const RestaurantEditor = ({ user }) => {
                 .replace(/[\s]+/g, '-')
             : restaurant.slug;
 
-        // Ensure slug is not empty and valid
+        // Убеждаемся, что slug не пустой и действительный
         if (!slug || slug.trim() === '') {
             slug = `restaurant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         }
 
-        // Validate delivery time
+        // Валидация времени доставки
         const minTime = parseInt(restaurant.deliveryTimeMin, 10);
         const maxTime = parseInt(restaurant.deliveryTimeMax, 10);
         
@@ -213,21 +213,21 @@ const RestaurantEditor = ({ user }) => {
             return;
         }
 
-        // Validate working hours
+        // Валидация рабочих часов
         if (!restaurant.workingHours.openTime || !restaurant.workingHours.closeTime) {
             setError('Пожалуйста, укажите время открытия и закрытия ресторана');
             setSaving(false);
             return;
         }
 
-            // Validate category
+            // Валидация категории
             if (!restaurant.category) {
                 setError('Пожалуйста, выберите категорию ресторана');
                 setSaving(false);
                 return;
             }
 
-            // Format the data to match the expected API format
+            // Форматирование данных для соответствия ожидаемому формату API
             const formData = {
                 name: restaurant.name.trim(),
                 address: restaurant.address,
@@ -294,7 +294,7 @@ const RestaurantEditor = ({ user }) => {
         );
     }
     
-    // Function to show image preview
+    // Функция для отображения предварительного просмотра изображения
     const getImagePreview = () => {
         if (!restaurant.imageUrl) return null;
         

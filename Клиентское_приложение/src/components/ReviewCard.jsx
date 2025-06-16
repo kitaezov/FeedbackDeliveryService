@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { restaurantData } from '../features/restaurants/restaurantData';
 import { getCategoryName } from '../features/restaurants/constants/categories';
 
-// Animation variants
+// Анимация для кнопок
 const buttonVariants = {
     initial: { opacity: 0, y: 5 },
     animate: { opacity: 1, y: 0 },
@@ -26,12 +26,12 @@ const buttonVariants = {
     }
 };
 
-// Utility function to format image URL
+// Утилита для форматирования URL изображения
 const getImageUrl = (image) => {
     if (!image) return null;
     
     try {
-        // If it's a string that might be JSON, try to parse it
+        // Если это строка, которая может быть JSON, пытаемся его разобрать
         if (typeof image === 'string' && (image.startsWith('{') || image.startsWith('['))) {
             try {
                 const parsed = JSON.parse(image);
@@ -41,21 +41,21 @@ const getImageUrl = (image) => {
                     }
                 }
             } catch (e) {
-                // Not valid JSON, continue with string processing
+                // Некорректный JSON, продолжаем обработку строки
             }
         }
         
-        // If it's already an object with url property, use that
+        // Если это уже объект с полем url, используем его
         if (typeof image === 'object' && image.url) {
             return getImageUrl(image.url);
         }
         
-        // If it's a full URL, use it directly, but ensure protocol is correct
+        // Если это полный URL, используем его напрямую, но убедимся, что протокол корректный
         if (typeof image === 'string') {
-            // Fix common URL issues
+            // Исправляем общие проблемы с URL
             let url = image;
             
-            // Fix missing colon in http://
+            // Исправляем отсутствие двоеточия в http://
             if (url.match(/^http\/\//)) {
                 url = url.replace('http//', 'http://');
             }
@@ -64,21 +64,21 @@ const getImageUrl = (image) => {
                 return url;
             }
             
-            // If it starts with a slash, prepend the API base URL
+            // Если он начинается с косой черты, добавляем базовый URL API
             if (url.startsWith('/')) {
                 return `${process.env.REACT_APP_API_URL || ''}${url}`;
             }
             
-            // If it has a domain but no protocol, add https://
+            // Если он имеет домен, но не имеет протокола, добавляем https://
             if (url.includes('.') && !url.includes(' ') && !url.match(/^[a-zA-Z]+:\/\//)) {
                 return 'https://' + url;
             }
             
-            // Otherwise, prepend the API base URL
+            // Иначе добавляем базовый URL API
             return `${process.env.REACT_APP_API_URL || ''}${url}`;
         }
         
-        // If we get here and it's not a string, return null
+        // Если мы дошли до этого места и это не строка, возвращаем null
         return null;
     } catch (err) {
         console.error("Error formatting image URL:", err);

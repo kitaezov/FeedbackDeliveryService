@@ -9,36 +9,36 @@ async function addRestaurantToUsers() {
     try {
         console.log('Starting migration: Adding restaurant_id to users table...');
 
-        // Check if restaurant_id column exists
+        // Проверяем, существует ли столбец restaurant_id
         const [columns] = await pool.query(`
             SHOW COLUMNS FROM users LIKE 'restaurant_id'
         `);
 
         if (columns.length === 0) {
-            // Add restaurant_id column
+            // Добавляем столбец restaurant_id
             await pool.query(`
                 ALTER TABLE users 
                 ADD COLUMN restaurant_id INT,
                 ADD FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE SET NULL
             `);
 
-            console.log('Added restaurant_id column to users table');
+            console.log('Добавлен столбец restaurant_id в таблицу users');
         } else {
-            console.log('restaurant_id column already exists');
+            console.log('Столбец restaurant_id уже существует');
         }
 
-        // Reset restaurant_id for non-manager users
+        // Сбрасываем restaurant_id для не менеджеров
         await pool.query(`
             UPDATE users 
             SET restaurant_id = NULL 
             WHERE role != 'manager'
         `);
 
-        console.log('Reset restaurant_id for non-manager users');
-        console.log('Migration completed successfully!');
+        console.log('Сброс restaurant_id для не менеджеров');
+        console.log('Миграция завершена успешно!');
         process.exit(0);
     } catch (error) {
-        console.error('Error during migration:', error);
+        console.error('Ошибка во время миграции:', error);
         process.exit(1);
     }
 }

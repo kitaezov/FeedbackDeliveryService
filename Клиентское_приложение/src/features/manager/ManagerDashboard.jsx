@@ -177,6 +177,7 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [reviewType, setReviewType] = useState(review.type || "inRestaurant");
     const [isTypeLoading, setIsTypeLoading] = useState(false);
+    const [showRatingDetails, setShowRatingDetails] = useState(false);
 
     // Получение имени пользователя с учетом разных форматов данных
     const getUserName = () => {
@@ -242,6 +243,32 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
     // Определяем, является ли отзыв доставкой
     const isDelivery = reviewType === "delivery";
 
+    // Получаем данные о рейтингах по категориям
+    const getRatingCategories = () => {
+        const ratings = review.ratings || {};
+        
+        // Определяем категории в зависимости от типа отзыва
+        if (isDelivery) {
+            return [
+                { id: 'food', name: 'Качество блюд', value: ratings.food || 0 },
+                { id: 'deliverySpeed', name: 'Скорость доставки', value: ratings.deliverySpeed || ratings.service || 0 },
+                { id: 'deliveryQuality', name: 'Качество доставки', value: ratings.deliveryQuality || ratings.atmosphere || 0 },
+                { id: 'price', name: 'Цена/Качество', value: ratings.price || 0 }
+            ];
+        } else {
+            return [
+                { id: 'food', name: 'Качество блюд', value: ratings.food || 0 },
+                { id: 'service', name: 'Уровень сервиса', value: ratings.service || 0 },
+                { id: 'atmosphere', name: 'Атмосфера', value: ratings.atmosphere || 0 },
+                { id: 'price', name: 'Цена/Качество', value: ratings.price || 0 },
+                { id: 'cleanliness', name: 'Чистота', value: ratings.cleanliness || 0 }
+            ];
+        }
+    };
+
+    // Получаем категории рейтингов
+    const ratingCategories = getRatingCategories();
+
     return (
         <motion.div 
             variants={itemVariants}
@@ -288,7 +315,55 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
             
             <p className="text-gray-700 dark:text-gray-300 mb-2">{review.comment || review.text}</p>
             
-            {/* Убрали детальные критерии оценки, оставив только общий рейтинг */}
+            {/* Кнопка для отображения/скрытия детальных рейтингов */}
+            <button 
+                onClick={() => setShowRatingDetails(!showRatingDetails)}
+                className="text-blue-600 dark:text-blue-400 text-sm flex items-center hover:underline mb-2"
+            >
+                {showRatingDetails ? 'Скрыть детали рейтинга' : 'Показать детали рейтинга'} 
+                <ChevronDown size={16} className={`ml-1 transition-transform ${showRatingDetails ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {/* Детальные рейтинги по категориям */}
+            {showRatingDetails && (
+                <div className="mb-3 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+                    <h5 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                        Рейтинги по категориям ({isDelivery ? 'Доставка' : 'В ресторане'}):
+                    </h5>
+                    <div className="space-y-2">
+                        {ratingCategories.map((category) => (
+                            <div key={category.id} className="flex items-center">
+                                <div className="text-sm min-w-[150px] truncate text-gray-700 dark:text-gray-300">
+                                    {category.name}:
+                                </div>
+                                <div className="flex items-center">
+                                    {[1, 2, 3, 4, 5].map((star) => {
+                                        const isFilled = star <= Number(category.value);
+                                        return (
+                                            <span 
+                                                key={star} 
+                                                className={`text-sm ${isFilled ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                style={{ 
+                                                    display: 'inline-block',
+                                                    width: '14px',
+                                                    height: '14px',
+                                                    lineHeight: '14px',
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                ★
+                                            </span>
+                                        );
+                                    })}
+                                    <span className="ml-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        {Number(category.value).toFixed(1)}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             
             {/* Отображение фотографий с улучшенной обработкой ошибок */}
             <div className="mb-3">
@@ -1432,6 +1507,9 @@ const ManagerDashboard = () => {
                             </div>
                         </div>
                     </ChartCard>
+                    
+                    {/* Новая карточка с аналитикой по категориям */}
+                
                 </div>
             </div>
 

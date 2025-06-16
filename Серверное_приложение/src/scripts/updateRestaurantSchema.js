@@ -10,7 +10,7 @@ async function updateRestaurantSchema() {
     try {
         console.log('Checking restaurant schema...');
         
-        // Check if slug column exists
+        // Проверяем, существует ли столбец slug
         const [columnCheck] = await pool.query(`
             SELECT column_name 
             FROM information_schema.columns 
@@ -20,22 +20,22 @@ async function updateRestaurantSchema() {
         if (columnCheck.length === 0) {
             console.log('Adding slug column to restaurants table...');
             
-            // Add slug column
+            // Добавляем столбец slug
             await pool.query(`
                 ALTER TABLE restaurants 
                 ADD COLUMN slug VARCHAR(100) UNIQUE
             `);
             
-            // Add index for slug - MySQL doesn't support IF NOT EXISTS for indexes
+            // Добавляем индекс для slug - MySQL не поддерживает IF NOT EXISTS для индексов
             try {
-                // First check if index exists
+                // Сначала проверяем, существует ли индекс
                 const [indexCheck] = await pool.query(`
                     SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS 
                     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'restaurants' AND INDEX_NAME = 'restaurants_slug_idx'
                 `, [process.env.DB_NAME]);
                 
                 if (indexCheck.length === 0) {
-                    // Create index if it doesn't exist
+                    // Создаем индекс, если он не существует
                     await pool.query(`
                         CREATE INDEX restaurants_slug_idx ON restaurants(slug)
                     `);
@@ -44,15 +44,15 @@ async function updateRestaurantSchema() {
                 }
             } catch (indexError) {
                 console.log('Error checking/creating index:', indexError.message);
-                // Continue even if index creation fails
+                // Продолжаем даже если создание индекса не удается
             }
             
             console.log('Updating existing restaurants with slugs...');
             
-            // Get all restaurants
+            // Получаем все рестораны
             const [restaurants] = await pool.query('SELECT id, name FROM restaurants');
             
-            // Update each restaurant with a generated slug
+            // Обновляем каждый ресторан с сгенерированным slug
             for (const restaurant of restaurants) {
                 const slug = generateSlug(restaurant.name);
                 await pool.query('UPDATE restaurants SET slug = ? WHERE id = ?', [slug, restaurant.id]);
@@ -72,16 +72,16 @@ async function updateRestaurantSchema() {
 }
 
 /**
- * Generate a URL-friendly slug from a restaurant name
+ * Генерация URL-friendly slug из названия ресторана
  * @param {string} name - Restaurant name
  * @returns {string} - URL-friendly slug
  */
 function generateSlug(name) {
     return name
         .toLowerCase()
-        .replace(/[^\w\s-]/g, '') // Remove non-word chars
-        .replace(/[\s_-]+/g, '-')  // Replace spaces and underscores with hyphens
-        .replace(/^-+|-+$/g, '');  // Remove leading/trailing hyphens
+        .replace(/[^\w\s-]/g, '') // Удаляем не-слова-символы
+        .replace(/[\s_-]+/g, '-')  // Заменяем пробелы и подчеркивания на дефисы
+        .replace(/^-+|-+$/g, '');  // Удаляем начальные/конечные дефисы
 }
 
 updateRestaurantSchema(); 

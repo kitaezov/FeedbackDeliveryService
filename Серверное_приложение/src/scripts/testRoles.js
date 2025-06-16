@@ -16,14 +16,14 @@ async function testRoles() {
     try {
         console.log('Testing role hierarchy functionality...');
         
-        // Clean up any previous test users
+        // Очищаем любые предыдущие тестовые пользователей
         console.log('Cleaning up previous test users...');
         await pool.query(`
             DELETE FROM users 
             WHERE email LIKE 'test%@example.com'
         `);
         
-        // Create test users with different roles
+        // Создаем тестовые пользователей с разными ролями
         console.log('Creating test users with different roles...');
         
         const testUsers = [
@@ -44,7 +44,7 @@ async function testRoles() {
             console.log(`Created test user: ${user.name} (${user.role})`);
         }
         
-        // Test role level comparisons
+        // Тестируем иерархию ролей
         console.log('\nTesting role hierarchy...');
         
         const roleHierarchy = {
@@ -65,23 +65,23 @@ async function testRoles() {
         console.log(`manager > user: ${roleHierarchy['manager'] > roleHierarchy['user']}`);
         console.log(`head_admin > user: ${roleHierarchy['head_admin'] > roleHierarchy['user']}`);
         
-        // Test promoting users (would fail with real permissions)
-        console.log('\nSimulating role update operations...');
+        // Тестируем повышение пользователей (не сработает с реальными разрешениями)
+        console.log('\nИмитируем операции обновления ролей...');
         
-        // Get the created test users
+        // Получаем созданных тестовых пользователей
         const [users] = await pool.query(`
             SELECT id, name, email, role FROM users
             WHERE email LIKE 'test%@example.com'
             ORDER BY FIELD(role, 'head_admin', 'admin', 'manager', 'user')
         `);
         
-        // Log the current roles
+        // Логируем текущие роли
         console.log('Current test users:');
         users.forEach(user => {
             console.log(`${user.name} (${user.email}): ${user.role}`);
         });
         
-        console.log('\nTest completed. You can now test the admin panel in the UI.');
+        console.log('\nТест завершен. Теперь вы можете протестировать панель администратора в UI.');
         process.exit(0);
     } catch (error) {
         console.error('Error testing roles:', error);

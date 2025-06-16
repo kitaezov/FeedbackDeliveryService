@@ -4,19 +4,21 @@
  */
 
 // Функция для блокировки пользователя с исправленным URL
+// Функция для блокировки пользователя с исправленным URL
 const confirmBlockUser = async () => {
     if (!userToBlock || !blockReason.trim()) return;
     
     try {
         // Исправленный URL без начального слеша admin
+        // Исправленный URL без начального слеша admin
         await api.post(`admin/users/${userToBlock.id}/block`, { reason: blockReason });
         
-        // Update user in list
+        // Обновляем пользователя в списке
         setUsers(prevUsers => prevUsers.map(u => 
             u.id === userToBlock.id ? { ...u, is_blocked: 1, blocked_reason: blockReason } : u
         ));
         
-        // Close modal
+        // Закрываем модальное окно
         setShowBlockModal(false);
         setUserToBlock(null);
         setBlockReason('');
@@ -32,14 +34,15 @@ const confirmUnblockUser = async () => {
     
     try {
         // Исправленный URL без начального слеша admin
+        // Исправленный URL без начального слеша admin
         await api.post(`admin/users/${userToUnblock.id}/unblock`);
         
-        // Update user in list
+        // Обновляем пользователя в списке
         setUsers(prevUsers => prevUsers.map(u => 
             u.id === userToUnblock.id ? { ...u, is_blocked: 0, blocked_reason: null } : u
         ));
         
-        // Close modal
+        // Закрываем модальное окно
         setShowUnblockModal(false);
         setUserToUnblock(null);
     } catch (error) {

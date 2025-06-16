@@ -11,23 +11,23 @@ async function setupSupportTables() {
     try {
         console.log('Initializing support ticket tables...');
         
-        // Read the SQL script
+        // Читаем SQL скрипт
         const sqlScript = fs.readFileSync(
             path.join(__dirname, '../db/support_schema.sql'),
             'utf8'
         );
         
-        // Split the script into separate statements
+        // Разделяем скрипт на отдельные операторы
         const statements = sqlScript
             .split(';')
             .filter(statement => statement.trim() !== '');
         
-        // Execute each statement
+        // Выполняем каждый оператор
         for (const statement of statements) {
             try {
                 await pool.query(statement + ';');
             } catch (err) {
-                // Ignore duplicate key errors for indexes
+                // Игнорируем ошибки дублирования ключей для индексов
                 if (err.code === 'ER_DUP_KEYNAME') {
                     console.log(`Index already exists: ${err.sqlMessage}`);
                 } else {
@@ -43,7 +43,7 @@ async function setupSupportTables() {
     }
 }
 
-// If this script is run directly (not imported)
+// Если этот скрипт запускается напрямую (не импортируется)
 if (require.main === module) {
     setupSupportTables()
         .then(() => {
@@ -55,6 +55,6 @@ if (require.main === module) {
             process.exit(1);
         });
 } else {
-    // Export for use in other scripts
+    // Экспорт для использования в других скриптах
     module.exports = setupSupportTables;
 } 

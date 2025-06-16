@@ -15,11 +15,11 @@ import { NotificationProvider } from './components/NotificationContext';
 import { AuthProvider } from './features/auth/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
-// Add global debug helper to fix reviews not showing up
+// Добавить глобальный отладочный помощник для исправления отображения отзывов
 window.debugReviews = true;
 console.log("DEBUG MODE ENABLED - Reviews debugging is active");
 
-// Monkey patch console.log to add timestamps
+// Мокинг console.log для добавления временных меток
 const originalConsoleLog = console.log;
 console.log = function() {
   const timestamp = new Date().toISOString();

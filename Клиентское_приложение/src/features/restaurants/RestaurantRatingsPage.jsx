@@ -14,6 +14,10 @@ import { restaurantService } from './services/restaurantService';
 // Define API base URL
 const API_BASE_URL = 'http://localhost:5000/api';
 
+// Mock restaurants data for fallback
+const mockRestaurants = [
+];
+
 // Animation variants
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -90,36 +94,7 @@ const imageVariants = {
     }
 };
 
-// Mock data for restaurants when API fails
-const mockRestaurants = [
-    {
-        id: 1,
-        name: 'Итальянский дворик',
-        cuisine: 'Итальянская кухня',
-        avgRating: 4.8,
-        reviewCount: 42,
-        address: 'ул. Гастрономическая, 12',
-        image_url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4'
-    },
-    {
-        id: 2,
-        name: 'Азиатский бриз',
-        cuisine: 'Азиатская кухня',
-        avgRating: 4.7,
-        reviewCount: 38,
-        address: 'пр. Кулинаров, 45',
-        image_url: 'https://images.unsplash.com/photo-1552566626-52f8b828add9'
-    },
-    {
-        id: 3,
-        name: 'У Михалыча',
-        cuisine: 'Русская кухня',
-        avgRating: 4.9,
-        reviewCount: 56,
-        address: 'ул. Домашняя, 8',
-        image_url: 'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d'
-    }
-];
+
 
 // Categories for filtering
 const categories = [

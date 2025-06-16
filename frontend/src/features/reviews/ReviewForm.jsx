@@ -43,7 +43,9 @@ const RestaurantButton = ({ restaurant, isSelected, onSelect }) => (
                 </div>
                 <div className="flex items-center">
                     <Star className="w-3 h-3 text-yellow-500 mr-1" />
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{restaurant.avgRating}</span>
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {restaurant.avgRating ? restaurant.avgRating.toFixed(1) : '0.0'}
+                    </span>
                 </div>
             </div>
         </div>

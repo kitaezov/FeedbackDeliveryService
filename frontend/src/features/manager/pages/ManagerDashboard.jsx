@@ -7,6 +7,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../../../config';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { RatingCriteria } from '../../restaurants/components/RatingCriteria';
 
 const ManagerDashboard = () => {
     const [reviews, setReviews] = useState([]);
@@ -129,18 +130,33 @@ const ManagerDashboard = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
-            const { averageRatings, reviewCounts, ratingDistribution } = response.data;
+            const { 
+                ratings, 
+                volumeByDay, 
+                ratingDistribution, 
+                restaurantCriteriaRatings, 
+                deliveryCriteriaRatings 
+            } = response.data;
             
             setChartData({
                 ratings: {
-                    data: averageRatings
+                    data: ratings?.datasets?.[0]?.data.map((value, index) => ({
+                        date: ratings.labels[index],
+                        value: value
+                    })) || []
                 },
                 volumeByDay: {
-                    data: reviewCounts
+                    data: volumeByDay?.datasets?.[0]?.data.map((value, index) => ({
+                        date: volumeByDay.labels[index],
+                        count: value
+                    })) || []
                 },
                 ratingDistribution: {
-                    data: ratingDistribution
-                }
+                    data: ratingDistribution || {}
+                },
+                restaurantCriteriaRatings: restaurantCriteriaRatings || [],
+                deliveryCriteriaRatings: deliveryCriteriaRatings || [],
+                reviewCount: volumeByDay?.datasets?.[0]?.data.reduce((sum, val) => sum + val, 0) || 0
             });
 
             setIsChartLoading(false);
@@ -305,38 +321,77 @@ const ManagerDashboard = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-                            <CardContent className="p-4">
-                                <h3 className="text-white font-medium mb-4">Средний рейтинг за период</h3>
-                                {isChartLoading ? (
-                                    <div className="h-64 flex items-center justify-center">
-                                        <p className="text-white/60">Загрузка...</p>
-                                    </div>
-                                ) : chartData.ratings?.data ? (
-                                    <RatingChart data={chartData.ratings.data} />
-                                ) : (
-                                    <div className="h-64 flex items-center justify-center">
-                                        <p className="text-white/60">Нет данных</p>
-                                    </div>
-                                )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <Card className="col-span-1 lg:col-span-1">
+                            <CardContent className="p-0">
+                                <div className="p-4 border-b">
+                                    <h3 className="text-lg font-semibold">Средний рейтинг за период</h3>
+                                </div>
+                                <div className="p-4">
+                                    {isChartLoading ? (
+                                        <div className="flex justify-center items-center h-64">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                        </div>
+                                    ) : (
+                                        <div className="h-64">
+                                            <RatingChart data={chartData.ratings} />
+                                        </div>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
-                        
-                        <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-                            <CardContent className="p-4">
-                                <h3 className="text-white font-medium mb-4">Количество отзывов по дням</h3>
-                                {isChartLoading ? (
-                                    <div className="h-64 flex items-center justify-center">
-                                        <p className="text-white/60">Загрузка...</p>
-                                    </div>
-                                ) : chartData.volumeByDay?.data ? (
-                                    <ReviewCountChart data={chartData.volumeByDay.data} />
-                                ) : (
-                                    <div className="h-64 flex items-center justify-center">
-                                        <p className="text-white/60">Нет данных</p>
-                                    </div>
-                                )}
+
+                        <Card className="col-span-1 lg:col-span-1">
+                            <CardContent className="p-0">
+                                <div className="p-4 border-b">
+                                    <h3 className="text-lg font-semibold">Количество отзывов</h3>
+                                </div>
+                                <div className="p-4">
+                                    {isChartLoading ? (
+                                        <div className="flex justify-center items-center h-64">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                        </div>
+                                    ) : (
+                                        <div className="h-64">
+                                            <ReviewCountChart data={chartData.volumeByDay} />
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="col-span-1 lg:col-span-1">
+                            <CardContent className="p-0">
+                                <div className="p-4 border-b">
+                                    <h3 className="text-lg font-semibold">Критерии оценивания</h3>
+                                </div>
+                                <div className="p-0 h-64 overflow-hidden">
+                                    {isChartLoading ? (
+                                        <div className="flex justify-center items-center h-full">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                        </div>
+                                    ) : (
+                                        chartData.restaurantCriteriaRatings && chartData.deliveryCriteriaRatings && (
+                                            <RatingCriteria 
+                                                restaurantRatings={{
+                                                    food: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Качество еды')?.score || 0),
+                                                    service: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Обслуживание')?.score || 0),
+                                                    interior: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Интерьер')?.score || 0),
+                                                    price: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Соотношение цена/качество')?.score || 0),
+                                                    speed: parseFloat(chartData.restaurantCriteriaRatings.find(c => c.name === 'Скорость обслуживания')?.score || 0)
+                                                }}
+                                                deliveryRatings={{
+                                                    food: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Качество еды')?.score || 0),
+                                                    packaging: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Упаковка')?.score || 0),
+                                                    delivery: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Скорость доставки')?.score || 0),
+                                                    price: parseFloat(chartData.deliveryCriteriaRatings.find(c => c.name === 'Соотношение цена/качество')?.score || 0)
+                                                }}
+                                                reviewCount={chartData.reviewCount}
+                                                showHeading={false}
+                                            />
+                                        )
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     </div>

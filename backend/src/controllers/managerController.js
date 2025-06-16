@@ -569,13 +569,14 @@ const getChartData = async (req, res) => {
         `, [restaurantId, restaurantId]);
 
         // Получение критериев оценки
-        const [criteriaRatings] = await pool.query(`
+        const [restaurantCriteriaRatings] = await pool.query(`
             SELECT 
                 'Качество еды' as name, COALESCE(ROUND(AVG(food_rating), 1), 4.2) as score
             FROM reviews r 
             WHERE r.deleted = 0 
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.food_rating IS NOT NULL
+                AND r.type = 'inRestaurant'
                 AND (r.restaurant_id = ? OR EXISTS (
                     SELECT 1 FROM restaurants rest 
                     WHERE rest.id = r.restaurant_id AND rest.id = ?
@@ -587,6 +588,7 @@ const getChartData = async (req, res) => {
             WHERE r.deleted = 0 
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.service_rating IS NOT NULL
+                AND r.type = 'inRestaurant'
                 AND (r.restaurant_id = ? OR EXISTS (
                     SELECT 1 FROM restaurants rest 
                     WHERE rest.id = r.restaurant_id AND rest.id = ?
@@ -598,6 +600,7 @@ const getChartData = async (req, res) => {
             WHERE r.deleted = 0 
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.atmosphere_rating IS NOT NULL
+                AND r.type = 'inRestaurant'
                 AND (r.restaurant_id = ? OR EXISTS (
                     SELECT 1 FROM restaurants rest 
                     WHERE rest.id = r.restaurant_id AND rest.id = ?
@@ -609,6 +612,7 @@ const getChartData = async (req, res) => {
             WHERE r.deleted = 0 
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.price_rating IS NOT NULL
+                AND r.type = 'inRestaurant'
                 AND (r.restaurant_id = ? OR EXISTS (
                     SELECT 1 FROM restaurants rest 
                     WHERE rest.id = r.restaurant_id AND rest.id = ?
@@ -620,11 +624,63 @@ const getChartData = async (req, res) => {
             WHERE r.deleted = 0 
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.cleanliness_rating IS NOT NULL
+                AND r.type = 'inRestaurant'
                 AND (r.restaurant_id = ? OR EXISTS (
                     SELECT 1 FROM restaurants rest 
                     WHERE rest.id = r.restaurant_id AND rest.id = ?
                 ))
         `, [restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId]);
+
+        // Получение критериев оценки для доставки
+        const [deliveryCriteriaRatings] = await pool.query(`
+            SELECT 
+                'Качество еды' as name, COALESCE(ROUND(AVG(food_rating), 1), 4.2) as score
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.food_rating IS NOT NULL
+                AND r.type = 'delivery'
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
+            UNION ALL
+            SELECT 
+                'Скорость доставки', COALESCE(ROUND(AVG(service_rating), 1), 4.0)
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.service_rating IS NOT NULL
+                AND r.type = 'delivery'
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
+            UNION ALL
+            SELECT 
+                'Упаковка', COALESCE(ROUND(AVG(atmosphere_rating), 1), 4.5)
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.atmosphere_rating IS NOT NULL
+                AND r.type = 'delivery'
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
+            UNION ALL
+            SELECT 
+                'Соотношение цена/качество', COALESCE(ROUND(AVG(price_rating), 1), 3.8)
+            FROM reviews r 
+            WHERE r.deleted = 0 
+                AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
+                AND r.price_rating IS NOT NULL
+                AND r.type = 'delivery'
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
+        `, [restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId]);
 
         // Форматируем данные для фронтенда с учетом периода
         const formatDate = (dateStr, periodType) => {
@@ -635,11 +691,45 @@ const getChartData = async (req, res) => {
             return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
         };
 
+        // Получение всех рейтингов для каждого дня
+        const [allRatings] = await pool.query(`
+            WITH RECURSIVE dates AS (
+                SELECT CURDATE() - ${dateFilter} + INTERVAL 1 DAY as date
+                UNION ALL
+                SELECT date + INTERVAL 1 DAY
+                FROM dates
+                WHERE date < CURDATE()
+            )
+            SELECT 
+                ${groupBy} as date,
+                COALESCE(ROUND(AVG(
+                    (COALESCE(r.food_rating, 0) + 
+                     COALESCE(r.service_rating, 0) + 
+                     COALESCE(r.atmosphere_rating, 0) + 
+                     COALESCE(r.price_rating, 0) + 
+                     COALESCE(r.cleanliness_rating, 0)) / 
+                    NULLIF((CASE WHEN r.food_rating IS NOT NULL THEN 1 ELSE 0 END + 
+                     CASE WHEN r.service_rating IS NOT NULL THEN 1 ELSE 0 END + 
+                     CASE WHEN r.atmosphere_rating IS NOT NULL THEN 1 ELSE 0 END + 
+                     CASE WHEN r.price_rating IS NOT NULL THEN 1 ELSE 0 END + 
+                     CASE WHEN r.cleanliness_rating IS NOT NULL THEN 1 ELSE 0 END), 0)
+                ), 1), 0) as average_rating,
+                COUNT(r.id) as review_count
+            FROM dates
+            LEFT JOIN reviews r ON DATE(r.created_at) = DATE(dates.date) AND r.deleted = 0
+                AND (r.restaurant_id = ? OR EXISTS (
+                    SELECT 1 FROM restaurants rest 
+                    WHERE rest.id = r.restaurant_id AND rest.id = ?
+                ))
+            GROUP BY ${groupBy}
+            ORDER BY date ASC
+        `, [restaurantId, restaurantId]);
+
         const formattedAverageRatings = {
-            labels: averageRatings.map(day => formatDate(day.date, period)),
+            labels: allRatings.map(day => formatDate(day.date, period)),
             datasets: [{
                 label: 'Средний рейтинг',
-                data: averageRatings.map(day => parseFloat(day.average_rating) || 0),
+                data: allRatings.map(day => parseFloat(day.average_rating) || 0),
                 borderColor: 'rgb(59, 130, 246)',
                 backgroundColor: 'rgba(59, 130, 246, 0.5)',
             }]
@@ -674,7 +764,9 @@ const getChartData = async (req, res) => {
             ratings: formattedAverageRatings.labels.length,
             reviews: formattedReviewCounts.labels.length,
             distributions: formattedRatingDistribution.labels.length,
-            criteria: criteriaRatings.length
+            restaurantCriteria: restaurantCriteriaRatings.length,
+            deliveryCriteria: deliveryCriteriaRatings.length,
+            note: 'Средний рейтинг рассчитывается на основе всех критериев (доставка + в ресторане)'
         });
 
         res.json({
@@ -682,7 +774,11 @@ const getChartData = async (req, res) => {
             ratings: formattedAverageRatings,
             volumeByDay: formattedReviewCounts,
             ratingDistribution: formattedRatingDistribution,
-            criteriaRatings: criteriaRatings.map(c => ({
+            restaurantCriteriaRatings: restaurantCriteriaRatings.map(c => ({
+                name: c.name,
+                score: parseFloat(c.score).toFixed(1)
+            })),
+            deliveryCriteriaRatings: deliveryCriteriaRatings.map(c => ({
                 name: c.name,
                 score: parseFloat(c.score).toFixed(1)
             }))

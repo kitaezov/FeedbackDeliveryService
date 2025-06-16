@@ -175,24 +175,6 @@ export const RestaurantDetailsPage = () => {
                     ]}
                     className="mb-6"
                 />
-                
-                {/* Детальная информация о ресторане */}
-                <RestaurantDetails 
-                    restaurant={restaurant} 
-                    onAddReview={handleAddReviewClick} 
-                />
-                
-                {/* Модальное окно с формой отзыва */}
-                <Modal
-                    isOpen={isReviewModalOpen}
-                    onClose={handleCloseModal}
-                    title={`Отзыв о ресторане "${restaurant?.name}"`}
-                >
-                    <ReviewForm 
-                        onSubmit={handleSubmitReview}
-                        onCancel={handleCloseModal}
-                    />
-                </Modal>
             </Container>
         </div>
     );

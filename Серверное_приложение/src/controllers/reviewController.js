@@ -165,41 +165,7 @@ const getAllReviews = async (req, res) => {
         console.log(`Количество отзывов в базе данных: ${reviewsCount}`);
         
         // Если отзывов нет, добавляем несколько тестовых отзывов
-        if (reviewsCount === 0) {
-            console.log('Отзывы не найдены, добавляем тестовые отзывы в базу данных');
-            
-            // Получаем список пользователей для отзывов
-            const [users] = await pool.execute('SELECT id FROM users LIMIT 2');
-            if (users.length > 0) {
-                // Получаем список ресторанов
-                const [restaurants] = await pool.execute('SELECT id, name FROM restaurants LIMIT 2');
-                if (restaurants.length > 0) {
-                    // Добавляем отзывы
-                    await pool.execute(
-                        'INSERT INTO reviews (user_id, restaurant_id, restaurant_name, rating, comment, food_rating, service_rating, atmosphere_rating, price_rating, cleanliness_rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                        [users[0].id, restaurants[0].id, restaurants[0].name, 4, 'Отличное место! Очень вкусная еда и приятная атмосфера.', 4, 5, 4, 3, 5]
-                    );
-                    
-                    if (users.length > 1 && restaurants.length > 1) {
-                        await pool.execute(
-                            'INSERT INTO reviews (user_id, restaurant_id, restaurant_name, rating, comment, food_rating, service_rating, atmosphere_rating, price_rating, cleanliness_rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            [users[1].id, restaurants[1].id, restaurants[1].name, 5, 'Превосходный ресторан! Обязательно вернусь сюда снова.', 5, 5, 5, 4, 5]
-                        );
-                    }
-                    
-                    console.log('Тестовые отзывы успешно добавлены в базу данных');
-                }
-            }
-        }
-        
-        // Получить отзывы
-        const reviewsData = await reviewModel.getAll({
-            page: parseInt(page),
-            limit: parseInt(limit),
-            userId: userId ? parseInt(userId) : undefined,
-            restaurantName,
-            currentUserId
-        });
+
         
         // Проверяем, что отзывы получены и имеют правильный формат
         if (!reviewsData || !reviewsData.reviews) {
@@ -214,40 +180,7 @@ const getAllReviews = async (req, res) => {
         // Возвращаем массив отзывов напрямую, без вложенности
         res.json(nonDeletedReviews);
     } catch (error) {
-        console.error('Ошибка получения отзывов:', error);
-        
-        // В случае ошибки также возвращаем тестовые данные
-        console.log('Возвращаем тестовые данные из-за ошибки');
-        const testReviews = [
-            {
-                id: 1,
-                user_id: 1,
-                restaurant_name: 'Тестовый ресторан (ошибка)',
-                rating: 3,
-                comment: 'Это тестовый отзыв, отображаемый в случае ошибки.',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                likes: 2,
-                deleted: false,
-                author: {
-                    id: 1,
-                    name: 'Тестовый пользователь',
-                    avatar: null
-                },
-                ratings: {
-                    food: 3,
-                    service: 3,
-                    atmosphere: 4,
-                    price: 2,
-                    cleanliness: 4
-                },
-                date: new Date().toISOString(),
-                photos: [],
-                isLikedByUser: false,
-                userVoteType: null
-            }
-        ];
-        res.json(testReviews);
+        console.error('Ошибка получения отзывов:', error);            
     }
 };
 

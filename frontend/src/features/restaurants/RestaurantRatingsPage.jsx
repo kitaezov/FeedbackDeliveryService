@@ -9,6 +9,7 @@ import { Container } from '../../common/components/ui';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { RESTAURANT_CATEGORIES } from './constants/categories';
+import { restaurantService } from './services/restaurantService';
 
 // Define API base URL
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -396,84 +397,61 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
         setShowReviewsFor(prevId => prevId === restaurantId ? null : restaurantId);
     };
 
-    // Update the refresh reviews function to use the correct API endpoint
+    // Update the refresh reviews function to use the restaurantService instead of apiService
     const refreshReviews = async (restaurantId) => {
         try {
-            toast.info("Обновление отзывов...");
+            console.log(`Fetching reviews for restaurant ${restaurantId}...`);
+            const response = await restaurantService.getRestaurantReviews(restaurantId);
+            console.log('Reviews response received:', response);
             
-            // Fetch all reviews
-            const reviewsResponse = await axios.get(`${API_BASE_URL}/reviews`);
-            let allReviews = [];
-            
-            if (reviewsResponse.data && reviewsResponse.data.reviews && Array.isArray(reviewsResponse.data.reviews)) {
-                allReviews = reviewsResponse.data.reviews;
-            } else if (reviewsResponse.data && reviewsResponse.data.reviews && reviewsResponse.data.reviews.reviews && Array.isArray(reviewsResponse.data.reviews.reviews)) {
-                // Формат: { reviews: { reviews: [...] } }
-                allReviews = reviewsResponse.data.reviews.reviews;
-            } else if (Array.isArray(reviewsResponse.data)) {
-                allReviews = reviewsResponse.data;
-            } else if (reviewsResponse.data && reviewsResponse.data.reviews === null) {
-                allReviews = [];
-            }
-            
-            console.log('Получены отзывы:', allReviews);
-            
-            // Find the restaurant by ID
-            const restaurant = restaurants.find(r => r.id === restaurantId);
-            
-            // Filter reviews for this restaurant
-            const restaurantReviews = allReviews.filter(
-                review => review.restaurant_id === restaurantId || 
-                         review.restaurantId === restaurantId ||
-                         (restaurant && (review.restaurant_name === restaurant.name || 
-                                      review.restaurantName === restaurant.name))
-            );
-            
-            // Update state with filtered reviews
-            if (restaurantReviews.length > 0) {
-                // Update reviews state
+            if (!response || !response.reviews) {
+                console.warn(`No reviews returned for restaurant ${restaurantId}`);
                 setRestaurantReviews(prev => ({
                     ...prev,
-                    [restaurantId]: restaurantReviews
+                    [restaurantId]: []
                 }));
-                
-                // Update restaurant objects too
-                setRestaurants(prev => 
-                    prev.map(restaurant => 
-                        restaurant.id === restaurantId 
-                            ? {...restaurant, reviews: restaurantReviews, hasReviews: true}
-                            : restaurant
-                    )
-                );
-                
-                setFilteredRestaurants(prev => 
-                    prev.map(restaurant => 
-                        restaurant.id === restaurantId 
-                            ? {...restaurant, reviews: restaurantReviews, hasReviews: true}
-                            : restaurant
-                    )
-                );
-                
-                toast.success(`Загружено ${restaurantReviews.length} отзывов`);
-                return true;
-            } else {
-                console.log(`No reviews found for restaurant ${restaurantId}`);
-                toast.info("Отзывы не найдены");
-                return false;
+                return;
             }
-        } catch (err) {
-            console.error(`Error refreshing reviews for restaurant ID ${restaurantId}:`, err);
-            toast.error("Ошибка при обновлении отзывов");
-            return false;
+            
+            // Log raw reviews for debugging
+            console.log('Raw reviews data:', JSON.stringify(response.reviews, null, 2));
+            
+            // Normalize the review data to ensure consistency
+            const normalizedReviews = response.reviews.map(review => ({
+                ...review,
+                // Ensure all necessary fields exist for rendering
+                user_name: review.user_name || review.userName || review.author?.name || 'Неизвестный пользователь',
+                restaurant_id: review.restaurant_id || restaurantId,
+                restaurantId: review.restaurant_id || restaurantId,
+                comment: review.comment || review.text || review.content || '',
+                created_at: review.created_at || review.date || new Date().toISOString(),
+                date: review.created_at || review.date || new Date().toISOString()
+            }));
+            
+            console.log(`Successfully processed ${normalizedReviews.length} reviews for restaurant ${restaurantId}`);
+            console.log('Normalized reviews:', JSON.stringify(normalizedReviews, null, 2));
+            
+            setRestaurantReviews(prev => ({
+                ...prev,
+                [restaurantId]: normalizedReviews
+            }));
+        } catch (error) {
+            console.error(`Error fetching reviews for restaurant ${restaurantId}:`, error);
+            toast.error(`Не удалось загрузить отзывы: ${error.message || 'Ошибка сервера'}`);
         }
     };
 
     // Update the RestaurantReviews component to always link to the restaurant of the review
     const RestaurantReviews = ({ restaurantId, isDarkMode }) => {
         const reviews = restaurantReviews[restaurantId] || [];
-        console.log(`Rendering ${reviews.length} reviews for restaurant ${restaurantId}`);
         
-        // Add handleLike function
+        // Add explicit logging to help debug
+        console.log(`RestaurantReviews component for restaurant ${restaurantId}:`, {
+            reviewsAvailable: reviews.length > 0,
+            reviewsCount: reviews.length,
+            reviewsData: reviews
+        });
+        
         const handleLike = async (reviewId) => {
             try {
                 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -525,8 +503,23 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
             }
         };
         
-        // If reviews not fetched yet or empty
+        // If reviews not fetched yet, fetch them
+        if (!restaurantReviews[restaurantId]) {
+            console.log(`No reviews loaded yet for restaurant ${restaurantId}, fetching...`);
+            refreshReviews(restaurantId);
+            
+            return (
+                <div className={`text-center py-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-500 mx-auto mb-2"></div>
+                    <p>Загрузка отзывов...</p>
+                </div>
+            );
+        }
+        
+        // If reviews array exists but is empty (after fetching)
         if (reviews.length === 0) {
+            console.log(`No reviews found for restaurant ${restaurantId} after fetching`);
+            
             return (
                 <div className={`text-center py-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     <p className="mb-3">Пока нет отзывов для этого ресторана.</p>
@@ -550,6 +543,9 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
             );
         }
         
+        console.log(`Rendering ${reviews.length} reviews for restaurant ${restaurantId}`);
+        
+        // If we have reviews, display them
         return (
             <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -590,7 +586,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                         
                         return (
                             <motion.div 
-                                key={index}
+                                key={review.id || index}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
@@ -601,7 +597,7 @@ const RestaurantRatingsPage = ({ isDarkMode = false, singleRestaurant = false })
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center">
                                         <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
-                                            {review.user_name || review.username || review.name || 'Гость'}
+                                            {review.user_name || review.userName || review.username || review.name || review.author?.name || 'Гость'}
                                         </span>
                                         
                                         {/* Always show which restaurant this review is for */}

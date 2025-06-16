@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { StarRating } from './StarRating';
 import { Button, Card, Badge } from '../../../common/components/ui';
 import { formatAddress } from '../../../common/utils/formatUtils';
-import { FileText, Clock, Map, Phone, Mail, Globe, Coffee, Utensils, DollarSign, Wifi, Music, Car, Check, Star } from 'lucide-react';
+import { FileText, Clock, Map, Phone, Mail, Globe, Coffee, Utensils, DollarSign, Wifi, Music, Car, Check, Star, ArrowRight, User } from 'lucide-react';
 import { restaurantService } from '../services/restaurantService';
 
 /**
@@ -97,10 +97,51 @@ const getImageUrl = (image) => {
 
 export const RestaurantDetails = ({ restaurant, onAddReview }) => {
     const [activeTab, setActiveTab] = useState('details');
+    const [reviews, setReviews] = useState([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+    const [reviewError, setReviewError] = useState(null);
     
-    // Обработчик переключения вкладок
+    // Fetch reviews when the component mounts or when the restaurant ID changes
+    useEffect(() => {
+        if (restaurant?.id) {
+            fetchRestaurantReviews();
+        }
+    }, [restaurant?.id]);
+    
+    // Function to fetch reviews for this restaurant
+    const fetchRestaurantReviews = async () => {
+        if (!restaurant?.id) return;
+        
+        try {
+            setLoadingReviews(true);
+            setReviewError(null);
+            
+            console.log('Fetching reviews for restaurant ID:', restaurant.id);
+            const response = await restaurantService.getRestaurantReviews(restaurant.id);
+            console.log('Reviews response received:', response);
+            
+            // Check for reviews in the response
+            if (response && Array.isArray(response.reviews)) {
+                setReviews(response.reviews);
+                console.log(`Successfully loaded ${response.reviews.length} reviews for restaurant ${restaurant.id}`);
+            } else {
+                console.warn('No valid reviews array found in the response');
+                setReviews([]);
+            }
+        } catch (error) {
+            console.error('Error fetching reviews:', error);
+            setReviewError('Не удалось загрузить отзывы');
+            setReviews([]);
+        } finally {
+            setLoadingReviews(false);
+        }
+    };
+    
     const handleTabChange = (tab) => {
         setActiveTab(tab);
+        if (tab === 'reviews' && reviews.length === 0) {
+            fetchRestaurantReviews();
+        }
     };
     
     // Обработчик для открытия меню ресторана в PDF
@@ -165,6 +206,137 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
     const getFeatureIcon = (feature) => {
         const Icon = featureIcons[feature] || Utensils;
         return Icon;
+    };
+    
+    // Add this function to render reviews
+    const renderReviews = () => {
+        if (loadingReviews) {
+            return (
+                <div className="flex justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-700 dark:border-gray-300"></div>
+                </div>
+            );
+        }
+        
+        if (reviewError) {
+            return (
+                <div className="p-4 text-center text-red-500">
+                    <p>{reviewError}</p>
+                    <button 
+                        onClick={fetchRestaurantReviews}
+                        className="mt-2 text-blue-500 hover:underline"
+                    >
+                        Попробовать снова
+                    </button>
+                </div>
+            );
+        }
+        
+        if (reviews.length === 0) {
+            return (
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="p-8 bg-gray-50 dark:bg-gray-700 text-center rounded-lg border border-gray-100 dark:border-gray-600 shadow-sm"
+                >
+                    <motion.div 
+                        className="inline-block mb-4"
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ 
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 20
+                        }}
+                    >
+                        <Star className="w-12 h-12 text-gray-300 dark:text-gray-500 mx-auto" />
+                    </motion.div>
+                    <h4 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-2">Ещё нет отзывов</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        Делитесь своими впечатлениями и помогайте другим сделать выбор
+                    </p>
+                    <motion.button
+                        onClick={onAddReview}
+                        className="text-white bg-gray-700 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                    >
+                        Оставить первый отзыв
+                    </motion.button>
+                </motion.div>
+            );
+        }
+        
+        return (
+            <div className="space-y-4">
+                {reviews.map((review) => (
+                    <motion.div 
+                        key={review.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+                    >
+                        <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center">
+                                {review.author?.avatar ? (
+                                    <img 
+                                        src={review.author.avatar} 
+                                        alt={review.author.name || review.user_name || "User"} 
+                                        className="w-10 h-10 rounded-full mr-3"
+                                    />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
+                                        <User className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                                    </div>
+                                )}
+                                <div>
+                                    <div className="font-medium text-gray-900 dark:text-white">
+                                        {review.author?.name || review.user_name || review.userName || "Анонимный пользователь"}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {new Date(review.date || review.created_at).toLocaleDateString('ru-RU', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star
+                                        key={i}
+                                        size={16}
+                                        fill={i < Math.round(review.rating || 0) ? "#FFB800" : "none"}
+                                        stroke={i < Math.round(review.rating || 0) ? "#FFB800" : "#94a3b8"}
+                                        className="mr-0.5"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        
+                        <p className="text-gray-700 dark:text-gray-300">
+                            {review.comment || review.text || "Пользователь не оставил комментарий"}
+                        </p>
+                        
+                        {review.photos && review.photos.length > 0 && (
+                            <div className="mt-3 flex gap-2 overflow-x-auto py-2">
+                                {review.photos.map((photo, index) => (
+                                    <img 
+                                        key={index}
+                                        src={typeof photo === 'string' ? photo : photo.url} 
+                                        alt={`Фото ${index + 1} к отзыву`}
+                                        className="h-20 w-auto rounded-md object-cover"
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </motion.div>
+                ))}
+            </div>
+        );
     };
     
     return (
@@ -468,38 +640,7 @@ export const RestaurantDetails = ({ restaurant, onAddReview }) => {
                             </Button>
                         </div>
                         
-                        {/* Заглушка для отзывов */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="p-8 bg-gray-50 dark:bg-gray-700 text-center rounded-lg border border-gray-100 dark:border-gray-600 shadow-sm"
-                        >
-                            <motion.div 
-                                className="inline-block mb-4"
-                                initial={{ scale: 0.8 }}
-                                animate={{ scale: 1 }}
-                                transition={{ 
-                                    type: "spring",
-                                    stiffness: 400,
-                                    damping: 20
-                                }}
-                            >
-                                <Star className="w-12 h-12 text-gray-300 dark:text-gray-500 mx-auto" />
-                            </motion.div>
-                            <h4 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-2">Ещё нет отзывов</h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                Делитесь своими впечатлениями и помогайте другим сделать выбор
-                            </p>
-                            <motion.button
-                                onClick={onAddReview}
-                                className="text-white bg-gray-700 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
-                                whileHover={{ scale: 1.03 }}
-                                whileTap={{ scale: 0.97 }}
-                            >
-                                Оставить первый отзыв
-                            </motion.button>
-                        </motion.div>
+                        {renderReviews()}
                     </div>
                 )}
             </div>

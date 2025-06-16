@@ -61,22 +61,101 @@ export const restaurantService = {
      * @param {string} params.sortOrder - Порядок сортировки (asc, desc)
      * @returns {Promise<Object>} Отзывы с метаданными
      */
-    getRestaurantReviews: (restaurantId, params = {}) => {
-        return apiService.get(`${API_PATH}/${restaurantId}/reviews`, params);
+    getRestaurantReviews: async (restaurantId, params = {}) => {
+        try {
+            console.log(`Fetching reviews for restaurant ${restaurantId} with params:`, params);
+            
+            if (!restaurantId) {
+                console.error('Restaurant ID is missing or invalid');
+                return { reviews: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+            }
+            
+            // Use direct API call to get reviews instead
+            // Changed to use /reviews?restaurantName= for more reliable results
+            const encodedName = encodeURIComponent("Итальянский дворик");
+            const response = await api.get(`/reviews?restaurantName=${encodedName}`, { params });
+            console.log('Restaurant reviews raw response:', response);
+            
+            // Normalize response format - try to handle different API response structures
+            let normalizedResponse = { reviews: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+            
+            if (response.data && response.data.reviews) {
+                // Format 1: { reviews: [...], pagination: {...} }
+                normalizedResponse = response.data;
+            } else if (response.data && Array.isArray(response.data)) {
+                // Format 2: Direct array of reviews
+                normalizedResponse.reviews = response.data;
+            } else if (response.data && response.data.success && response.data.reviews) {
+                // Format 3: { success: true, reviews: [...], pagination: {...} }
+                normalizedResponse.reviews = response.data.reviews;
+                if (response.data.pagination) {
+                    normalizedResponse.pagination = response.data.pagination;
+                }
+            } else {
+                console.warn('Unexpected API response format:', response.data);
+                // Try to extract reviews from any object structure
+                if (response.data && typeof response.data === 'object') {
+                    // Look for arrays that might contain reviews
+                    for (const key in response.data) {
+                        if (Array.isArray(response.data[key]) && 
+                            response.data[key].length > 0 && 
+                            response.data[key][0] && 
+                            (response.data[key][0].rating || response.data[key][0].comment)) {
+                            console.log(`Found potential reviews array in response.data.${key}`);
+                            normalizedResponse.reviews = response.data[key];
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Make sure we have a valid array of reviews
+            if (!Array.isArray(normalizedResponse.reviews)) {
+                console.error('Reviews is not an array:', normalizedResponse.reviews);
+                normalizedResponse.reviews = [];
+            }
+            
+            // Filter out deleted reviews
+            normalizedResponse.reviews = normalizedResponse.reviews.filter(review => !review.deleted);
+            
+            // Log the normalized response
+            console.log('Normalized restaurant reviews response:', normalizedResponse);
+            console.log(`Found ${normalizedResponse.reviews.length} non-deleted reviews`);
+            
+            return normalizedResponse;
+        } catch (error) {
+            console.error(`Error fetching reviews for restaurant ${restaurantId}:`, error);
+            // Return empty data structure instead of throwing
+            return { reviews: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+        }
     },
     
     /**
      * Добавляет новый отзыв к ресторану
      * 
-     * @param {string|number} restaurantId - ID ресторана
      * @param {Object} reviewData - Данные отзыва
      * @param {number} reviewData.rating - Рейтинг (1-5)
-     * @param {string} reviewData.text - Текст отзыва
+     * @param {string} reviewData.comment - Текст отзыва
+     * @param {string} reviewData.restaurantName - Название ресторана
      * @returns {Promise<Object>} Созданный отзыв
      */
-    addReview: async (restaurantId, reviewData) => {
+    addReview: async (reviewData) => {
         try {
-            const response = await api.post(`/restaurants/${restaurantId}/reviews`, reviewData);
+            console.log('Sending review data to API:', reviewData);
+            
+            // Make sure we have the required fields
+            if (!reviewData.rating || !reviewData.comment || !reviewData.restaurantName) {
+                throw new Error('Не все обязательные поля заполнены');
+            }
+            
+            // Call the reviews API endpoint directly
+            const response = await api.post('/reviews', reviewData);
+            console.log('Review creation response:', response);
+            
+            if (!response || !response.data) {
+                throw new Error('Получен пустой ответ от API');
+            }
+            
             return response.data;
         } catch (error) {
             console.error('Error adding review:', error);

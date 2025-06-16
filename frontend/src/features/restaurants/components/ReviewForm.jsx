@@ -18,7 +18,10 @@ export const ReviewForm = ({
     isSubmitting = false 
 }) => {
     // Состояние формы
-    const [formData, setFormData] = useState(initialValues);
+    const [formData, setFormData] = useState({
+        rating: initialValues.rating || 0,
+        text: initialValues.text || initialValues.comment || '',
+    });
     const [errors, setErrors] = useState({});
     
     // Обработчик изменения рейтинга
@@ -64,7 +67,14 @@ export const ReviewForm = ({
         e.preventDefault();
         
         if (validateForm()) {
-            onSubmit(formData);
+            // Convert the form data to the expected format for the API
+            const reviewData = {
+                ...formData,
+                comment: formData.text  // Backend expects 'comment' instead of 'text'
+            };
+            
+            console.log('Submitting review form data:', reviewData);
+            onSubmit(reviewData);
         }
     };
     

@@ -15,7 +15,9 @@ const buttonVariants = {
 };
 
 // Компонент для отображения состояния пустого списка отзывов
-const EmptyReviews = ({ sortMode, themeClasses }) => (
+const EmptyReviews = ({ sortMode, themeClasses }) => {
+    console.log('EmptyReviews component rendered with sortMode:', sortMode);
+    return (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -41,7 +43,8 @@ const EmptyReviews = ({ sortMode, themeClasses }) => (
                 : 'Пока никто не оставил отзыв'}
         </p>
     </motion.div>
-);
+    );
+};
 
 // Компонент для кнопок сортировки
 const SortButtons = ({ sortMode, setSortMode, setCurrentPage, handleRefresh, isRotating, themeClasses }) => (

@@ -623,6 +623,9 @@ class ReviewModel {
                 const created_at = review.created_at ? new Date(review.created_at).toISOString() : new Date().toISOString();
                 const updated_at = review.updated_at ? new Date(review.updated_at).toISOString() : created_at;
                 
+                // Ensure user_name is available for display in the frontend
+                const user_name = review.user_name || author.name || 'Unknown User';
+                
                 // Return the properly formatted review object
                 return {
                     id: review.id,
@@ -637,6 +640,9 @@ class ReviewModel {
                     author,
                     ratings,
                     date: created_at,
+                    user_name, // Ensure user_name is explicitly included
+                    userName: user_name, // Add userName as an alias for compatibility
+                    name: user_name, // Add name as another alias for compatibility
                     photos: review.photos || [],
                     isLikedByUser: review.isLikedByUser || false,
                     userVoteType: review.userVoteType || null,

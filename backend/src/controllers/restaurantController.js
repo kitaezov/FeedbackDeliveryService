@@ -6,6 +6,8 @@
 const restaurantModel = require('../models/restaurantModel');
 const path = require('path');
 const fs = require('fs');
+const ReviewModel = require('../models/reviewModel');
+const pool = require('../config/database');
 
 /**
  * Create a new restaurant
@@ -382,6 +384,74 @@ const updateRestaurantCategory = async (req, res) => {
     }
 };
 
+/**
+ * Get reviews for a specific restaurant
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
+const getRestaurantReviews = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { page = 1, limit = 10, sortBy = 'latest' } = req.query;
+        
+        console.log(`Getting reviews for restaurant ID: ${id}, page: ${page}, limit: ${limit}, sortBy: ${sortBy}`);
+        
+        // Validate the restaurant ID
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Необходимо указать ID ресторана'
+            });
+        }
+        
+        // Get the restaurant to check if it exists
+        const [restaurant] = await pool.execute(
+            'SELECT * FROM restaurants WHERE id = ?',
+            [id]
+        );
+        
+        // If restaurant doesn't exist, return appropriate message
+        if (restaurant.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Ресторан не найден'
+            });
+        }
+        
+        // Get the user ID from token if available
+        const userId = req.user ? req.user.id : null;
+        
+        // Get reviews for this restaurant
+        const reviewModel = new ReviewModel();
+        const result = await reviewModel.getAll({
+            page: parseInt(page),
+            limit: parseInt(limit),
+            restaurantName: restaurant[0].name,
+            currentUserId: userId,
+            sortBy
+        });
+        
+        console.log(`Found ${result.reviews.length} reviews for restaurant ${id} (${restaurant[0].name})`);
+        
+        // Return the reviews
+        return res.json({
+            success: true,
+            reviews: result.reviews,
+            pagination: result.pagination,
+            restaurantName: restaurant[0].name
+        });
+    } catch (error) {
+        console.error('Error getting restaurant reviews:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Ошибка при получении отзывов ресторана',
+            error: error.message
+        });
+    }
+};
+
 // Экспортируем все функции контроллера
 module.exports = {
     createRestaurant,
@@ -395,5 +465,6 @@ module.exports = {
     searchRestaurants,
     updateRestaurantSlug,
     uploadRestaurantImage,
-    updateRestaurantCategory
+    updateRestaurantCategory,
+    getRestaurantReviews
 }; 

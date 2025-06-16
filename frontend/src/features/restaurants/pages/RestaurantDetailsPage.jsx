@@ -73,20 +73,50 @@ export const RestaurantDetailsPage = () => {
     // Обработчик отправки формы отзыва
     const handleSubmitReview = async (reviewData) => {
         try {
-            await restaurantService.addReview(id, reviewData);
+            console.log('Submitting review:', { restaurantId: id, reviewData });
+            
+            // Transform the form data to match the API's expected format
+            const apiReviewData = {
+                restaurantName: restaurant.name,
+                rating: reviewData.rating,
+                comment: reviewData.text, // Frontend uses 'text', backend expects 'comment'
+                ratings: {
+                    food: reviewData.foodRating || reviewData.rating,
+                    service: reviewData.serviceRating || reviewData.rating,
+                    atmosphere: reviewData.atmosphereRating || reviewData.rating,
+                    price: reviewData.priceRating || reviewData.rating,
+                    cleanliness: reviewData.cleanlinessRating || reviewData.rating
+                }
+            };
+            
+            // Send to the reviews API endpoint, not the restaurant-specific endpoint
+            await restaurantService.addReview(apiReviewData);
+            
+            // Temporarily close the modal to improve UX
+            setIsReviewModalOpen(false);
+            
+            // Show loading toast
+            showToast({
+                title: 'Отправка отзыва',
+                description: 'Ваш отзыв обрабатывается...',
+                type: 'info'
+            });
+            
+            // Wait a bit to allow the backend to process the review
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Обновляем данные ресторана
             const updatedData = await restaurantService.getRestaurantById(id);
             setRestaurant(updatedData);
             
-            // Закрываем модальное окно и показываем уведомление
-            setIsReviewModalOpen(false);
+            // Показываем уведомление
             showToast({
                 title: 'Отзыв добавлен',
                 description: 'Ваш отзыв успешно опубликован',
                 type: 'success'
             });
         } catch (error) {
+            console.error('Error submitting review:', error);
             showToast({
                 title: 'Ошибка',
                 description: error.message || 'Не удалось добавить отзыв',

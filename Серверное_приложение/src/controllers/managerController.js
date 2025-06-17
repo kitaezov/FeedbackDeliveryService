@@ -390,11 +390,12 @@ const getStats = async (req, res) => {
         const [reviews] = await pool.query(`
             SELECT r.* 
             FROM reviews r
-            LEFT JOIN restaurants rest ON r.restaurant_id = rest.id
             WHERE r.deleted = 0 
-            AND (r.restaurant_id = ? OR rest.id = ?)
+            AND r.restaurant_id = ?
             ORDER BY r.created_at DESC
-        `, [restaurantId, restaurantId]);
+        `, [restaurantId]);
+        
+        console.log(`Найдено ${reviews.length} отзывов для ресторана ID: ${restaurantId}`);
         
         // Получение информации о ресторане
         const [restaurant] = await pool.query(`
@@ -404,9 +405,25 @@ const getStats = async (req, res) => {
         
         // Расчет основных статистических данных
         const totalReviews = reviews.length;
-        const averageRating = totalReviews > 0 
-            ? reviews.reduce((acc, review) => acc + review.rating, 0) / totalReviews 
-            : 0;
+        
+        // Расчет среднего рейтинга с проверкой на валидность
+        let averageRating = 0;
+        if (totalReviews > 0) {
+            let validRatings = 0;
+            let ratingSum = 0;
+            
+            reviews.forEach(review => {
+                const rating = parseFloat(review.rating);
+                if (!isNaN(rating) && rating > 0) {
+                    ratingSum += rating;
+                    validRatings++;
+                }
+            });
+            
+            averageRating = validRatings > 0 ? ratingSum / validRatings : 0;
+            console.log(`Средний рейтинг для ресторана ID ${restaurantId}: ${averageRating.toFixed(1)} (из ${validRatings} валидных отзывов)`);
+        }
+        
         const totalRestaurants = restaurant.length; // Всегда должно быть 1
         
         // Расчет отзывов по типу
@@ -417,7 +434,7 @@ const getStats = async (req, res) => {
         }, { inRestaurant: 0, delivery: 0 });
         
         // Получение количества активных пользователей, оставивших отзывы для ресторана
-        const uniqueUserIds = [...new Set(reviews.map(review => review.user_id))];
+        const uniqueUserIds = [...new Set(reviews.map(review => review.user_id).filter(id => id))];
         const activeUsers = uniqueUserIds.length;
         
         // Расчет коэффициента ответов
@@ -433,7 +450,9 @@ const getStats = async (req, res) => {
             totalRestaurants,
             reviewsByType,
             activeUsers,
-            responseRate: parseFloat(responseRate.toFixed(1))
+            responseRate: parseFloat(responseRate.toFixed(1)),
+            pendingReviews: totalReviews - respondedReviews,
+            respondedReviews
         });
         
     } catch (error) {
@@ -507,7 +526,7 @@ const getChartData = async (req, res) => {
 
         console.log('Используем фильтр:', dateFilter, 'и группировку:', groupBy);
 
-        // Получение среднего рейтинга по дням/месяцам
+        // Получение среднего рейтинга по дням/месяцам, строго для ресторана менеджера
         const [averageRatings] = await pool.query(`
             WITH RECURSIVE dates AS (
                 SELECT CURDATE() - ${dateFilter} + INTERVAL 1 DAY as date
@@ -522,15 +541,12 @@ const getChartData = async (req, res) => {
                 COUNT(r.id) as review_count
             FROM dates
             LEFT JOIN reviews r ON DATE(r.created_at) = DATE(dates.date) AND r.deleted = 0
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             GROUP BY ${groupBy}
             ORDER BY date ASC
-        `, [restaurantId, restaurantId]);
+        `, [restaurantId]);
 
-        // Получение количества отзывов по дням/месяцам
+        // Получение количества отзывов по дням/месяцам, строго для ресторана менеджера
         const [reviewCounts] = await pool.query(`
             WITH RECURSIVE dates AS (
                 SELECT CURDATE() - ${dateFilter} + INTERVAL 1 DAY as date
@@ -544,15 +560,12 @@ const getChartData = async (req, res) => {
                 COUNT(r.id) as count
             FROM dates
             LEFT JOIN reviews r ON DATE(r.created_at) = DATE(dates.date) AND r.deleted = 0
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             GROUP BY ${groupBy}
             ORDER BY date ASC
-        `, [restaurantId, restaurantId]);
+        `, [restaurantId]);
 
-        // Получение распределения по рейтингам
+        // Получение распределения по рейтингам, строго для ресторана менеджера
         const [ratingDistribution] = await pool.query(`
             SELECT 
                 rating,
@@ -560,15 +573,12 @@ const getChartData = async (req, res) => {
             FROM reviews r
             WHERE r.deleted = 0 
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             GROUP BY rating
             ORDER BY rating ASC
-        `, [restaurantId, restaurantId]);
+        `, [restaurantId]);
 
-        // Получение критериев оценки
+        // Получение критериев оценки, строго для ресторана менеджера
         const [restaurantCriteriaRatings] = await pool.query(`
             SELECT 
                 'Качество еды' as name, COALESCE(ROUND(AVG(food_rating), 1), 4.2) as score
@@ -577,10 +587,7 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.food_rating IS NOT NULL
                 AND r.type = 'inRestaurant'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             UNION ALL
             SELECT 
                 'Обслуживание', COALESCE(ROUND(AVG(service_rating), 1), 4.0)
@@ -589,10 +596,7 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.service_rating IS NOT NULL
                 AND r.type = 'inRestaurant'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             UNION ALL
             SELECT 
                 'Интерьер', COALESCE(ROUND(AVG(atmosphere_rating), 1), 4.5)
@@ -601,10 +605,7 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.atmosphere_rating IS NOT NULL
                 AND r.type = 'inRestaurant'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             UNION ALL
             SELECT 
                 'Соотношение цена/качество', COALESCE(ROUND(AVG(price_rating), 1), 3.8)
@@ -613,10 +614,7 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.price_rating IS NOT NULL
                 AND r.type = 'inRestaurant'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             UNION ALL
             SELECT 
                 'Скорость обслуживания', COALESCE(ROUND(AVG(cleanliness_rating), 1), 3.9)
@@ -625,13 +623,10 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.cleanliness_rating IS NOT NULL
                 AND r.type = 'inRestaurant'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
-        `, [restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId]);
+                AND r.restaurant_id = ?
+        `, [restaurantId, restaurantId, restaurantId, restaurantId, restaurantId]);
 
-        // Получение критериев оценки для доставки
+        // Получение критериев оценки для доставки, строго для ресторана менеджера
         const [deliveryCriteriaRatings] = await pool.query(`
             SELECT 
                 'Качество еды' as name, COALESCE(ROUND(AVG(food_rating), 1), 4.2) as score
@@ -640,10 +635,7 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.food_rating IS NOT NULL
                 AND r.type = 'delivery'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             UNION ALL
             SELECT 
                 'Скорость доставки', COALESCE(ROUND(AVG(service_rating), 1), 4.0)
@@ -652,10 +644,7 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.service_rating IS NOT NULL
                 AND r.type = 'delivery'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             UNION ALL
             SELECT 
                 'Упаковка', COALESCE(ROUND(AVG(atmosphere_rating), 1), 4.5)
@@ -664,10 +653,7 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.atmosphere_rating IS NOT NULL
                 AND r.type = 'delivery'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             UNION ALL
             SELECT 
                 'Соотношение цена/качество', COALESCE(ROUND(AVG(price_rating), 1), 3.8)
@@ -676,11 +662,8 @@ const getChartData = async (req, res) => {
                 AND r.created_at >= DATE_SUB(CURDATE(), ${dateFilter})
                 AND r.price_rating IS NOT NULL
                 AND r.type = 'delivery'
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
-        `, [restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId, restaurantId]);
+                AND r.restaurant_id = ?
+        `, [restaurantId, restaurantId, restaurantId, restaurantId]);
 
         // Форматируем данные для фронтенда с учетом периода
         const formatDate = (dateStr, periodType) => {
@@ -691,7 +674,7 @@ const getChartData = async (req, res) => {
             return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
         };
 
-        // Получение всех рейтингов для каждого дня
+        // Получение всех рейтингов для каждого дня, строго для ресторана менеджера
         const [allRatings] = await pool.query(`
             WITH RECURSIVE dates AS (
                 SELECT CURDATE() - ${dateFilter} + INTERVAL 1 DAY as date
@@ -717,13 +700,10 @@ const getChartData = async (req, res) => {
                 COUNT(r.id) as review_count
             FROM dates
             LEFT JOIN reviews r ON DATE(r.created_at) = DATE(dates.date) AND r.deleted = 0
-                AND (r.restaurant_id = ? OR EXISTS (
-                    SELECT 1 FROM restaurants rest 
-                    WHERE rest.id = r.restaurant_id AND rest.id = ?
-                ))
+                AND r.restaurant_id = ?
             GROUP BY ${groupBy}
             ORDER BY date ASC
-        `, [restaurantId, restaurantId]);
+        `, [restaurantId]);
 
         const formattedAverageRatings = {
             labels: allRatings.map(day => formatDate(day.date, period)),
@@ -766,7 +746,7 @@ const getChartData = async (req, res) => {
             distributions: formattedRatingDistribution.labels.length,
             restaurantCriteria: restaurantCriteriaRatings.length,
             deliveryCriteria: deliveryCriteriaRatings.length,
-            note: 'Средний рейтинг рассчитывается на основе всех критериев (доставка + в ресторане)'
+            note: 'Средний рейтинг рассчитывается для конкретного ресторана менеджера'
         });
 
         res.json({

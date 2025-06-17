@@ -3,7 +3,7 @@ import axios from 'axios';
 import api from '../../utils/api';
 import { API_URL } from '../../config';
 
-// Create the auth context
+// Создаем контекст для аутентификации
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if the user is authenticated on mount
+  // Проверяем, аутентифицирован ли пользователь при монтировании
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (error) {
           console.error('Authentication error:', error);
-          // If token is invalid, remove it
+          // Если токен не валидный, удаляем его
           localStorage.removeItem('token');
         }
       }
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
       // Добавляем временную метку для обхода кэша браузера
       const cacheParam = `?t=${new Date().getTime()}`;
       
-      // If the avatar path is already a full URL, return it
+      // Если путь к аватару уже является полным URL, возвращаем его
       if (avatarPath.startsWith('http')) {
         // Если URL уже содержит параметры запроса, добавляем к ним временную метку
         if (avatarPath.includes('?')) {
@@ -74,24 +74,24 @@ export const AuthProvider = ({ children }) => {
         return `${avatarPath}${cacheParam}`;
       }
       
-      // For paths starting with /uploads, add the server base URL
+      // Для путей, начинающихся с /uploads, добавляем базовый URL сервера
       if (avatarPath.startsWith('/uploads')) {
         return `${API_URL}${avatarPath}${cacheParam}`;
       }
       
-      // For paths without leading slash
+      // Для путей без начального слеша
       if (!avatarPath.startsWith('/')) {
         return `${API_URL}/${avatarPath}${cacheParam}`;
       }
       
-      // Otherwise, prepend the server base URL
+      // Иначе добавляем базовый URL сервера
       return `${API_URL}${avatarPath}${cacheParam}`;
     };
 
     checkAuth();
   }, []);
 
-  // Listen for auth changes from other components
+  // Слушаем изменения аутентификации от других компонентов
   useEffect(() => {
     const handleAuthChange = (event) => {
       if (event.detail.isAuthenticated) {
@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // Login function
+  // Функция входа
   const login = async (credentials) => {
     try {
       console.log('Отправка запроса на вход в систему:', credentials);
@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }) => {
       
       const { token, user: userData } = response.data;
       
-      // Check if the user is blocked
+      // Проверяем, заблокирован ли пользователь
       if (response.data.blocked) {
         return { 
           success: false, 
@@ -127,10 +127,10 @@ export const AuthProvider = ({ children }) => {
         };
       }
       
-      // Always save token to localStorage for session persistence
+        // Всегда сохраняем токен в localStorage для сохранения сессии
       localStorage.setItem('token', token);
       
-      // Update state
+      // Обновляем состояние
       setUser({
         ...userData,
         token
@@ -141,7 +141,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Login error:', error);
       
-      // Check if the error is due to blocked account
+      // Проверяем, является ли ошибка из-за заблокированного аккаунта
       if (error.response?.status === 403 && error.response?.data?.blocked) {
         return { 
           success: false, 
@@ -158,13 +158,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+  // Функция выхода
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
     
-    // Dispatch event for other components
+    // Отправляем событие для других компонентов
     const authEvent = new CustomEvent('auth-changed', { 
       detail: { 
         isAuthenticated: false
@@ -173,7 +173,7 @@ export const AuthProvider = ({ children }) => {
     document.dispatchEvent(authEvent);
   };
 
-  // Update user function
+  // Функция обновления пользователя
   const updateAuthUser = (userData) => {
     if (!userData) return;
     
@@ -182,7 +182,7 @@ export const AuthProvider = ({ children }) => {
       ...userData
     }));
     
-    // Dispatch event for other components
+    // Отправляем событие для других компонентов
     const authEvent = new CustomEvent('auth-changed', { 
       detail: { 
         isAuthenticated: true,
@@ -209,7 +209,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use the auth context
+// Кастомный хук для использования контекста аутентификации
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

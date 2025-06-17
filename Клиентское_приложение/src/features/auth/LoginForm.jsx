@@ -225,7 +225,7 @@ const LoginModal = ({
     };
 
     const handlePasswordChange = (password) => {
-        // Only apply strength check for registration
+        // Только применяем проверку силы пароля для регистрации
         if (isRegistration) {
             const result = checkPasswordStrength(password);
 
@@ -236,7 +236,7 @@ const LoginModal = ({
 
         setLoginData(prev => ({ ...prev, password }));
 
-        // Clear any previous password-related errors
+        // Очищаем любые предыдущие ошибки, связанные с паролем
         const newErrors = { ...errors };
         delete newErrors.password;
         delete newErrors.passwordStrength;
@@ -246,16 +246,16 @@ const LoginModal = ({
     const validateForm = () => {
         const newErrors = {};
 
-        // Email validation
+        // Проверка email
         if (!VALIDATION_RULES.EMAIL_REGEX.test(loginData.email)) {
             newErrors.email = 'Некорректный email адрес';
         }
 
-        // Password validation
+        // Проверка пароля
         if (isRegistration) {
             const result = checkPasswordStrength(loginData.password);
 
-            // Check if all strength criteria are met
+            // Проверяем, все ли критерии силы пароля выполнены
             const isPasswordStrong = Object.values(result.strengthChecks).every(check => check);
 
             if (!isPasswordStrong) {
@@ -263,7 +263,7 @@ const LoginModal = ({
             }
         }
 
-        // Name validation for registration
+        // Проверка имени для регистрации
         if (isRegistration) {
             if (!loginData.name) {
                 newErrors.name = 'Имя обязательно для заполнения';
@@ -285,7 +285,7 @@ const LoginModal = ({
             return;
         }
 
-        // Validate form before submission
+        // Проверяем форму перед отправкой
         if (!validateForm()) {
             return;
         }
@@ -302,7 +302,7 @@ const LoginModal = ({
                     token: response.data.token
                 };
 
-                // Сохраняем токен в localStorage или sessionStorage
+                // Сохраняем токен в localStorage
                 if (loginData.rememberMe) {
                     localStorage.setItem('token', response.data.token);
                 } else {
@@ -312,7 +312,7 @@ const LoginModal = ({
                 // Вызываем обработчик успешного входа
                 onLoginSuccess(userWithToken);
                 
-                // Диспатчим пользовательское событие для обновления статуса авторизации
+                // Отправляем пользовательское событие для обновления статуса авторизации
                 const authEvent = new CustomEvent('auth-changed', { 
                     detail: { 
                         isAuthenticated: true,
@@ -337,7 +337,7 @@ const LoginModal = ({
                 // Вызываем обработчик успешного входа
                 onLoginSuccess(userWithToken);
                 
-                // Диспатчим пользовательское событие для обновления статуса авторизации
+                // Отправляем пользовательское событие для обновления статуса авторизации
                 const authEvent = new CustomEvent('auth-changed', { 
                     detail: { 
                         isAuthenticated: true,
@@ -388,7 +388,7 @@ const LoginModal = ({
         setShowPassword(!showPassword);
     };
 
-    // Animation variants
+    // Анимация вариантов
     const containerVariants = {
         hidden: { opacity: 0, scale: 0.95 },
         visible: {

@@ -8,7 +8,7 @@ export const Footer = ({ isDarkMode }) => {
     
     const isOnlyHomePage = location.pathname === '/';
     
-    // Only show footer on homepage
+    // Только на главной странице показывать footer
     if (!isOnlyHomePage) {
         return null;
     }

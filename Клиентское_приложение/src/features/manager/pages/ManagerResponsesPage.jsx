@@ -26,7 +26,7 @@ const ManagerResponsesPage = () => {
     const handleSaveResponse = async (responseId, newText) => {
         try {
             await api.put(`/api/manager-responses/${responseId}`, { text: newText });
-            fetchResponses(); // Refresh the list
+            fetchResponses(); // Перезагружаем список
         } catch (error) {
             console.error('Error saving response:', error);
         }
@@ -35,7 +35,7 @@ const ManagerResponsesPage = () => {
     const handleDeleteResponse = async (responseId) => {
         try {
             await api.delete(`/api/manager-responses/${responseId}`);
-            fetchResponses(); // Refresh the list
+            fetchResponses(); // Перезагружаем список
         } catch (error) {
             console.error('Error deleting response:', error);
         }

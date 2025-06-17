@@ -361,7 +361,7 @@ const ManagerPanel = () => {
                         </h3>
                         <div className="space-y-4">
                             {categoryRatings.restaurant.map((category) => {
-                                // Calculate color based on rating value
+                                // Рассчитываем цвет на основе рейтинга
                                 let barColor = "bg-red-500";
                                 if (category.value >= 4.5) barColor = "bg-green-500";
                                 else if (category.value >= 4) barColor = "bg-teal-500";
@@ -381,7 +381,7 @@ const ManagerPanel = () => {
                                                 </span>
                                                 <div className="flex">
                                                     {[1, 2, 3, 4, 5].map((star) => {
-                                                        // For partial stars
+                                                        // Для частичных звезд
                                                         const value = Number(category.value);
                                                         const isFullStar = star <= Math.floor(value);
                                                         const isHalfStar = !isFullStar && star === Math.ceil(value) && value % 1 >= 0.5;
@@ -423,7 +423,7 @@ const ManagerPanel = () => {
                         </h3>
                         <div className="space-y-4">
                             {categoryRatings.delivery.map((category) => {
-                                // Calculate color based on rating value
+                                // Рассчитываем цвет на основе рейтинга
                                 let barColor = "bg-red-500";
                                 if (category.value >= 4.5) barColor = "bg-green-500";
                                 else if (category.value >= 4) barColor = "bg-teal-500";
@@ -443,7 +443,7 @@ const ManagerPanel = () => {
                                                 </span>
                                                 <div className="flex">
                                                     {[1, 2, 3, 4, 5].map((star) => {
-                                                        // For partial stars
+                                                        // Для частичных звезд
                                                         const value = Number(category.value);
                                                         const isFullStar = star <= Math.floor(value);
                                                         const isHalfStar = !isFullStar && star === Math.ceil(value) && value % 1 >= 0.5;

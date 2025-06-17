@@ -1108,17 +1108,6 @@ formData.append('isDelivery', reviewType === 'delivery' ? 'true' : 'false');
                                 <div className="flex space-x-2">
                                     <button
                                         type="button"
-                                        onClick={() => handleReviewTypeChange('inRestaurant')}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                            reviewType === 'inRestaurant'
-                                                ? 'bg-gray-800 text-white dark:bg-gray-700'
-                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
-                                        }`}
-                                    >
-                                        В ресторане
-                                    </button>
-                                    <button
-                                        type="button"
                                         onClick={() => handleReviewTypeChange('delivery')}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                             reviewType === 'delivery'
@@ -1134,7 +1123,7 @@ formData.append('isDelivery', reviewType === 'delivery' ? 'true' : 'false');
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Оцените {reviewType === 'inRestaurant' ? 'ресторан' : 'доставку'}
+                                        Оцените {reviewType === 'delivery' ? 'доставку' : 'ресторан'}
                                     </h3>
                                 </div>
 

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import useBackendApi from '../../hooks/useBackendApi';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, BarChart, Bar, ReferenceLine } from 'recharts';
+import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, BarChart, Bar } from 'recharts';
 import { toast } from 'react-hot-toast';
 // RatingCriteria import removed
 
@@ -428,7 +428,7 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
     );
 };
 
-// Simple chart components to render with mock data
+// Простые графические компоненты для отображения с моковыми данными
 const SimpleLineChart = ({ data }) => (
     <div className="h-full flex items-center justify-center">
         <div className="w-full">
@@ -548,157 +548,49 @@ const SimplePieChart = ({ data }) => {
 };
 
 // Chart components
-const RatingChart = ({ data }) => {
-    // Проверка на валидность данных
-    if (!data || !data.datasets || !data.datasets[0] || !data.labels) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500 dark:text-gray-400">Нет данных для отображения</p>
-            </div>
-        );
-    }
+const RatingChart = ({ data }) => (
+    <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+            data={data.datasets[0].data.map((value, index) => ({
+                name: data.labels[index],
+                rating: value
+            }))}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} />
+            <Tooltip formatter={(value) => [`${value}`, 'Рейтинг']} />
+            <Line
+                type="monotone"
+                dataKey="rating"
+                stroke="#3b82f6"
+                activeDot={{ r: 8 }}
+                dot={{ r: 4 }}
+            />
+        </LineChart>
+    </ResponsiveContainer>
+);
 
-    // Преобразуем данные для графика, с проверкой на валидность
-    const chartData = data.datasets[0].data.map((value, index) => {
-        // Проверяем, что значение - число и в диапазоне от 0 до 5
-        let validValue = parseFloat(value);
-        if (isNaN(validValue)) validValue = 5.0; // Если значение не число, используем 5.0
-        if (validValue < 0) validValue = 0;
-        if (validValue > 5) validValue = 5;
-        
-        return {
-            name: data.labels[index] || `День ${index + 1}`,
-            value: validValue,
-            // Округляем до 1 знака после запятой для отображения
-            displayValue: validValue.toFixed(1)
-        };
-    });
-
-    // Выводим данные для отладки
-    console.log('Данные для графика рейтингов после обработки:', chartData);
-
-    // Пользовательский компонент для подсказки при наведении
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-md">
-                    <p className="font-medium text-gray-700 dark:text-gray-300">{label}</p>
-                    <p className="text-blue-600 dark:text-blue-400">
-                        Рейтинг: <span className="font-bold">{payload[0].value.toFixed(1)}</span>
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    };
-
-    return (
-        <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                    dataKey="name" 
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#d1d5db' }}
-                />
-                <YAxis 
-                    domain={[0, 5]} 
-                    ticks={[0, 1, 2, 3, 4, 5]} 
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#d1d5db' }}
-                    tickFormatter={(value) => value.toFixed(1)}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ paddingTop: 10 }} />
-                <Line 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#3b82f6" 
-                    name="Средний рейтинг"
-                    strokeWidth={2}
-                    dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 6, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
-                    isAnimationActive={true}
-                    animationDuration={1000}
-                    animationEasing="ease-in-out"
-                />
-                {/* Добавляем линию для максимального рейтинга 5.0 */}
-                <ReferenceLine y={5} stroke="#10b981" strokeDasharray="3 3" label={{ 
-                    value: 'Максимум (5.0)', 
-                    position: 'insideTopRight',
-                    fill: '#10b981',
-                    fontSize: 12
-                }} />
-            </LineChart>
-        </ResponsiveContainer>
-    );
-};
-
-const ReviewCountChart = ({ data }) => {
-    // Проверка на валидность данных
-    if (!data || !data.datasets || !data.datasets[0] || !data.labels) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500 dark:text-gray-400">Нет данных для отображения</p>
-            </div>
-        );
-    }
-
-    // Преобразуем данные для графика, с проверкой на валидность
-    const chartData = data.datasets[0].data.map((value, index) => {
-        // Проверяем, что значение - число и не отрицательное
-        let validValue = parseInt(value);
-        if (isNaN(validValue) || validValue < 0) validValue = 0;
-        
-        return {
-            name: data.labels[index] || `День ${index + 1}`,
-            value: validValue
-        };
-    });
-
-    // Пользовательский компонент для подсказки при наведении
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-md">
-                    <p className="font-medium text-gray-700 dark:text-gray-300">{label}</p>
-                    <p className="text-indigo-600 dark:text-indigo-400">
-                        Отзывов: <span className="font-bold">{payload[0].value}</span>
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    };
-
-    return (
-        <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                    dataKey="name" 
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#d1d5db' }}
-                />
-                <YAxis 
-                    allowDecimals={false} 
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                    axisLine={{ stroke: '#d1d5db' }}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ paddingTop: 10 }} />
-                <Bar 
-                    dataKey="value" 
-                    fill="#6366f1" 
-                    name="Количество отзывов"
-                    radius={[4, 4, 0, 0]} // Скругленные углы сверху
-                    animationDuration={1000}
-                    animationEasing="ease-in-out"
-                />
-            </BarChart>
-        </ResponsiveContainer>
-    );
-};
+const ReviewCountChart = ({ data }) => (
+    <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data.datasets[0].data.map((value, index) => ({
+            name: data.labels[index],
+            value: value
+        }))}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Legend />
+            <Bar 
+                dataKey="value" 
+                fill="#6366f1" 
+                name="Количество отзывов"
+            />
+        </BarChart>
+    </ResponsiveContainer>
+);
 
 const ManagerDashboard = () => {
     const [restaurants, setRestaurants] = useState([]);
@@ -741,25 +633,25 @@ const ManagerDashboard = () => {
         reviewCount: 0
     });
 
-    // Use our custom hook for API calls
+    // Используем наш кастомный хук для вызовов API
     const { loading: apiLoading, error: apiError, fetchData, postData } = useBackendApi();
     const [loading, setLoading] = useState(true);
 
-    // On component mount, load all data
+    // При монтировании компонента, загружаем все данные
     useEffect(() => {
         loadAllData();
         
-        // Auto-refresh data every 5 minutes
+        // Автоматическое обновление данных каждые 5 минут  
         const interval = setInterval(() => {
             console.log('Автоматическое обновление данных...');
             loadAllData();
-        }, 300000); // 5 minutes
+        }, 300000); // 5 минут
         
         return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
-        // When the chart period changes, reload chart data
+        // Когда изменяется период графика, перезагружаем данные графика
         if (!loading) {
             console.log('Обновление данных графика при изменении периода:', chartPeriod);
             fetchChartDataFromDatabase();
@@ -837,12 +729,17 @@ const ManagerDashboard = () => {
         try {
             console.log('Начинаем загрузку данных из базы данных...');
             
-            // Параллельная загрузка всех данных
-            await Promise.all([
-                fetchReviewsFromDatabase(),
-                calculateStatsFromDatabase(),
-                fetchChartDataFromDatabase()
-            ]);
+            // Сначала получаем статистику
+            const statsData = await calculateStatsFromDatabase();
+            console.log('Получена статистика:', statsData);
+            
+            // Затем загружаем отзывы
+            const reviewsData = await fetchReviewsFromDatabase();
+            console.log('Получены отзывы:', reviewsData.length);
+            
+            // И наконец получаем данные для графиков, используя статистику
+            const chartData = await fetchChartDataFromDatabase();
+            console.log('Получены данные для графиков');
             
             console.log('Все данные успешно загружены из базы данных');
         } catch (error) {
@@ -888,7 +785,7 @@ const ManagerDashboard = () => {
                 // Обрабатываем фотографии
                 let photos = [];
                 if (review.photos && Array.isArray(review.photos)) {
-                    photos = review.photos;
+                        photos = review.photos;
                 } else if (review.photo) {
                     photos = [review.photo];
                 } else if (review.images && Array.isArray(review.images)) {
@@ -1029,6 +926,72 @@ const ManagerDashboard = () => {
         }
     };
 
+    const fetchChartDataFromDatabase = async () => {
+        try {
+            console.log('Запрашиваем данные для периода:', chartPeriod);
+            
+            // Получаем данные графиков
+            const data = await fetchData(`manager/analytics/charts?period=${chartPeriod}`);
+            console.log('Получены данные для графиков:', data);
+            
+            // Получаем все отзывы для расчета рейтингов по категориям
+            const reviewsData = await fetchReviewsFromDatabase();
+            
+            // Рассчитываем общие средние рейтинги по категориям
+            const combinedRatings = calculateCategoryRatings(reviewsData);
+            
+            console.log('Рассчитанные общие рейтинги:', combinedRatings);
+            
+            if (data.success) {
+                // Используем средний рейтинг из статистики для обеспечения согласованности данных
+                const overallRating = stats.averageRating || 0;
+                console.log('Используем общий средний рейтинг из статистики:', overallRating);
+                
+                // Создаем обновленные данные для графика рейтингов
+                let updatedRatings = { ...data.ratings };
+                
+                if (data.ratings && data.ratings.labels && data.ratings.datasets && data.ratings.datasets.length > 0) {
+                    // Создаем массив с одинаковым рейтингом для всех дней, если нет отзывов за этот период
+                    // или обновляем последнее значение, если есть отзывы
+                    const hasReviews = data.ratings.datasets[0].data.some(value => value > 0);
+                    
+                    if (!hasReviews) {
+                        // Если нет отзывов за период, показываем общий средний рейтинг как константу
+                        updatedRatings = {
+                            labels: data.ratings.labels,
+                            datasets: [{
+                                ...data.ratings.datasets[0],
+                                data: data.ratings.labels.map(() => overallRating)
+                            }]
+                        };
+                        console.log('Создан график с постоянным средним рейтингом:', overallRating);
+                    } else {
+                        // Если есть отзывы, обновляем только последнее значение
+                        const lastIndex = data.ratings.datasets[0].data.length - 1;
+                        updatedRatings.datasets[0].data[lastIndex] = overallRating;
+                        console.log('Обновлено последнее значение рейтинга в графике:', updatedRatings.datasets[0].data);
+                    }
+                }
+                
+                setChartData({
+                    ratings: updatedRatings,
+                    volumeByDay: data.volumeByDay,
+                    categoryDistribution: {
+                        ...data.ratingDistribution,
+                        criteriaRatings: data.criteriaRatings
+                    },
+                    restaurantCriteriaRatings: combinedRatings,
+                    reviewCount: data.reviewCount || 0
+                });
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Ошибка при получении данных для графиков:', error);
+            return chartData;
+        }
+    };
+
     // Обновляем функцию для расчета средних рейтингов по категориям
     const calculateCategoryRatings = (reviews) => {
         console.log(`Всего отзывов для анализа: ${reviews.length}`);
@@ -1109,15 +1072,15 @@ const ManagerDashboard = () => {
                 const average = total.count > 0 ? total.sum / total.count : 3.0;
                 
                 console.log(`Категория "${category.name}" (${isDelivery ? 'доставка' : 'ресторан'}): сумма=${total.sum.toFixed(1)}, количество=${total.count}, среднее=${average.toFixed(1)}`);
-                
-                return {
-                    criteria: category.id,
-                    name: category.name,
-                    value: average,
+            
+            return {
+                criteria: category.id,
+                name: category.name,
+                value: average,
                     count: total.count,
                     type: isDelivery ? 'delivery' : 'restaurant'
-                };
-            });
+            };
+        });
         };
         
         // Рассчитываем рейтинги для обоих типов отзывов
@@ -1129,570 +1092,6 @@ const ManagerDashboard = () => {
         console.log('Итоговые рейтинги по категориям:', combinedRatings);
         
         return combinedRatings;
-    };
-
-    const fetchChartDataFromDatabase = async () => {
-        try {
-            console.log('Запрашиваем данные для периода:', chartPeriod);
-            const data = await fetchData(`manager/analytics/charts?period=${chartPeriod}`);
-            console.log('Получены данные для графиков:', data);
-            
-            // Получаем все отзывы для расчета рейтингов по категориям
-            const reviewsData = await fetchReviewsFromDatabase();
-            
-            // Рассчитываем общие средние рейтинги по категориям
-            const combinedRatings = calculateCategoryRatings(reviewsData);
-            
-            console.log('Рассчитанные общие рейтинги:', combinedRatings);
-            
-            // Дополнительная обработка данных для графиков
-            let ratingsChartData = null;
-            let volumeByDayData = null;
-            
-            // Создаем переменные для расчета данных по периодам
-            const now = new Date();
-            let startDate = new Date();
-            let labels = [];
-            
-            // Определяем период и форматируем метки
-            switch(chartPeriod) {
-                case 'week':
-                    startDate.setDate(now.getDate() - 6);
-                    labels = Array(7).fill().map((_, i) => {
-                        const date = new Date(now);
-                        date.setDate(now.getDate() - (6 - i));
-                        return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                    });
-                    break;
-                case 'month':
-                    startDate.setDate(now.getDate() - 29);
-                    labels = Array(6).fill().map((_, i) => {
-                        const date = new Date(now);
-                        date.setDate(now.getDate() - 29 + i*6);
-                        return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                    });
-                    break;
-                case 'year':
-                    startDate.setMonth(now.getMonth() - 11);
-                    labels = Array(12).fill().map((_, i) => {
-                        const date = new Date(now);
-                        date.setMonth(now.getMonth() - 11 + i);
-                        return date.toLocaleDateString('ru-RU', { month: 'short' });
-                    });
-                    break;
-                default:
-                    startDate.setDate(now.getDate() - 6);
-                    labels = Array(7).fill().map((_, i) => {
-                        const date = new Date(now);
-                        date.setDate(now.getDate() - (6 - i));
-                        return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                    });
-            }
-            
-            // Фильтруем отзывы по выбранному периоду
-            const filteredReviews = reviewsData.filter(review => {
-                const reviewDate = new Date(review.created_at || review.createdAt);
-                return reviewDate >= startDate && reviewDate <= now;
-            });
-            
-            // Обработка данных для графика рейтингов
-            if (data && data.ratings) {
-                ratingsChartData = data.ratings;
-                
-                // Проверяем валидность данных
-                if (ratingsChartData.datasets && ratingsChartData.datasets[0] && ratingsChartData.datasets[0].data) {
-                    // Убедимся, что все значения рейтингов валидные и в диапазоне от 0 до 5
-                    ratingsChartData.datasets[0].data = ratingsChartData.datasets[0].data.map(value => {
-                        const rating = parseFloat(value);
-                        if (isNaN(rating)) return 0;
-                        return Math.min(5, Math.max(0, rating));
-                    });
-                }
-            } else {
-                // Если данные с сервера некорректны, рассчитываем средний рейтинг на основе отзывов
-                // Группируем отзывы по дням и рассчитываем средний рейтинг
-                const ratingsByDay = {};
-                
-                // Сначала проверим, есть ли у нас вообще отзывы для расчета
-                console.log(`Отзывы для расчета рейтинга (${filteredReviews.length}):`, 
-                    filteredReviews.map(r => ({
-                        id: r.id,
-                        date: r.created_at || r.createdAt,
-                        rating: r.rating,
-                        type: r.type
-                    }))
-                );
-                
-                // Для каждого отзыва выводим подробную информацию о рейтингах
-                filteredReviews.forEach(review => {
-                    console.log(`Отзыв ID=${review.id}, тип=${review.type}, рейтинг: ${review.rating}`, review.ratings);
-                });
-                
-                filteredReviews.forEach(review => {
-                    const reviewDate = new Date(review.created_at || review.createdAt);
-                    let dayKey;
-                    
-                    if (chartPeriod === 'year') {
-                        // Для года группируем по месяцам
-                        dayKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}`;
-                    } else {
-                        // Для недели и месяца группируем по дням
-                        dayKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}-${reviewDate.getDate().toString().padStart(2, '0')}`;
-                    }
-                    
-                    if (!ratingsByDay[dayKey]) {
-                        ratingsByDay[dayKey] = { sum: 0, count: 0 };
-                    }
-                    
-                    // Убедимся, что рейтинг - это действительное число и не меньше 0
-                    const reviewRating = parseFloat(review.rating);
-                    const validRating = !isNaN(reviewRating) && reviewRating >= 0 ? reviewRating : 5.0;
-                    
-                    ratingsByDay[dayKey].sum += validRating;
-                    ratingsByDay[dayKey].count++;
-                    
-                    // Выводим для отладки
-                    console.log(`Добавлен рейтинг ${validRating} для даты ${dayKey}, текущая сумма: ${ratingsByDay[dayKey].sum}, количество: ${ratingsByDay[dayKey].count}`);
-                });
-                
-                // Формируем данные для графика
-                let ratingData = [];
-                
-                if (chartPeriod === 'year') {
-                    // Для года - по месяцам
-                    for (let i = 0; i < 12; i++) {
-                        const date = new Date(startDate);
-                        date.setMonth(startDate.getMonth() + i);
-                        const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                        
-                        if (ratingsByDay[monthKey] && ratingsByDay[monthKey].count > 0) {
-                            const avgRating = ratingsByDay[monthKey].sum / ratingsByDay[monthKey].count;
-                            console.log(`Месяц ${monthKey}: сумма=${ratingsByDay[monthKey].sum}, количество=${ratingsByDay[monthKey].count}, средний=${avgRating.toFixed(1)}`);
-                            ratingData.push(avgRating);
-                        } else {
-                            // Если нет данных, используем 5.0 вместо среднего из предыдущих или 0
-                            ratingData.push(5.0);
-                        }
-                    }
-                } else if (chartPeriod === 'month') {
-                    // Для месяца - группируем по 5 дней
-                    const groups = 6; // 6 групп по ~5 дней
-                    const daysPerGroup = Math.ceil(30 / groups);
-                    
-                    for (let i = 0; i < groups; i++) {
-                        let groupSum = 0;
-                        let groupCount = 0;
-                        
-                        for (let j = 0; j < daysPerGroup; j++) {
-                            const dayOffset = i * daysPerGroup + j;
-                            if (dayOffset < 30) {
-                                const date = new Date(startDate);
-                                date.setDate(startDate.getDate() + dayOffset);
-                                const dayKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-                                
-                                if (ratingsByDay[dayKey]) {
-                                    groupSum += ratingsByDay[dayKey].sum;
-                                    groupCount += ratingsByDay[dayKey].count;
-                                }
-                            }
-                        }
-                        
-                        if (groupCount > 0) {
-                            const avgRating = groupSum / groupCount;
-                            console.log(`Группа ${i+1}: сумма=${groupSum}, количество=${groupCount}, средний=${avgRating.toFixed(1)}`);
-                            ratingData.push(avgRating);
-                        } else {
-                            // Если нет данных, используем 5.0
-                            ratingData.push(5.0);
-                        }
-                    }
-                } else {
-                    // Для недели - по дням
-                    for (let i = 0; i < 7; i++) {
-                        const date = new Date(startDate);
-                        date.setDate(startDate.getDate() + i);
-                        const dayKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-                        
-                        if (ratingsByDay[dayKey] && ratingsByDay[dayKey].count > 0) {
-                            const avgRating = ratingsByDay[dayKey].sum / ratingsByDay[dayKey].count;
-                            console.log(`День ${dayKey}: сумма=${ratingsByDay[dayKey].sum}, количество=${ratingsByDay[dayKey].count}, средний=${avgRating.toFixed(1)}`);
-                            ratingData.push(avgRating);
-                        } else {
-                            // Если нет данных, используем 5.0
-                            ratingData.push(5.0);
-                        }
-                    }
-                }
-                
-                // Проверяем данные перед созданием объекта
-                console.log('Итоговые данные для графика рейтингов:', ratingData);
-                
-                // Создаем объект с данными для графика
-                ratingsChartData = {
-                    labels,
-                    datasets: [{
-                        data: ratingData,
-                        label: 'Средний рейтинг',
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)'
-                    }]
-                };
-            }
-            
-            // Обработка данных для графика количества отзывов
-            if (data && data.volumeByDay) {
-                volumeByDayData = data.volumeByDay;
-            } else {
-                // Если данные с сервера некорректны, рассчитываем количество отзывов по дням
-                // Используем те же метки и периоды, что и для графика рейтингов
-                const volumeData = [];
-                
-                if (chartPeriod === 'year') {
-                    // Для года - по месяцам
-                    for (let i = 0; i < 12; i++) {
-                        const date = new Date(startDate);
-                        date.setMonth(startDate.getMonth() + i);
-                        const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                        
-                        // Считаем количество отзывов за месяц
-                        let count = 0;
-                        filteredReviews.forEach(review => {
-                            const reviewDate = new Date(review.created_at || review.createdAt);
-                            const reviewMonthKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}`;
-                            if (reviewMonthKey === monthKey) {
-                                count++;
-                            }
-                        });
-                        
-                        volumeData.push(count);
-                    }
-                } else if (chartPeriod === 'month') {
-                    // Для месяца - группируем по 5 дней
-                    const groups = 6; // 6 групп по ~5 дней
-                    const daysPerGroup = Math.ceil(30 / groups);
-                    
-                    for (let i = 0; i < groups; i++) {
-                        let groupCount = 0;
-                        
-                        for (let j = 0; j < daysPerGroup; j++) {
-                            const dayOffset = i * daysPerGroup + j;
-                            if (dayOffset < 30) {
-                                const date = new Date(startDate);
-                                date.setDate(startDate.getDate() + dayOffset);
-                                const dayKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-                                
-                                // Считаем количество отзывов за день
-                                filteredReviews.forEach(review => {
-                                    const reviewDate = new Date(review.created_at || review.createdAt);
-                                    const reviewDayKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}-${reviewDate.getDate().toString().padStart(2, '0')}`;
-                                    if (reviewDayKey === dayKey) {
-                                        groupCount++;
-                                    }
-                                });
-                            }
-                        }
-                        
-                        volumeData.push(groupCount);
-                    }
-                } else {
-                    // Для недели - по дням
-                    for (let i = 0; i < 7; i++) {
-                        const date = new Date(startDate);
-                        date.setDate(startDate.getDate() + i);
-                        const dayKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-                        
-                        // Считаем количество отзывов за день
-                        let count = 0;
-                        filteredReviews.forEach(review => {
-                            const reviewDate = new Date(review.created_at || review.createdAt);
-                            const reviewDayKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}-${reviewDate.getDate().toString().padStart(2, '0')}`;
-                            if (reviewDayKey === dayKey) {
-                                count++;
-                            }
-                        });
-                        
-                        volumeData.push(count);
-                    }
-                }
-                
-                // Создаем объект с данными для графика
-                volumeByDayData = {
-                    labels,
-                    datasets: [{
-                        data: volumeData,
-                        label: 'Количество отзывов',
-                        borderColor: '#6366f1',
-                        backgroundColor: '#6366f1'
-                    }]
-                };
-            }
-            
-            setChartData({
-                ratings: ratingsChartData,
-                volumeByDay: volumeByDayData,
-                categoryDistribution: data && data.ratingDistribution ? {
-                    ...data.ratingDistribution,
-                    criteriaRatings: data.criteriaRatings
-                } : null,
-                // Используем только общие рейтинги
-                restaurantCriteriaRatings: combinedRatings,
-                reviewCount: data && data.reviewCount ? data.reviewCount : reviewsData.length
-            });
-            
-            return data;
-        } catch (error) {
-            console.error('Ошибка при получении данных для графиков:', error);
-            return chartData;
-        }
-    };
-
-    // Функция для расчета среднего рейтинга по дням на основе отзывов
-    const calculateRatingsByPeriod = (reviews, period) => {
-        // Получаем диапазон дат в зависимости от периода
-        const now = new Date();
-        let startDate = new Date();
-        let labels = [];
-        
-        switch(period) {
-            case 'week':
-                startDate.setDate(now.getDate() - 6); // Последние 7 дней
-                labels = Array(7).fill().map((_, i) => {
-                    const date = new Date(now);
-                    date.setDate(now.getDate() - (6 - i));
-                    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                });
-                break;
-            case 'month':
-                startDate.setDate(now.getDate() - 29); // Последние 30 дней
-                labels = Array(30).fill().map((_, i) => {
-                    const date = new Date(now);
-                    date.setDate(now.getDate() - (29 - i));
-                    return i % 5 === 0 ? date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : '';
-                }).filter(Boolean);
-                break;
-            case 'year':
-                startDate.setMonth(now.getMonth() - 11); // Последние 12 месяцев
-                labels = Array(12).fill().map((_, i) => {
-                    const date = new Date(now);
-                    date.setMonth(now.getMonth() - (11 - i));
-                    return date.toLocaleDateString('ru-RU', { month: 'short' });
-                });
-                break;
-            default:
-                startDate.setDate(now.getDate() - 6);
-                labels = Array(7).fill().map((_, i) => {
-                    const date = new Date(now);
-                    date.setDate(now.getDate() - (6 - i));
-                    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                });
-        }
-        
-        // Фильтруем отзывы по диапазону дат
-        const filteredReviews = reviews.filter(review => {
-            const reviewDate = new Date(review.created_at || review.createdAt);
-            return reviewDate >= startDate && reviewDate <= now;
-        });
-        
-        // Группируем отзывы по дням/месяцам и рассчитываем средний рейтинг
-        const ratingsByPeriod = {};
-        let periodFormat = '';
-        
-        switch(period) {
-            case 'week':
-            case 'month':
-                periodFormat = 'day';
-                break;
-            case 'year':
-                periodFormat = 'month';
-                break;
-            default:
-                periodFormat = 'day';
-        }
-        
-        filteredReviews.forEach(review => {
-            const reviewDate = new Date(review.created_at || review.createdAt);
-            let periodKey = '';
-            
-            if (periodFormat === 'day') {
-                periodKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}-${reviewDate.getDate().toString().padStart(2, '0')}`;
-            } else {
-                periodKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}`;
-            }
-            
-            if (!ratingsByPeriod[periodKey]) {
-                ratingsByPeriod[periodKey] = { sum: 0, count: 0 };
-            }
-            
-            ratingsByPeriod[periodKey].sum += parseFloat(review.rating) || 0;
-            ratingsByPeriod[periodKey].count++;
-        });
-        
-        // Формируем данные для графика
-        const data = [];
-        
-        // Заполняем данные для всех периодов, даже если нет отзывов
-        if (periodFormat === 'day') {
-            for (let i = 0; i < (period === 'week' ? 7 : 30); i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                const periodKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-                
-                if (ratingsByPeriod[periodKey]) {
-                    data.push(ratingsByPeriod[periodKey].sum / ratingsByPeriod[periodKey].count);
-                } else {
-                    // Если нет данных, используем среднее значение или 0
-                    const prevValues = data.filter(v => !isNaN(v) && v > 0);
-                    data.push(prevValues.length > 0 ? prevValues.reduce((a, b) => a + b, 0) / prevValues.length : 0);
-                }
-            }
-        } else {
-            for (let i = 0; i < 12; i++) {
-                const date = new Date(startDate);
-                date.setMonth(startDate.getMonth() + i);
-                const periodKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                
-                if (ratingsByPeriod[periodKey]) {
-                    data.push(ratingsByPeriod[periodKey].sum / ratingsByPeriod[periodKey].count);
-                } else {
-                    // Если нет данных, используем среднее значение или 0
-                    const prevValues = data.filter(v => !isNaN(v) && v > 0);
-                    data.push(prevValues.length > 0 ? prevValues.reduce((a, b) => a + b, 0) / prevValues.length : 0);
-                }
-            }
-        }
-        
-        // Формируем итоговую структуру данных для графика
-        return {
-            labels,
-            datasets: [
-                {
-                    label: 'Средний рейтинг',
-                    data,
-                    fill: false,
-                    borderColor: '#3b82f6',
-                    tension: 0.1
-                }
-            ]
-        };
-    };
-    
-    // Функция для расчета количества отзывов по дням
-    const calculateVolumeByPeriod = (reviews, period) => {
-        // Аналогично calculateRatingsByPeriod, но считаем количество отзывов
-        // Получаем диапазон дат в зависимости от периода
-        const now = new Date();
-        let startDate = new Date();
-        let labels = [];
-        
-        switch(period) {
-            case 'week':
-                startDate.setDate(now.getDate() - 6);
-                labels = Array(7).fill().map((_, i) => {
-                    const date = new Date(now);
-                    date.setDate(now.getDate() - (6 - i));
-                    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                });
-                break;
-            case 'month':
-                startDate.setDate(now.getDate() - 29);
-                labels = Array(30).fill().map((_, i) => {
-                    const date = new Date(now);
-                    date.setDate(now.getDate() - (29 - i));
-                    return i % 5 === 0 ? date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : '';
-                }).filter(Boolean);
-                break;
-            case 'year':
-                startDate.setMonth(now.getMonth() - 11);
-                labels = Array(12).fill().map((_, i) => {
-                    const date = new Date(now);
-                    date.setMonth(now.getMonth() - (11 - i));
-                    return date.toLocaleDateString('ru-RU', { month: 'short' });
-                });
-                break;
-            default:
-                startDate.setDate(now.getDate() - 6);
-                labels = Array(7).fill().map((_, i) => {
-                    const date = new Date(now);
-                    date.setDate(now.getDate() - (6 - i));
-                    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                });
-        }
-        
-        // Фильтруем отзывы по диапазону дат
-        const filteredReviews = reviews.filter(review => {
-            const reviewDate = new Date(review.created_at || review.createdAt);
-            return reviewDate >= startDate && reviewDate <= now;
-        });
-        
-        // Группируем отзывы по дням/месяцам и считаем количество
-        const volumeByPeriod = {};
-        let periodFormat = '';
-        
-        switch(period) {
-            case 'week':
-            case 'month':
-                periodFormat = 'day';
-                break;
-            case 'year':
-                periodFormat = 'month';
-                break;
-            default:
-                periodFormat = 'day';
-        }
-        
-        filteredReviews.forEach(review => {
-            const reviewDate = new Date(review.created_at || review.createdAt);
-            let periodKey = '';
-            
-            if (periodFormat === 'day') {
-                periodKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}-${reviewDate.getDate().toString().padStart(2, '0')}`;
-            } else {
-                periodKey = `${reviewDate.getFullYear()}-${(reviewDate.getMonth() + 1).toString().padStart(2, '0')}`;
-            }
-            
-            if (!volumeByPeriod[periodKey]) {
-                volumeByPeriod[periodKey] = 0;
-            }
-            
-            volumeByPeriod[periodKey]++;
-        });
-        
-        // Формируем данные для графика
-        const data = [];
-        
-        // Заполняем данные для всех периодов, даже если нет отзывов
-        if (periodFormat === 'day') {
-            for (let i = 0; i < (period === 'week' ? 7 : 30); i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                const periodKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-                
-                data.push(volumeByPeriod[periodKey] || 0);
-            }
-        } else {
-            for (let i = 0; i < 12; i++) {
-                const date = new Date(startDate);
-                date.setMonth(startDate.getMonth() + i);
-                const periodKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                
-                data.push(volumeByPeriod[periodKey] || 0);
-            }
-        }
-        
-        // Формируем итоговую структуру данных для графика
-        return {
-            labels,
-            datasets: [
-                {
-                    label: 'Количество отзывов',
-                    data,
-                    fill: false,
-                    borderColor: '#6366f1',
-                    backgroundColor: '#6366f1',
-                    tension: 0.1
-                }
-            ]
-        };
     };
 
     const calculateTrends = (newStats) => {

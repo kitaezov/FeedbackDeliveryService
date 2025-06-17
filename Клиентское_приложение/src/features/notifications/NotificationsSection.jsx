@@ -106,13 +106,13 @@ const NotificationsSection = ({ user, isDarkMode }) => {
             const data = await getUserNotifications();
             setNotifications(data);
             
-            // Automatically mark all unread notifications as read when viewed
+            // Автоматически отмечаем все непрочитанные уведомления как прочитанные при просмотре
             const unreadNotifications = data.filter(notification => !notification.is_read);
             for (const notification of unreadNotifications) {
                 await markNotificationAsRead(notification.id);
             }
             
-            // Update local state to reflect all notifications as read
+            // Обновляем локальное состояние, чтобы отразить все уведомления как прочитанные
             setNotifications(prevNotifications => 
                 prevNotifications.map(notification => ({ ...notification, is_read: true }))
             );
@@ -199,7 +199,7 @@ const NotificationsSection = ({ user, isDarkMode }) => {
     
     const unreadCount = notifications.filter(notification => !notification.is_read).length;
 
-    // Styles configuration
+    // Конфигурация стилей
     const themeClasses = {
         card: isDarkMode
             ? 'bg-gray-900 border-gray-700 text-gray-100'

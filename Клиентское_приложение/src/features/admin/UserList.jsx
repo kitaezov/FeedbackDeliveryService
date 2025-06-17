@@ -109,7 +109,7 @@ const UserList = ({ user, onBlockUser, onUnblockUser, onUpdateRole }) => {
                 api.get('/admin/restaurants')
             ]);
             
-            // Map restaurants to users
+            // Картируем рестораны к пользователям
             const usersWithRestaurants = usersResponse.data.users.map(user => {
                 const restaurant = restaurantsResponse.data.restaurants?.find(r => r.id === user.restaurant_id);
                 return {

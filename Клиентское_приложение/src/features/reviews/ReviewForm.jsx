@@ -159,6 +159,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
     const fileInputRef = useRef(null);
     const receiptInputRef = useRef(null);
     const modalRef = useRef(null);
+    const lastLoadedRestaurantId = useRef(null);
 
     // Функция для проверки, открыт ли ресторан
     const checkIfOpen = (workingHours) => {
@@ -240,8 +241,9 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
     // Поиск отзывов для ресторана при его выборе
     useEffect(() => {
-        if (restaurant?.id) {
+        if (restaurant?.id && lastLoadedRestaurantId.current !== restaurant.id) {
             fetchRestaurantReviews();
+            lastLoadedRestaurantId.current = restaurant.id;
         }
     }, [restaurant]);
 
@@ -288,6 +290,14 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
     if (!restaurant) return null;
 
+    const inRestaurantCategories = [
+        {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
+        {id: 'service', name: 'Уровень сервиса', icon: <Smile className="w-5 h-5 text-gray-400"/>},
+        {id: 'atmosphere', name: 'Атмосфера', icon: <MapPin className="w-5 h-5 text-gray-400"/>},
+        {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
+        {id: 'cleanliness', name: 'Чистота', icon: <Award className="w-5 h-5 text-gray-400"/>}
+    ];
+
     const deliveryCategories = [
         {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
         {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
@@ -295,7 +305,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         {id: 'deliveryQuality', name: 'Качество доставки', icon: <Award className="w-5 h-5 text-gray-400"/>}
     ];
 
-    const ratingCategories = reviewType === 'delivery' ? deliveryCategories : deliveryCategories;
+    const ratingCategories = reviewType === 'inRestaurant' ? inRestaurantCategories : deliveryCategories;
 
     const handlePhotoSelect = (e) => {
         if (!e.target.files || e.target.files.length === 0) return;
@@ -452,12 +462,11 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         setSubmitting(false);
         console.log('Успешный ответ от сервера:', response.data);
         
-        // Добавить отзыв в список
+        // Добавить отзыв в список, если его там еще нет
         if (response.data && response.data.review) {
             setRestaurantReviews(prevReviews => {
-                // Ensure prevReviews is an array before spreading
-                const reviews = Array.isArray(prevReviews) ? prevReviews : [];
-                return [response.data.review, ...reviews];
+                if (prevReviews.some(r => r.id === response.data.review.id)) return prevReviews;
+                return [response.data.review, ...prevReviews];
             });
         }
         
@@ -1097,6 +1106,17 @@ formData.append('isDelivery', reviewType === 'delivery' ? 'true' : 'false');
                                     Тип отзыва:
                                 </label>
                                 <div className="flex space-x-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleReviewTypeChange('inRestaurant')}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                            reviewType === 'inRestaurant'
+                                                ? 'bg-gray-800 text-white dark:bg-gray-700'
+                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                                        }`}
+                                    >
+                                        В ресторане
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => handleReviewTypeChange('delivery')}

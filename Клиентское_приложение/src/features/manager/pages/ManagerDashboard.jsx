@@ -75,7 +75,7 @@ const ManagerDashboard = () => {
             fetchReviewsFromDatabase();
         }
     }, [selectedRestaurant]);
-    
+
     const getRestaurants = async () => {
         try {
             const response = await getData('manager/restaurants');

@@ -276,18 +276,11 @@ const ReviewItem = ({ review, onRespond, postData, onTypeChange }) => {
         if (isDelivery) {
             return [
                 { id: 'food', name: 'Качество блюд', value: normalizedRatings.food },
-                { id: 'deliverySpeed', name: 'Скорость доставки', value: normalizedRatings.deliverySpeed },
-                { id: 'deliveryQuality', name: 'Качество доставки', value: normalizedRatings.deliveryQuality },
-                { id: 'price', name: 'Цена/Качество', value: normalizedRatings.price }
+                { id: 'deliverySpeed', name: 'Цена/Качество', value: normalizedRatings.deliverySpeed },
+                { id: 'deliveryQuality', name: 'Скорость доставки', value: normalizedRatings.deliveryQuality },
+                { id: 'price', name: 'Качество доставки', value: normalizedRatings.price }
             ];
         } else {
-            return [
-                { id: 'food', name: 'Качество блюд', value: normalizedRatings.food },
-                { id: 'service', name: 'Уровень сервиса', value: normalizedRatings.service },
-                { id: 'atmosphere', name: 'Атмосфера', value: normalizedRatings.atmosphere },
-                { id: 'price', name: 'Цена/Качество', value: normalizedRatings.price },
-                { id: 'cleanliness', name: 'Чистота', value: normalizedRatings.cleanliness }
-            ];
         }
     };
 
@@ -974,18 +967,17 @@ const ManagerDashboard = () => {
         // Определяем категории для ресторана
         const restaurantCategories = [
             { id: 'food', name: 'Качество блюд' },
-            { id: 'service', name: 'Уровень сервиса' },
-            { id: 'atmosphere', name: 'Атмосфера' },
-            { id: 'price', name: 'Цена/Качество' },
-            { id: 'cleanliness', name: 'Чистота' }
+            { id: 'service', name: 'Цена/Качество' },
+            { id: 'atmosphere', name: 'Скорость доставки' },
+            { id: 'price', name: 'Качество доставки' }
         ];
         
         // Определяем категории для доставки
         const deliveryCategories = [
             { id: 'food', name: 'Качество блюд' },
-            { id: 'deliverySpeed', name: 'Скорость доставки' },
-            { id: 'deliveryQuality', name: 'Качество доставки' },
-            { id: 'price', name: 'Цена/Качество' }
+            { id: 'service', name: 'Цена/Качество' },
+            { id: 'atmosphere', name: 'Скорость доставки' },
+            { id: 'price', name: 'Качество доставки' }
         ];
         
         // Функция для расчета рейтингов по категориям

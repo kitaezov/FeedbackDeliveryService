@@ -290,15 +290,15 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
     if (!restaurant) return null;
 
-    const inRestaurantCategories = [
-        {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
-        {id: 'service', name: 'Уровень сервиса', icon: <Smile className="w-5 h-5 text-gray-400"/>},
-        {id: 'atmosphere', name: 'Атмосфера', icon: <MapPin className="w-5 h-5 text-gray-400"/>},
-        {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
-        {id: 'cleanliness', name: 'Чистота', icon: <Award className="w-5 h-5 text-gray-400"/>}
-    ];
 
     const deliveryCategories = [
+        {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
+        {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
+        {id: 'deliverySpeed', name: 'Скорость доставки', icon: <Clock className="w-5 h-5 text-gray-400"/>},
+        {id: 'deliveryQuality', name: 'Качество доставки', icon: <Award className="w-5 h-5 text-gray-400"/>}
+    ];
+
+    const inRestaurantCategories = [
         {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
         {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
         {id: 'deliverySpeed', name: 'Скорость доставки', icon: <Clock className="w-5 h-5 text-gray-400"/>},
@@ -1123,7 +1123,7 @@ formData.append('isDelivery', reviewType === 'delivery' ? 'true' : 'false');
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Оцените {reviewType === 'delivery' ? 'доставку' : 'ресторан'}
+                                        Оцените {reviewType === 'delivery' ? 'доставку' : 'доставку'}
                                     </h3>
                                 </div>
 

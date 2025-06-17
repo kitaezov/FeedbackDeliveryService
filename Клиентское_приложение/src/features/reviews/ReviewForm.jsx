@@ -288,14 +288,6 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
 
     if (!restaurant) return null;
 
-    const inRestaurantCategories = [
-        {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
-        {id: 'service', name: 'Уровень сервиса', icon: <Smile className="w-5 h-5 text-gray-400"/>},
-        {id: 'atmosphere', name: 'Атмосфера', icon: <MapPin className="w-5 h-5 text-gray-400"/>},
-        {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
-        {id: 'cleanliness', name: 'Чистота', icon: <Award className="w-5 h-5 text-gray-400"/>}
-    ];
-
     const deliveryCategories = [
         {id: 'food', name: 'Качество блюд', icon: <Star className="w-5 h-5 text-gray-400"/>},
         {id: 'price', name: 'Цена/Качество', icon: <DollarSign className="w-5 h-5 text-gray-400"/>},
@@ -303,7 +295,7 @@ const RestaurantDetailModal = ({ restaurant, onClose, onReviewSubmitted, user })
         {id: 'deliveryQuality', name: 'Качество доставки', icon: <Award className="w-5 h-5 text-gray-400"/>}
     ];
 
-    const ratingCategories = reviewType === 'inRestaurant' ? inRestaurantCategories : deliveryCategories;
+    const ratingCategories = reviewType === 'delivery' ? deliveryCategories : deliveryCategories;
 
     const handlePhotoSelect = (e) => {
         if (!e.target.files || e.target.files.length === 0) return;
